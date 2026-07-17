@@ -1,0 +1,1866 @@
+{
+ "routes": [
+  {
+   "path": "/login",
+   "comp": "LoginPage"
+  },
+  {
+   "path": "/team-login",
+   "comp": "TeamLogin"
+  },
+  {
+   "path": "/accept-invite",
+   "comp": "AcceptInvite"
+  },
+  {
+   "path": "/",
+   "comp": "Home"
+  },
+  {
+   "path": "/home",
+   "comp": "Home"
+  },
+  {
+   "path": "/kitchen-workspace",
+   "comp": "KitchenWorkspace"
+  },
+  {
+   "path": "/master-prep-engine",
+   "comp": "MasterPrepEngine"
+  },
+  {
+   "path": "/master-prep-engine/admin",
+   "comp": "MasterPrepEngineAdmin"
+  },
+  {
+   "path": "/retail-workspace",
+   "comp": "RetailWorkspace"
+  },
+  {
+   "path": "/pit-workspace",
+   "comp": "PitWorkspace"
+  },
+  {
+   "path": "/sales-workspace",
+   "comp": "SalesWorkspace"
+  },
+  {
+   "path": "/marketing-workspace",
+   "comp": "MarketingWorkspace"
+  },
+  {
+   "path": "/admin-workspace",
+   "comp": "AdminWorkspace"
+  },
+  {
+   "path": "/c/:slug",
+   "comp": "CampaignLanding"
+  },
+  {
+   "path": "/order",
+   "comp": "CateringOrder"
+  },
+  {
+   "path": "/order/confirmation",
+   "comp": "CateringOrderConfirmation"
+  },
+  {
+   "path": "/catering/quote",
+   "comp": "CateringQuotePage"
+  },
+  {
+   "path": "/app/book",
+   "comp": "CateringExperience"
+  },
+  {
+   "path": "/quote/:token",
+   "comp": "QuoteAccept"
+  },
+  {
+   "path": "/invoice/checkout/:token",
+   "comp": "InvoiceCheckout"
+  },
+  {
+   "path": "/catering/lead-intake",
+   "comp": "LeadIntakeForm"
+  },
+  {
+   "path": "/sales/lead-intake",
+   "comp": "LeadIntakeForm"
+  },
+  {
+   "path": "/portal",
+   "comp": "PortalLandingPage"
+  },
+  {
+   "path": "/portal/order",
+   "comp": "PortalLandingPage"
+  },
+  {
+   "path": "/portal/sign-in",
+   "comp": "PortalSignInPage"
+  },
+  {
+   "path": "/portal/account",
+   "comp": "PortalAccountPage"
+  },
+  {
+   "path": "/portal/auth",
+   "comp": "PortalAuthPage"
+  },
+  {
+   "path": "/portal/beo/:orderId",
+   "comp": "PortalBEOPage"
+  },
+  {
+   "path": "/sales-quote/:token",
+   "comp": "SalesQuotePage"
+  },
+  {
+   "path": "/404",
+   "comp": "NotFound"
+  }
+ ],
+ "workspaces": {
+  "AdminWorkspace": [
+   {
+    "id": "menu",
+    "label": "Menu Editor",
+    "component": "AdminMenuEditor",
+    "analysis": {
+     "file": "client/src/pages/AdminMenuEditor.tsx",
+     "trpc": [
+      "menu.list",
+      "menu.upsert",
+      "menu.hardDelete",
+      "menu.reorder"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 325
+    }
+   },
+   {
+    "id": "walk-in-sampler",
+    "label": "Walk-In Samplers",
+    "component": "WalkInSamplerEditor",
+    "analysis": {
+     "file": "client/src/pages/WalkInSamplerEditor.tsx",
+     "trpc": [
+      "walkInSampler.upsert",
+      "walkInSampler.delete",
+      "walkInSampler.list"
+     ],
+     "dialogs": [
+      "existing ?"
+     ],
+     "buttons": [
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 320
+    }
+   },
+   {
+    "id": "prep-master",
+    "label": "Prep Master",
+    "component": "AdminPrepMaster",
+    "analysis": {
+     "file": "client/src/pages/AdminPrepMaster.tsx",
+     "trpc": [
+      "prepBoard.listAllItems",
+      "prepBoard.getActiveSession",
+      "prepBoard.upsertItem",
+      "prepBoard.deleteItem",
+      "prepBoard.startNewWeek",
+      "prepBoard.generateFromSelection"
+     ],
+     "dialogs": [
+      "form.id ?"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 511
+    }
+   },
+   {
+    "id": "fathers-day",
+    "label": "Father",
+    "component": "FathersDayAdmin",
+    "analysis": {
+     "file": "client/src/pages/FathersDayAdmin.tsx",
+     "trpc": [
+      "fathersDay.listOrders",
+      "fathersDay.updateStatus"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 193
+    }
+   },
+   {
+    "id": "cuban-thursday",
+    "label": "Cuban Thursday",
+    "component": "CubanThursdayAdmin",
+    "analysis": {
+     "file": "client/src/pages/CubanThursdayAdmin.tsx",
+     "trpc": [
+      "cubanThursday.listOrders",
+      "cubanThursday.updateStatus"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 276
+    }
+   },
+   {
+    "id": "4th-of-july",
+    "label": "4th of July",
+    "component": "July4Admin",
+    "analysis": {
+     "file": "client/src/pages/July4Admin.tsx",
+     "trpc": [
+      "july4.listOrders",
+      "july4.getDiamondAvailability",
+      "july4.updateOrderStatus"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 242
+    }
+   },
+   {
+    "id": "catering-drop",
+    "label": "Catering Pre-Orders",
+    "component": "CateringDropAdmin",
+    "analysis": {
+     "file": "client/src/pages/CateringDropAdmin.tsx",
+     "trpc": [
+      "cateringDrop.listOrders",
+      "cateringDrop.updateOrderStatus",
+      "cateringDrop.clearTestOrders"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 247
+    }
+   },
+   {
+    "id": "weekend-preorder",
+    "label": "Weekend Pre-Orders",
+    "component": "?",
+    "analysis": null
+   },
+   {
+    "id": "preorder-inventory",
+    "label": "Preorder Inventory Caps",
+    "component": "PreorderInventoryDashboard",
+    "analysis": {
+     "file": "client/src/pages/admin/PreorderInventoryDashboard.tsx",
+     "trpc": [
+      "preorderInventory.adminListPages",
+      "preorderInventory.adminGetPageInventory",
+      "preorderInventory.adminUpsertProduct",
+      "preorderInventory.adminAdjustSold",
+      "preorderInventory.adminResetPage"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Reset All Sold",
+      "Save",
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 463
+    }
+   },
+   {
+    "id": "order-guide-setup",
+    "label": "Order Guide Setup",
+    "component": "OrderGuideSetup",
+    "analysis": {
+     "file": "client/src/pages/OrderGuideSetup.tsx",
+     "trpc": [
+      "orderGuide.getVendors",
+      "orderGuide.updateItemMeta",
+      "orderGuide.updatePar",
+      "orderGuide.upsertVendor",
+      "orderGuide.deleteVendor",
+      "orderGuide.list",
+      "orderGuide.categories"
+     ],
+     "dialogs": [
+      "vendor ?"
+     ],
+     "buttons": [
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 617
+    }
+   },
+   {
+    "id": "protein-conversions",
+    "label": "Protein Conversions",
+    "component": "ProteinConversionTable",
+    "analysis": {
+     "file": "client/src/pages/ProteinConversionTable.tsx",
+     "trpc": [
+      "proteinConversions.list",
+      "proteinConversions.upsert"
+     ],
+     "dialogs": [
+      "editing ? `Edit — $"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 360
+    }
+   },
+   {
+    "id": "users",
+    "label": "Users",
+    "component": "UsersAdmin",
+    "analysis": {
+     "file": "client/src/pages/UsersAdmin.tsx",
+     "trpc": [
+      "users.list",
+      "users.listInvites",
+      "users.updateRole",
+      "users.updateName",
+      "users.deleteUser",
+      "users.createInvite",
+      "users.revokeInvite"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 418
+    }
+   },
+   {
+    "id": "team",
+    "label": "Team Access",
+    "component": "TeamManagement",
+    "analysis": {
+     "file": "client/src/pages/TeamManagement.tsx",
+     "trpc": [
+      "teamAuth.listTeamMembers",
+      "users.listInvites",
+      "teamAuth.adminResetPassword",
+      "users.createInvite",
+      "teamAuth.suspendMember",
+      "teamAuth.reactivateMember",
+      "teamAuth.resetAndReinvite",
+      "users.revokeInvite",
+      "users.regenerateInvite",
+      "users.extendInvite"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 537
+    }
+   },
+   {
+    "id": "express-menu",
+    "label": "Express Menu",
+    "component": "ExpressMenuAdmin",
+    "analysis": {
+     "file": "client/src/pages/ExpressMenuAdmin.tsx",
+     "trpc": [
+      "expressMenu.adminListMenu",
+      "expressMenu.adminUpsertItem",
+      "expressMenu.adminDeleteItem"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 129
+    }
+   },
+   {
+    "id": "discounts",
+    "label": "Discount Codes",
+    "component": "DiscountCodesAdmin",
+    "analysis": {
+     "file": "client/src/pages/DiscountCodesAdmin.tsx",
+     "trpc": [
+      "expressMenu.adminCreateDiscountCode",
+      "expressMenu.adminListDiscountCodes",
+      "expressMenu.adminToggleDiscountCode",
+      "expressMenu.adminDeleteDiscountCode"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Create Code"
+     ],
+     "storage": [],
+     "lines": 270
+    }
+   },
+   {
+    "id": "events",
+    "label": "Events Manager",
+    "component": "EventsAdmin",
+    "analysis": {
+     "file": "client/src/pages/EventsAdmin.tsx",
+     "trpc": [],
+     "dialogs": [
+      "editing ?"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 241
+    }
+   },
+   {
+    "id": "brand-setup",
+    "label": "Brand Setup",
+    "component": "BrandSetup",
+    "analysis": {
+     "file": "client/src/pages/BrandSetup.tsx",
+     "trpc": [
+      "brand.getConfig",
+      "brand.updateConfig"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Book Catering"
+     ],
+     "storage": [],
+     "lines": 551
+    }
+   },
+   {
+    "id": "brand-studio",
+    "label": "Brand Studio",
+    "component": "BrandStudio",
+    "analysis": {
+     "file": "client/src/pages/admin/BrandStudio.tsx",
+     "trpc": [
+      "tenant.listTenants",
+      "tenant.updateTenant"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 342
+    }
+   },
+   {
+    "id": "license",
+    "label": "License Manager",
+    "component": "LicensingDashboard",
+    "analysis": {
+     "file": "client/src/pages/admin/LicensingDashboard.tsx",
+     "trpc": [
+      "tenant.createTenant",
+      "tenant.setLicenseStatus",
+      "tenant.getTenant",
+      "tenant.getStats",
+      "tenant.listTenants"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 476
+    }
+   },
+   {
+    "id": "ai-import",
+    "label": "AI Import Hub",
+    "component": "AIImportHub",
+    "analysis": {
+     "file": "client/src/pages/AIImportHub.tsx",
+     "trpc": [
+      "import.upload",
+      "import.process",
+      "import.list",
+      "import.delete"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 423
+    }
+   },
+   {
+    "id": "customer-app",
+    "label": "Customer App",
+    "component": "CustomerHome",
+    "analysis": {
+     "file": "client/src/pages/public/CustomerHome.tsx",
+     "trpc": [],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 139
+    }
+   }
+  ],
+  "KitchenWorkspace": [
+   {
+    "id": "weekly",
+    "label": "Weekly Board",
+    "component": "WeeklyMasterBoard",
+    "analysis": {
+     "file": "client/src/pages/WeeklyMasterBoard.tsx",
+     "trpc": [
+      "weeklyUnified.getUnifiedBoard",
+      "orders.getWeeklyProductionBoard"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 441
+    }
+   },
+   {
+    "id": "fire-sheets",
+    "label": "Fire Sheets",
+    "component": "ProductionBoard",
+    "analysis": {
+     "file": "client/src/pages/ProductionBoard.tsx",
+     "trpc": [
+      "orders.list",
+      "handoff.getBulkKitchenProgress",
+      "proteinConversions.list",
+      "orders.getDailyAllTotalsV2",
+      "orders.getDailyAllTotals",
+      "prepCheck.getChecks",
+      "prepCheck.toggleCheck",
+      "prepCheck.clearDay",
+      "orders.updateStatus",
+      "orders.updateNotes",
+      "orders.createTestOrder",
+      "orders.updateFull"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 1476
+    }
+   },
+   {
+    "id": "calendar",
+    "label": "Calendar",
+    "component": "MasterCalendarPage",
+    "analysis": {
+     "file": "client/src/pages/MasterCalendarPage.tsx",
+     "trpc": [],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 10
+    }
+   },
+   {
+    "id": "expo",
+    "label": "Expo KDS",
+    "component": "?",
+    "analysis": null
+   },
+   {
+    "id": "calculator",
+    "label": "Meat Calc",
+    "component": "MeatCalculator",
+    "analysis": {
+     "file": "client/src/pages/MeatCalculator.tsx",
+     "trpc": [
+      "proteinConversions.list"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 302
+    }
+   },
+   {
+    "id": "prep",
+    "label": "Prep",
+    "component": "DynamicPrepBoard",
+    "analysis": {
+     "file": "client/src/pages/DynamicPrepBoard.tsx",
+     "trpc": [
+      "prepBoard.getActiveSession",
+      "prepBoard.updateEntryStatus",
+      "prepBoard.addEntry"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 321
+    }
+   },
+   {
+    "id": "order-history",
+    "label": "Order History",
+    "component": "KitchenOrderHistory",
+    "analysis": {
+     "file": "client/src/pages/KitchenOrderHistory.tsx",
+     "trpc": [
+      "orders.list",
+      "orders.updateStatus"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 196
+    }
+   },
+   {
+    "id": "morning-checklist",
+    "label": "Morning Checklist",
+    "component": "KitchenChecklist",
+    "analysis": {
+     "file": "client/src/pages/KitchenChecklist.tsx",
+     "trpc": [
+      "checklist.listTemplates",
+      "checklist.getTodayRun",
+      "checklist.toggleItem",
+      "checklist.managerSignOff",
+      "checklist.setNotificationEmail"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 517
+    }
+   },
+   {
+    "id": "prep-recipes",
+    "label": "Prep Recipes",
+    "component": "PrepRecipeAdmin",
+    "analysis": {
+     "file": "client/src/pages/PrepRecipeAdmin.tsx",
+     "trpc": [
+      "inventoryOrder.listPrepIngredients",
+      "inventoryOrder.upsertPrepIngredient",
+      "inventoryOrder.deletePrepIngredient",
+      "inventoryOrder.listPrepRecipes",
+      "inventoryOrder.createPrepRecipe",
+      "inventoryOrder.updatePrepRecipe",
+      "inventoryOrder.deletePrepRecipe"
+     ],
+     "dialogs": [
+      "editRecipe ?"
+     ],
+     "buttons": [
+      "Save",
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 568
+    }
+   }
+  ],
+  "MarketingWorkspace": [
+   {
+    "id": "hub",
+    "label": "Landing Page Hub",
+    "component": "MarketingHub",
+    "analysis": {
+     "file": "client/src/pages/marketing/MarketingHub.tsx",
+     "trpc": [
+      "marketing.getLandingPageMetrics"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 495
+    }
+   },
+   {
+    "id": "command",
+    "label": "Command Center",
+    "component": "MarketingCommandCenter",
+    "analysis": {
+     "file": "client/src/pages/marketing/MarketingCommandCenter.tsx",
+     "trpc": [
+      "marketingCC.getDashboardSummary",
+      "marketingCC.getIgSnapshot",
+      "ghl.getDashboardSummary",
+      "marketingCC.generateDailyBriefing",
+      "marketingCC.saveIgSnapshot",
+      "marketingCC.updateTaskStatus"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 480
+    }
+   },
+   {
+    "id": "leads",
+    "label": "Lead Analysis",
+    "component": "LeadAnalysis",
+    "analysis": {
+     "file": "client/src/pages/marketing/LeadAnalysis.tsx",
+     "trpc": [
+      "ghl.getLeadIntelligence",
+      "ghl.getPipelines",
+      "ghl.searchContacts",
+      "ghl.getOpportunities",
+      "marketingCC.runLeadAnalysis",
+      "ghl.sendSms",
+      "ghl.sendEmail"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 431
+    }
+   },
+   {
+    "id": "content-agent",
+    "label": "Content Agent",
+    "component": "ContentAgent",
+    "analysis": {
+     "file": "client/src/pages/marketing/ContentAgent.tsx",
+     "trpc": [
+      "marketingCC.saveToMediaLibrary",
+      "marketingCC.generateHooks",
+      "marketingCC.generateScript",
+      "marketingCC.generateCaptions",
+      "marketingCC.generateStrategy",
+      "marketingCC.listVideoUploads",
+      "marketingCC.listVideoClips",
+      "marketingCC.uploadVideo",
+      "marketingCC.analyzeVideo",
+      "marketingCC.updateVideoClip",
+      "marketingCC.renderVideoClip",
+      "marketingCC.deleteVideoUpload",
+      "marketingCC.listContentIdeas",
+      "marketingCC.getIgSnapshot",
+      "marketingCC.runContentAgent",
+      "marketingCC.saveContentIdea",
+      "marketingCC.updateContentStatus",
+      "marketingCC.deleteContentIdea",
+      "marketingCC.generateMoreHooks",
+      "marketingCC.generateCaptionVariations",
+      "marketingCC.approveAllStrong"
+     ],
+     "dialogs": [
+      "Add Clip Idea"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 1283
+    }
+   },
+   {
+    "id": "calendar",
+    "label": "Content Calendar",
+    "component": "ContentCalendar",
+    "analysis": {
+     "file": "client/src/pages/marketing/ContentCalendar.tsx",
+     "trpc": [
+      "marketingCC.listContentCalendar",
+      "marketingCC.saveContentCalendar",
+      "marketingCC.deleteContentCalendar",
+      "marketingCC.updateContentCalendarStatus"
+     ],
+     "dialogs": [
+      "editing ?"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 355
+    }
+   },
+   {
+    "id": "media",
+    "label": "Media Library",
+    "component": "MediaLibrary",
+    "analysis": {
+     "file": "client/src/pages/marketing/MediaLibrary.tsx",
+     "trpc": [
+      "marketingCC.listMediaLibrary",
+      "marketingCC.saveToMediaLibrary",
+      "marketingCC.deleteFromMediaLibrary"
+     ],
+     "dialogs": [
+      "editing ?"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 268
+    }
+   },
+   {
+    "id": "video",
+    "label": "Video Studio",
+    "component": "VideoStudio",
+    "analysis": {
+     "file": "client/src/pages/VideoStudio.tsx",
+     "trpc": [
+      "marketingCC.renderVideoClip",
+      "marketingCC.trimClip",
+      "marketingCC.generateSubtitles",
+      "marketingCC.listVideoUploads",
+      "marketingCC.analyzeVideo",
+      "marketingCC.deleteVideoUpload",
+      "marketingCC.listVideoClips",
+      "marketingCC.updateVideoClip",
+      "marketingCC.bulkUpdateClipStatus",
+      "marketingCC.regenerateCaptions",
+      "marketingCC.splitClip",
+      "marketingCC.listAllClips",
+      "marketingCC.getDistributionSummary",
+      "marketingCC.getUploadStatus",
+      "marketingCC.exportClip"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Close",
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 1763
+    }
+   },
+   {
+    "id": "outreach",
+    "label": "Outreach Agent",
+    "component": "OutreachAgent",
+    "analysis": {
+     "file": "client/src/pages/marketing/OutreachAgent.tsx",
+     "trpc": [
+      "marketingCC.listOutreachQueue",
+      "marketingCC.runOutreachAgent",
+      "marketingCC.saveOutreachItem",
+      "marketingCC.markOutreachSent",
+      "marketingCC.markOutreachSkipped",
+      "marketingCC.deleteOutreachItem"
+     ],
+     "dialogs": [
+      "Add Outreach Item"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 494
+    }
+   },
+   {
+    "id": "performance",
+    "label": "Performance",
+    "component": "PerformanceAgent",
+    "analysis": {
+     "file": "client/src/pages/marketing/PerformanceAgent.tsx",
+     "trpc": [
+      "marketingCC.getIgSnapshot",
+      "marketingCC.saveIgSnapshot",
+      "marketingCC.runPerformanceAnalysis"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 281
+    }
+   },
+   {
+    "id": "ads",
+    "label": "AI Ads Center",
+    "component": "AdsCommandCenter",
+    "analysis": {
+     "file": "client/src/pages/AdsCommandCenter.tsx",
+     "trpc": [
+      "ads.getDashboard",
+      "ads.analyzeAds",
+      "ads.updateAdStatus",
+      "ads.updateCampaignBudget",
+      "ads.updateRecommendation",
+      "ads.updateDraftStatus",
+      "ads.generateCampaignDraft"
+     ],
+     "dialogs": [
+      "Adjust Daily Budget",
+      "Fix Creative — AI Guidance"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 876
+    }
+   },
+   {
+    "id": "design",
+    "label": "Design Agent",
+    "component": "DesignAgent",
+    "analysis": {
+     "file": "client/src/pages/marketing/DesignAgent.tsx",
+     "trpc": [
+      "designAgent.getOptions",
+      "designAgent.listDesigns",
+      "designAgent.generateDesign",
+      "designAgent.toggleFavorite",
+      "designAgent.deleteDesign"
+     ],
+     "dialogs": [
+      "selectedAsset.title}"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 703
+    }
+   }
+  ],
+  "PackingWorkspace": [
+   {
+    "id": "queue",
+    "label": "Pack Queue",
+    "component": "PackingQueue",
+    "analysis": {
+     "file": "client/src/pages/PackingQueue.tsx",
+     "trpc": [
+      "handoff.getPackingQueue",
+      "handoff.getUpcomingQueue",
+      "handoff.getPackingChecklist",
+      "handoff.toggleChecklistItem",
+      "handoff.confirmPacked"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Pack"
+     ],
+     "storage": [],
+     "lines": 640
+    }
+   },
+   {
+    "id": "board",
+    "label": "Packing Board",
+    "component": "PackingBoard",
+    "analysis": {
+     "file": "client/src/pages/PackingBoard.tsx",
+     "trpc": [
+      "packingSheetV2.list",
+      "packingSheetV2.updateSheet",
+      "packingSheetV2.syncFromOrders"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 348
+    }
+   },
+   {
+    "id": "expo",
+    "label": "Expo View",
+    "component": "ExpoKDS",
+    "analysis": {
+     "file": "client/src/pages/ExpoKDS.tsx",
+     "trpc": [
+      "kds.getProductionTotals",
+      "kds.toggleKitchenCheck",
+      "kds.toggleExpoCheck",
+      "kds.bumpToExpo",
+      "kds.signOff",
+      "kds.reopenTicket",
+      "kds.markReady",
+      "kds.markHandedOff",
+      "kds.getAllDayItemTotals",
+      "kds.getTickets"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Cancel",
+      "Clear"
+     ],
+     "storage": [],
+     "lines": 876
+    }
+   },
+   {
+    "id": "deliveries",
+    "label": "Deliveries",
+    "component": "DeliveriesTab",
+    "analysis": {
+     "file": "client/src/pages/DeliveriesTab.tsx",
+     "trpc": [
+      "handoff.getDrivers",
+      "handoff.updateDeliveryDetails",
+      "handoff.advanceStatus",
+      "handoff.getDeliveryOrders"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 297
+    }
+   },
+   {
+    "id": "dashboard",
+    "label": "Dashboard",
+    "component": "PackingStationDashboard",
+    "analysis": {
+     "file": "client/src/pages/PackingStationDashboard.tsx",
+     "trpc": [
+      "packingSheetV2.list",
+      "packingSheetV2.syncFromOrders"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 289
+    }
+   },
+   {
+    "id": "inventory",
+    "label": "Inventory",
+    "component": "PackingInventory",
+    "analysis": {
+     "file": "client/src/pages/PackingInventory.tsx",
+     "trpc": [
+      "supply.list",
+      "supply.adjust",
+      "supply.upsert"
+     ],
+     "dialogs": [
+      "Adjust Stock —",
+      "editModal?.id ?"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 351
+    }
+   },
+   {
+    "id": "forecast",
+    "label": "Supply Forecast",
+    "component": "SupplyForecast",
+    "analysis": {
+     "file": "client/src/pages/SupplyForecast.tsx",
+     "trpc": [
+      "supply.forecast"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 182
+    }
+   }
+  ],
+  "PitWorkspace": [
+   {
+    "id": "dashboard",
+    "label": "Pit Dashboard",
+    "component": "PitDashboard",
+    "analysis": {
+     "file": "client/src/pages/PitDashboard.tsx",
+     "trpc": [
+      "pitChecklist.listSessions",
+      "pitChecklist.getOrCreateSession",
+      "forecast.getSmokerSchedule",
+      "pitChecklist.listItems",
+      "pitChecklist.syncFromSchedule",
+      "pitChecklist.updateItem",
+      "pitChecklist.deleteItem",
+      "pitChecklist.addItem"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 1008
+    }
+   },
+   {
+    "id": "inventory",
+    "label": "Smoked Inventory",
+    "component": "SmokedInventory",
+    "analysis": {
+     "file": "client/src/pages/SmokedInventory.tsx",
+     "trpc": [
+      "smokedInventory.getSummary",
+      "smokedInventory.logBatch"
+     ],
+     "dialogs": [
+      "Log Smoke Batch"
+     ],
+     "buttons": [],
+     "storage": [],
+     "lines": 346
+    }
+   },
+   {
+    "id": "forecast",
+    "label": "Smoker Forecast",
+    "component": "SmokerForecast",
+    "analysis": {
+     "file": "client/src/pages/SmokerForecast.tsx",
+     "trpc": [
+      "forecast.getSmokerSchedule",
+      "forecast.getForecast",
+      "forecast.getProteinConfigs",
+      "seasoning.list",
+      "forecast.getSeasoningSchedule",
+      "forecast.upsertSmokerDay",
+      "forecast.deleteSmokerEntry",
+      "forecast.upsertSeasoningEntry",
+      "forecast.deleteSeasoningEntry",
+      "forecast.copySmokerWeek",
+      "forecast.autoFillWeek",
+      "forecast.lockWeek"
+     ],
+     "dialogs": [
+      "🧂 Add Seasoning —",
+      "Manage Smoke Schedule"
+     ],
+     "buttons": [
+      "Save"
+     ],
+     "storage": [],
+     "lines": 965
+    }
+   },
+   {
+    "id": "guide",
+    "label": "Pitmaster Guide",
+    "component": "PitmasterGuide",
+    "analysis": {
+     "file": "client/src/pages/PitmasterGuide.tsx",
+     "trpc": [
+      "pitmaster.upsertGuide",
+      "pitmaster.addStep",
+      "pitmaster.updateStep",
+      "pitmaster.removeStep",
+      "pitmaster.getProtein",
+      "pitmaster.listProteins",
+      "pitmaster.createProtein"
+     ],
+     "dialogs": [
+      "Edit",
+      "Add Step",
+      "Edit Step",
+      "Add Protein"
+     ],
+     "buttons": [
+      "Go Back"
+     ],
+     "storage": [],
+     "lines": 517
+    }
+   },
+   {
+    "id": "cost",
+    "label": "Meat Cost Guide",
+    "component": "PitMeatCostGuide",
+    "analysis": {
+     "file": "client/src/pages/PitMeatCostGuide.tsx",
+     "trpc": [
+      "meatCosts.list",
+      "meatCosts.upsert",
+      "meatCosts.delete"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 337
+    }
+   }
+  ],
+  "RetailWorkspace": [
+   {
+    "id": "dashboard",
+    "label": "Dashboard",
+    "component": "RetailDashboard",
+    "analysis": {
+     "file": "client/src/pages/RetailDashboard.tsx",
+     "trpc": [
+      "retailDashboard.calendar",
+      "retailDashboard.dailyProduction",
+      "retailDashboard.stats",
+      "retailPreorders.list"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 458
+    }
+   },
+   {
+    "id": "fire-sheet",
+    "label": "🔥 Fire Sheet",
+    "component": "RetailFireSheet",
+    "analysis": {
+     "file": "client/src/pages/RetailFireSheet.tsx",
+     "trpc": [
+      "retailDaily.getSession",
+      "retailDaily.createSession",
+      "retailDaily.addItem",
+      "retailDaily.updateItemStatus",
+      "retailDaily.updateItemQty",
+      "retailDaily.removeItem",
+      "retailDaily.submitToKitchen",
+      "retailDaily.syncFromPar"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 734
+    }
+   },
+   {
+    "id": "kds",
+    "label": "📺 KDS",
+    "component": "SeminoleKDS",
+    "analysis": {
+     "file": "client/src/pages/SeminoleKDS.tsx",
+     "trpc": [
+      "kds.getSeminoleKDS"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 278
+    }
+   },
+   {
+    "id": "preorders",
+    "label": "Preorders",
+    "component": "RetailPreorders",
+    "analysis": {
+     "file": "client/src/pages/RetailPreorders.tsx",
+     "trpc": [
+      "fireDrop.getCustomerHistory",
+      "cubanThursday.listOrders",
+      "cubanThursday.updateStatus",
+      "cubanThursday.refundOrder",
+      "cubanThursday.hideOrder",
+      "cubanThursday.unhideOrder",
+      "fireDrop.getAllDropOrdersWithItems",
+      "fireDrop.updateOrderStatus",
+      "fireDrop.updateOrderItems",
+      "fireDrop.updateOrderCustomer",
+      "fireDrop.createManualOrder",
+      "fireDrop.refundOrder",
+      "fireDrop.hideOrder",
+      "fireDrop.unhideOrder",
+      "july4.listOrders",
+      "july4.updateOrderStatus",
+      "july4.hideOrder",
+      "july4.unhideOrder"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 1592
+    }
+   },
+   {
+    "id": "checklist",
+    "label": "FOH Checklist",
+    "component": "RetailChecklist",
+    "analysis": {
+     "file": "client/src/pages/RetailChecklist.tsx",
+     "trpc": [
+      "checklist.listTemplates",
+      "checklist.getTodayRun",
+      "checklist.toggleItem",
+      "checklist.managerSignOff",
+      "checklist.setNotificationEmail"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 552
+    }
+   },
+   {
+    "id": "temp-log",
+    "label": "Temp Log",
+    "component": "FoodTempLog",
+    "analysis": {
+     "file": "client/src/pages/FoodTempLog.tsx",
+     "trpc": [
+      "foodTemp.submitCheck",
+      "foodTemp.getTodayChecks",
+      "foodTemp.getRecent"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 308
+    }
+   },
+   {
+    "id": "fire-drop",
+    "label": "Fire Drop",
+    "component": "FireDropAdmin",
+    "analysis": {
+     "file": "client/src/pages/FireDropAdmin.tsx",
+     "trpc": [
+      "fireDrop.listDrops",
+      "fireDrop.createDrop",
+      "fireDrop.updateDrop",
+      "fireDrop.deleteDrop",
+      "fireDrop.getDrop",
+      "fireDrop.addProduct",
+      "fireDrop.updateProduct",
+      "fireDrop.deleteProduct",
+      "fireDrop.addSlot",
+      "fireDrop.deleteSlot",
+      "fireDrop.listOrdersWithItems",
+      "fireDrop.updateOrderStatus",
+      "fireDrop.deleteOrder",
+      "fireDrop.exportOrdersCSV",
+      "fireDrop.getMeatTotals",
+      "fireDrop.syncToWeeklyPAR",
+      "fireDrop.resendAllConfirmationsToInternal",
+      "fireDrop.updateSlot",
+      "fireDrop.createManualOrder",
+      "fireDrop.updateOrderItems"
+     ],
+     "dialogs": [
+      "Create New Drop",
+      "Add Product",
+      "Edit Order Items",
+      "Manual Order Entry"
+     ],
+     "buttons": [
+      "Create Drop",
+      "Add Product"
+     ],
+     "storage": [],
+     "lines": 794
+    }
+   }
+  ],
+  "SalesWorkspace": [
+   {
+    "id": "cockpit",
+    "label": "Director Cockpit",
+    "component": "DirectorCockpit",
+    "analysis": {
+     "file": "client/src/pages/catering/DirectorCockpit.tsx",
+     "trpc": [
+      "portalV2.adminPendingCount",
+      "portalV2.adminListOrders",
+      "directorCockpit.kpis",
+      "directorCockpit.pipeline",
+      "directorCockpit.upcoming",
+      "directorCockpit.beosPendingSignoff",
+      "directorCockpit.todaysPlan",
+      "directorCockpit.redZone",
+      "directorCockpit.winsThisWeek",
+      "directorCockpit.morningBrief",
+      "directorCockpit.topSpenders",
+      "directorCockpit.upcomingSquare",
+      "directorCockpit.recurringClients",
+      "directorCockpit.signBeo"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Send"
+     ],
+     "storage": [],
+     "lines": 877
+    }
+   },
+   {
+    "id": "pipeline",
+    "label": "Leads Pipeline",
+    "component": "CateringLeadPipeline",
+    "analysis": {
+     "file": "client/src/pages/catering/CateringLeadPipeline.tsx",
+     "trpc": [
+      "cateringLeads.getLead",
+      "cateringLeads.getActivity",
+      "cateringLeads.logActivity",
+      "cateringLeads.sendLeadEmail",
+      "cateringLeads.updateStageWithLog",
+      "cateringLeads.updatePriority",
+      "cateringLeads.listAllLeads"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 632
+    }
+   },
+   {
+    "id": "intake",
+    "label": "Lead Intake",
+    "component": "LeadIntakeForm",
+    "analysis": {
+     "file": "client/src/pages/LeadIntakeForm.tsx",
+     "trpc": [
+      "leadCommand.syncLeads",
+      "cateringLeads.createLead"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 759
+    }
+   },
+   {
+    "id": "calendar",
+    "label": "Calendar",
+    "component": "SalesCalendar",
+    "analysis": {
+     "file": "client/src/pages/sales/SalesCalendar.tsx",
+     "trpc": [],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 472
+    }
+   },
+   {
+    "id": "quotes",
+    "label": "Quotes & Invoices",
+    "component": "CateringQuoteBuilder",
+    "analysis": {
+     "file": "client/src/pages/CateringQuoteBuilder.tsx",
+     "trpc": [
+      "finance.createQuote",
+      "finance.createInvoice"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Draft"
+     ],
+     "storage": [],
+     "lines": 1192
+    }
+   },
+   {
+    "id": "contacts",
+    "label": "Contacts",
+    "component": "SalesContacts",
+    "analysis": {
+     "file": "client/src/pages/sales/SalesContacts.tsx",
+     "trpc": [],
+     "dialogs": [
+      "editContact ?"
+     ],
+     "buttons": [
+      "Cancel",
+      "Done"
+     ],
+     "storage": [],
+     "lines": 592
+    }
+   },
+   {
+    "id": "venues",
+    "label": "Venue Library",
+    "component": "SalesVenues",
+    "analysis": {
+     "file": "client/src/pages/sales/SalesVenues.tsx",
+     "trpc": [],
+     "dialogs": [
+      "editVenue ?"
+     ],
+     "buttons": [
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 265
+    }
+   },
+   {
+    "id": "red-zone",
+    "label": "Red Zone",
+    "component": "RedZone",
+    "analysis": {
+     "file": "client/src/pages/sales/RedZone.tsx",
+     "trpc": [],
+     "dialogs": [],
+     "buttons": [
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 260
+    }
+   },
+   {
+    "id": "approval",
+    "label": "Approval Queue",
+    "component": "ApprovalQueue",
+    "analysis": {
+     "file": "client/src/pages/catering/ApprovalQueue.tsx",
+     "trpc": [
+      "portalV2.adminPendingCount",
+      "portalV2.adminListOrders",
+      "portalV2.adminGetOrder",
+      "portalV2.adminApproveOrder",
+      "portalV2.adminRejectOrder",
+      "portalV2.adminToggleMenuAccess",
+      "portalV2.adminRequestChanges",
+      "portalV2.adminMarkPaid"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 412
+    }
+   },
+   {
+    "id": "portal",
+    "label": "Client Portal Admin",
+    "component": "ClientPortalAdmin",
+    "analysis": {
+     "file": "client/src/pages/ClientPortalAdmin.tsx",
+     "trpc": [
+      "clientPortal.admin_listCompanies",
+      "clientPortal.admin_listOrders",
+      "clientPortal.admin_stats",
+      "clientPortal.admin_listMenuItems",
+      "clientPortal.getMenus",
+      "clientPortal.admin_getPricing",
+      "clientPortal.admin_getBudget",
+      "clientPortal.admin_upsertCompany",
+      "clientPortal.admin_upsertUser",
+      "clientPortal.admin_approveOrder",
+      "clientPortal.admin_updateOrderStatus",
+      "clientPortal.admin_generateInvoice",
+      "clientPortal.admin_upsertMenuItem",
+      "clientPortal.admin_deleteMenuItem",
+      "clientPortal.admin_updatePricing",
+      "clientPortal.admin_upsertBudget",
+      "clientPortal.admin_resetMonthlySpend",
+      "clientPortal.admin_listInvoices",
+      "clientPortal.admin_createInvoice",
+      "clientPortal.admin_updateInvoice",
+      "clientPortal.admin_deleteInvoice",
+      "portalV2.admin_getPreviewToken"
+     ],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 914
+    }
+   },
+   {
+    "id": "equipment",
+    "label": "Equipment Catalog",
+    "component": "EquipmentCatalog",
+    "analysis": {
+     "file": "client/src/pages/catering/EquipmentCatalog.tsx",
+     "trpc": [],
+     "dialogs": [],
+     "buttons": [],
+     "storage": [],
+     "lines": 188
+    }
+   },
+   {
+    "id": "companies",
+    "label": "Companies",
+    "component": "CompaniesTab",
+    "analysis": {
+     "file": "client/src/pages/catering/CompaniesTab.tsx",
+     "trpc": [
+      "companies.create",
+      "companies.get",
+      "companies.update",
+      "companies.list"
+     ],
+     "dialogs": [],
+     "buttons": [
+      "Cancel"
+     ],
+     "storage": [],
+     "lines": 458
+    }
+   }
+  ]
+ },
+ "routeAnalysis": {
+  "LoginPage": {
+   "file": "client/src/pages/LoginPage.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 65
+  },
+  "TeamLogin": {
+   "file": "client/src/pages/TeamLogin.tsx",
+   "trpc": [
+    "teamAuth.teamLogin"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 161
+  },
+  "AcceptInvite": {
+   "file": "client/src/pages/AcceptInvite.tsx",
+   "trpc": [
+    "users.getInvite",
+    "teamAuth.acceptInviteWithPassword"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 261
+  },
+  "Home": {
+   "file": "client/src/pages/Home.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 317
+  },
+  "KitchenWorkspace": {
+   "file": "client/src/pages/KitchenWorkspace.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 205
+  },
+  "MasterPrepEngine": {
+   "file": "client/src/pages/MasterPrepEngine.tsx",
+   "trpc": [
+    "mpe.getPrepCountForm",
+    "mpe.submitPrepCount",
+    "mpe.getIngredientCountForm",
+    "mpe.submitIngredientCount",
+    "mpe.getPrepList",
+    "mpe.generateOrderGuide",
+    "mpe.generatePrepList",
+    "mpe.markPrepItemDone",
+    "mpe.getOrderGuide",
+    "mpe.approveOrderGuide",
+    "weeklyUnified.getUnifiedBoard"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 1073
+  },
+  "MasterPrepEngineAdmin": {
+   "file": "client/src/pages/MasterPrepEngineAdmin.tsx",
+   "trpc": [
+    "mpe.getPrepItems",
+    "mpe.upsertPrepItem",
+    "mpe.deletePrepItem",
+    "mpe.getIngredients",
+    "mpe.upsertIngredient",
+    "mpe.deleteIngredient",
+    "mpe.getDishLinks",
+    "mpe.upsertDishLink",
+    "mpe.deleteDishLink",
+    "mpe.getSauceLinks",
+    "mpe.upsertSauceLink",
+    "mpe.deleteSauceLink",
+    "mpe.getVendorItems",
+    "mpe.upsertVendorItem",
+    "mpe.deleteVendorItem"
+   ],
+   "dialogs": [
+    "editing ?",
+    "Add Dish → Sub-Sauce Link",
+    "Add Sub-Sauce → Ingredient Link"
+   ],
+   "buttons": [
+    "Save"
+   ],
+   "storage": [],
+   "lines": 721
+  },
+  "RetailWorkspace": {
+   "file": "client/src/pages/RetailWorkspace.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 83
+  },
+  "PitWorkspace": {
+   "file": "client/src/pages/PitWorkspace.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 45
+  },
+  "SalesWorkspace": {
+   "file": "client/src/pages/SalesWorkspace.tsx",
+   "trpc": [
+    "portalV2.adminPendingCount",
+    "cateringLeads.listAllLeads"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 113
+  },
+  "MarketingWorkspace": {
+   "file": "client/src/pages/MarketingWorkspace.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 63
+  },
+  "AdminWorkspace": {
+   "file": "client/src/pages/AdminWorkspace.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 108
+  },
+  "CampaignLanding": {
+   "file": "client/src/pages/CampaignLanding.tsx",
+   "trpc": [
+    "attribution.getCampaign"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 105
+  },
+  "CateringOrder": {
+   "file": "client/src/pages/CateringOrder.tsx",
+   "trpc": [
+    "expressMenu.list",
+    "expressMenu.placeOrder",
+    "attribution.record",
+    "expressMenu.processPayment",
+    "expressMenu.getDeliveryFee",
+    "expressMenu.validateDiscountCode"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 1030
+  },
+  "CateringOrderConfirmation": {
+   "file": "client/src/pages/CateringOrderConfirmation.tsx",
+   "trpc": [
+    "expressMenu.getConfirmation"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 136
+  },
+  "CateringQuotePage": {
+   "file": "client/src/pages/public/CateringQuotePage.tsx",
+   "trpc": [
+    "leadCapture.submitLead"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 257
+  },
+  "CateringExperience": {
+   "file": "client/src/pages/public/CateringExperience.tsx",
+   "trpc": [
+    "eventVisualizer.uploadVenuePhoto",
+    "eventVisualizer.generateVisualization",
+    "booking.startSession",
+    "booking.saveProgress",
+    "booking.submit"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 1442
+  },
+  "QuoteAccept": {
+   "file": "client/src/pages/public/QuoteAccept.tsx",
+   "trpc": [
+    "quotes.getByToken",
+    "quotes.accept",
+    "quotes.generateDepositPaymentLink"
+   ],
+   "dialogs": [],
+   "buttons": [
+    "DEPOSIT"
+   ],
+   "storage": [],
+   "lines": 344
+  },
+  "InvoiceCheckout": {
+   "file": "client/src/pages/public/InvoiceCheckout.tsx",
+   "trpc": [
+    "finance.getInvoiceByToken",
+    "finance.createInvoicePaymentLink"
+   ],
+   "dialogs": [],
+   "buttons": [
+    "SECURELY"
+   ],
+   "storage": [],
+   "lines": 475
+  },
+  "LeadIntakeForm": {
+   "file": "client/src/pages/LeadIntakeForm.tsx",
+   "trpc": [
+    "leadCommand.syncLeads",
+    "cateringLeads.createLead"
+   ],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 759
+  },
+  "PortalLandingPage": {
+   "file": null,
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": []
+  },
+  "PortalSignInPage": {
+   "file": null,
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": []
+  },
+  "PortalAccountPage": {
+   "file": null,
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": []
+  },
+  "PortalAuthPage": {
+   "file": null,
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": []
+  },
+  "PortalBEOPage": {
+   "file": null,
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": []
+  },
+  "SalesQuotePage": {
+   "file": "client/src/pages/SalesQuotePage.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [
+    "Remove"
+   ],
+   "storage": [],
+   "lines": 570
+  },
+  "NotFound": {
+   "file": "client/src/pages/NotFound.tsx",
+   "trpc": [],
+   "dialogs": [],
+   "buttons": [],
+   "storage": [],
+   "lines": 53
+  }
+ }
+}
