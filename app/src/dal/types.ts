@@ -96,6 +96,8 @@ export interface Dal {
   samplers: SamplersRepository;
   settings: SettingsRepository;
   imports: ImportsRepository;
+  publicCheckout: PublicCheckoutRepository;
+  portal: PortalRepository;
 }
 
 // ── Orders / tickets ──────────────────────────────────────────────────────
@@ -478,3 +480,30 @@ export interface SettingsRepository {
 }
 export interface ImportJob { id: string; source: string; kind: string; status: "queued" | "needs_review" | "imported" | "failed"; rows: number; createdAt: string; }
 export interface ImportsRepository { list(): Promise<ImportJob[]>; }
+
+// ── Public checkout (demo analog of the server-side checkout Edge Function) ──
+export interface PublicCheckoutInput {
+  channel: "fire_drop" | "cuban_thursday";
+  day: "friday" | "saturday" | "thursday";
+  slotId: string | null;                       // required for fire_drop
+  items: Array<{ productId: string; qty: number }>;   // fire_drop: product ids; cuban: menu item ids
+  customer: { name: string; phone: string; email: string };
+  attribution: Record<string, string | null> | null;
+}
+export interface PublicCheckoutResult { orderRef: string; totalCents: number; pickupDate: string; pickupWindow: string; }
+export interface PublicCheckoutRepository {
+  /**
+   * Demo analog of create-checkout: validates ordering windows (ET), product
+   * caps / sold-out flags, slot capacity, and recomputes all prices/tax
+   * server-side style. Client-provided prices are never accepted.
+   */
+  checkout(input: PublicCheckoutInput): Promise<PublicCheckoutResult>;
+  trackByRef(ref: string): Promise<Preorder | null>;
+}
+
+// ── Client portal (company-facing) ───────────────────────────────────────
+export interface PortalRepository {
+  companies(): Promise<Company[]>;   // portal-enabled only
+  ordersForCompany(companyId: string): Promise<PortalOrder[]>;
+  createRequest(companyId: string, eventDate: string, items: Array<{ name: string; qty: number; unitPriceCents: number }>, requestedBy: string): Promise<PortalOrder>;
+}

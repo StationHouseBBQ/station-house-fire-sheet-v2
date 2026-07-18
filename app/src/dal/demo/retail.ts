@@ -269,4 +269,19 @@ export class DemoFireDrop implements FireDropRepository {
   orderingStatus() {
     return { friday: isOrderingOpen("friday"), saturday: isOrderingOpen("saturday") };
   }
+  /** Transactional consumption analog: bump soldQty + slot booking atomically. */
+  async consume(items: Array<{ productId: string; qty: number }>, slotId: string): Promise<void> {
+    await this.mutate("public", "drop.consume", d => {
+      for (const it of items) {
+        const p = d.products.find(x => x.id === it.productId);
+        if (!p) throw new Error("Product not found");
+        if (p.capQty !== null && p.soldQty + it.qty > p.capQty) throw new Error(`Only ${Math.max(0, p.capQty - p.soldQty)} left of ${p.name}.`);
+        p.soldQty += it.qty;
+      }
+      const s = d.slots.find(x => x.id === slotId);
+      if (!s) throw new Error("Slot not found");
+      if (s.booked >= s.capacity) throw new Error("That pickup window is full — choose another.");
+      s.booked += 1;
+    });
+  }
 }

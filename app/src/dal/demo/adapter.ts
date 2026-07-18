@@ -5,6 +5,7 @@
 import { get, set } from "idb-keyval";
 import type { AuditRecord, AuditRepository, Dal, PrepCategory, PrepEntry, PrepRepository, PrepSession, PrepStatus } from "../types";
 import { DemoFireDrop, DemoPreorders, DemoRetailFireSheet, DemoTempLog } from "./retail";
+import { DemoPortal, DemoPublicCheckout } from "./publicFlows";
 import { DemoCalendar, DemoChecklists, DemoKds, DemoMeatCosts, DemoOrders, DemoPitChecklist, DemoPitmaster, DemoPrepRecipes, DemoProteins, DemoSmokedInventory, DemoSmokerForecast } from "./domains";
 import { DemoDeliveries, DemoPacking, DemoSupplies } from "./packing";
 import { DemoCockpit, DemoCompanies, DemoContacts, DemoEquipment, DemoLeads, DemoPortalAdmin, DemoQuotes, DemoVenues } from "./catering";
@@ -100,6 +101,9 @@ export function createDemoDal(): Dal {
   const leads = new DemoLeads(audit);
   const quotes = new DemoQuotes(audit);
   const portalAdmin = new DemoPortalAdmin(audit);
+  const preorders = new DemoPreorders(audit);
+  const fireDrop = new DemoFireDrop(audit);
+  const menu = new DemoMenu(audit);
   return {
     mode: "demo",
     prep: new DemoPrep(audit),
@@ -116,9 +120,9 @@ export function createDemoDal(): Dal {
     meatCosts: new DemoMeatCosts(audit),
     pitChecklist: new DemoPitChecklist(audit, smokerForecast),
     retailFireSheet: new DemoRetailFireSheet(audit),
-    preorders: new DemoPreorders(audit),
+    preorders,
     tempLog: new DemoTempLog(audit),
-    fireDrop: new DemoFireDrop(audit),
+    fireDrop,
     packing: new DemoPacking(audit, orders),
     supplies: new DemoSupplies(audit, orders),
     deliveries: new DemoDeliveries(audit, orders),
@@ -131,7 +135,7 @@ export function createDemoDal(): Dal {
     equipment: new DemoEquipment(audit),
     cockpit: new DemoCockpit(leads, quotes, portalAdmin),
     marketing: new DemoMarketing(audit, leads),
-    menu: new DemoMenu(audit),
+    menu,
     users: new DemoUsers(audit),
     discounts: new DemoDiscounts(audit),
     events: new DemoEvents(audit),
@@ -140,5 +144,7 @@ export function createDemoDal(): Dal {
     samplers: new DemoSamplers(audit),
     settings: new DemoSettings(audit),
     imports: new DemoImports(),
+    publicCheckout: new DemoPublicCheckout(audit, fireDrop, preorders, menu),
+    portal: new DemoPortal(audit, portalAdmin),
   };
 }
