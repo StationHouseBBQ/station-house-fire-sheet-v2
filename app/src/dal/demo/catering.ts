@@ -150,7 +150,7 @@ function quoteWith(kind: "quote" | "invoice", ref: string, customer: string, eve
   const qLines = lines.map(([name, qty, unitPriceCents]) => ({ id: uid(), name, qty, unitPriceCents }));
   const t = orderTotals(qLines.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
   const created = daysAgoIso(createdDaysAgo);
-  return { id: uid(), quoteRef: ref, kind, leadId: null, customer, eventDate, lines: qLines, ...t, status, createdAt: created, updatedAt: created };
+  return { id: uid(), quoteRef: ref, publicToken: uid(), kind, leadId: null, customer, eventDate, lines: qLines, ...t, status, createdAt: created, updatedAt: created };
 }
 
 function seedQuotes(): Quote[] {
@@ -194,7 +194,7 @@ export class DemoQuotes implements QuotesRepository {
     const totals = orderTotals(lines.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
     const now = nowIso();
     const q: Quote = {
-      id: uid(), quoteRef: this.nextRef(input.kind, rows), kind: input.kind,
+      id: uid(), quoteRef: this.nextRef(input.kind, rows), publicToken: uid(), kind: input.kind,
       leadId: input.leadId, customer: input.customer.trim(), eventDate: input.eventDate,
       lines, ...totals, status: input.kind === "invoice" ? "invoiced" : "draft",
       createdAt: now, updatedAt: now,
@@ -226,7 +226,7 @@ export class DemoQuotes implements QuotesRepository {
     const totals = orderTotals(lines.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
     const now = nowIso();
     const inv: Quote = {
-      ...q, id: uid(), quoteRef: this.nextRef("invoice", rows), kind: "invoice",
+      ...q, id: uid(), quoteRef: this.nextRef("invoice", rows), publicToken: uid(), kind: "invoice",
       lines, ...totals, status: "invoiced", createdAt: now, updatedAt: now,
     };
     q.status = "accepted";
@@ -235,6 +235,24 @@ export class DemoQuotes implements QuotesRepository {
     await saveCol(QUOTES, rows);
     await this.audit.log({ actor, action: "quote.convert", entity: "quote", entityId: q.quoteRef, before: { status: "sent" }, after: { invoice: inv.quoteRef } });
     return inv;
+  }
+
+  async byToken(token: string): Promise<Quote | null> {
+    const rows = await loadCol(QUOTES, seedQuotes);
+    return rows.find(q => q.publicToken === token) ?? null;
+  }
+
+  async respondByToken(token: string, response: "accepted" | "declined"): Promise<Quote> {
+    const rows = await loadCol(QUOTES, seedQuotes);
+    const q = rows.find(x => x.publicToken === token);
+    if (!q) throw new Error("Quote not found");
+    if (q.kind !== "quote") throw new Error("Only quotes can be responded to");
+    if (q.status !== "sent" && q.status !== "draft") throw new Error("This quote is no longer open");
+    q.status = response === "accepted" ? "accepted" : "declined";
+    q.updatedAt = nowIso();
+    await saveCol(QUOTES, rows);
+    await this.audit.log({ actor: "public-quote", action: "quote.respond", entity: "quote", entityId: q.quoteRef, before: null, after: { status: q.status } });
+    return { ...q };
   }
 }
 

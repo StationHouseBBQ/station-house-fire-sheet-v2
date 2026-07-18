@@ -342,7 +342,7 @@ export interface LeadsRepository {
 export type QuoteStatus = "draft" | "sent" | "accepted" | "declined" | "invoiced" | "paid";
 export interface QuoteLine { id: string; name: string; qty: number; unitPriceCents: number; }
 export interface Quote {
-  id: string; quoteRef: string; kind: "quote" | "invoice"; leadId: string | null; customer: string;
+  id: string; quoteRef: string; publicToken: string; kind: "quote" | "invoice"; leadId: string | null; customer: string;
   eventDate: string | null; lines: QuoteLine[]; subtotalCents: number; taxCents: number; totalCents: number;
   status: QuoteStatus; createdAt: string; updatedAt: string;
 }
@@ -351,6 +351,9 @@ export interface QuotesRepository {
   create(input: { kind: "quote" | "invoice"; leadId: string | null; customer: string; eventDate: string | null; lines: Array<Omit<QuoteLine, "id">> }, actor: string): Promise<Quote>;
   updateStatus(id: string, status: QuoteStatus, actor: string): Promise<Quote>;
   convertToInvoice(id: string, actor: string): Promise<Quote>;
+  /** Public quote accept flow (token-addressed, no login). */
+  byToken(token: string): Promise<Quote | null>;
+  respondByToken(token: string, response: "accepted" | "declined"): Promise<Quote>;
 }
 export interface Contact { id: string; name: string; company: string | null; email: string; phone: string; tags: string[]; notes: string | null; updatedAt: string; }
 export interface ContactsRepository {

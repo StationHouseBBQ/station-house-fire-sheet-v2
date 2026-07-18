@@ -14,6 +14,16 @@ import { CateringRequest } from "./modules/public/CateringRequest";
 import { OrderTrackerView } from "./modules/public/OrderTracker";
 import { EventLanding } from "./modules/public/EventLanding";
 import { PortalApp } from "./modules/portal/PortalApp";
+import { QuoteAccept } from "./modules/public/QuoteAccept";
+import { ROUTE_ALIASES } from "./config/aliases";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+
+function Redirect({ to }: { to: string }) {
+  const [, nav] = useLocation();
+  useEffect(() => { nav(to, { replace: true }); }, [to, nav]);
+  return null;
+}
 
 const qc = new QueryClient();
 
@@ -39,6 +49,12 @@ export default function App() {
             <Route path="/july4" component={pub(() => <EventLanding slug="july4" fallbackTitle="4th of July" />)} />
             <Route path="/football-sunday" component={pub(() => <EventLanding slug="football-sunday" fallbackTitle="Football Sunday" />)} />
             <Route path="/portal" component={pub(PortalApp)} />
+            <Route path="/quote/:token" component={pub(QuoteAccept)} />
+            <Route path="/sales-quote/:token" component={pub(QuoteAccept)} />
+            {/* Manus route parity: legacy paths resolve to their V2 homes */}
+            {Object.entries(ROUTE_ALIASES).filter(([from, to]) => from !== to).map(([from, to]) => (
+              <Route key={from} path={from}>{() => <Redirect to={to} />}</Route>
+            ))}
             {/* Workspaces */}
             {WORKSPACES.map(ws => (
               <Route key={ws.id} path={`${ws.base}/:tabId`}>
