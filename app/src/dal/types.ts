@@ -3,6 +3,8 @@
  * directly and never a database client. Interfaces mirror the Manus tRPC
  * surface documented in docs/PARITY_MATRIX.md, translated to V2 naming.
  */
+import type { Phase1Repos } from "./supabase/phase1-repos";
+import type { ConnectionCheck } from "./supabase/client";
 
 // ── Prep (Kitchen vertical slice) ─────────────────────────────────────────
 export type PrepStatus = "not_started" | "in_progress" | "complete";
@@ -58,6 +60,12 @@ export interface AuditRepository {
 // ── Root DAL ──────────────────────────────────────────────────────────────
 export interface Dal {
   mode: "demo" | "supabase";
+  /**
+   * Phase 1 Supabase repos — present ONLY when mode === "supabase".
+   * Optional so the demo Dal (and every existing demo test) is unaffected.
+   * See src/dal/supabase/adapter.ts for the Phase-1 model.
+   */
+  phase1?: { repos: Phase1Repos; checkConnection: () => Promise<ConnectionCheck> };
   prep: PrepRepository;
   audit: AuditRepository;
   orders: OrdersRepository;
