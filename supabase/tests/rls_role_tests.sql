@@ -112,14 +112,16 @@ set local request.jwt.claims to '{"sub": "cccccccc-0000-0000-0000-000000000004",
 select ok((select count(*) from public.kitchen_orders_v) > 0,
   'kitchen can read the production view (kitchen_orders_v)');
 
+-- Phase 2 hardening: kitchen lost base-table access to orders; status
+-- writes now flow through kitchen_orders_v (see 0002_phase2_hardening.sql).
 select is(
   (with u as (
-     update public.orders set status = 'in_production'
+     update public.kitchen_orders_v set status = 'in_production'
      where id = 'bbbbbbbb-0000-0000-0000-000000000001'
      returning 1)
    select count(*)::int from u),
   1,
-  'kitchen CAN update order status');
+  'kitchen CAN update order status (via kitchen_orders_v)');
 
 -- ----------------------------------------------------------------------------
 -- owner
