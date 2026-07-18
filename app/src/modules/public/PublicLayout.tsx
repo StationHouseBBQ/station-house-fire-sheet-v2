@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
+import { NavControls } from "../../app/NavControls";
 
 /**
  * Public-facing chrome shared by every customer page (Fire Drop, Cuban
@@ -20,7 +21,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-ink-950 text-zinc-200">
       <header className="sticky top-0 z-40 border-b border-ink-700 bg-ink-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3">
-          <Link href="/fire-drop" className="flex min-h-[44px] items-center gap-3">
+          <Link href="/" className="flex min-h-[44px] items-center gap-3">
             <span aria-hidden className="grid h-9 w-9 rotate-45 place-items-center rounded-md bg-gradient-to-br from-fire to-fire-light shadow-lg shadow-fire/30">
               <span className="-rotate-45 text-sm font-black tracking-tight text-white">SH</span>
             </span>
@@ -29,7 +30,8 @@ export function PublicLayout({ children }: { children: ReactNode }) {
               <span className="block text-[11px] font-semibold uppercase tracking-wider text-fire-light">Seminole Heights</span>
             </span>
           </Link>
-          <nav aria-label="Public pages" className="ml-auto flex flex-wrap items-center gap-1">
+          <div className="ml-auto"><NavControls compact /></div>
+          <nav aria-label="Public pages" className="flex flex-wrap items-center gap-1">
             {NAV.map(n => (
               <Link key={n.href} href={n.href}
                 className="flex min-h-[44px] items-center rounded-lg px-3 text-xs font-bold uppercase tracking-wider text-zinc-400 hover:bg-ink-800 hover:text-fire-light">

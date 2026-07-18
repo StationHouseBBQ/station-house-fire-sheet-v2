@@ -4,6 +4,7 @@ import { ROLES } from "../config/roles";
 import { useRole } from "./RoleContext";
 import { ParityPending } from "../modules/shared/ParityPending";
 import { IMPLEMENTED } from "./registry";
+import { NavControls } from "./NavControls";
 
 function TabView({ ws, tab }: { ws: WorkspaceDef; tab: TabDef }) {
   const Impl = IMPLEMENTED[`${ws.id}/${tab.id}`];
@@ -18,7 +19,9 @@ export function WorkspacePage({ wsId, tabId }: { wsId: string; tabId?: string })
   const tab = ws.tabs.find(t => t.id === (tabId ?? ws.tabs[0].id)) ?? ws.tabs[0];
   return (
     <div className="flex min-h-full flex-col">
-      <nav aria-label={`${ws.label} tabs`} className="sticky top-0 z-10 flex gap-1 overflow-x-auto border-b border-ink-700 bg-ink-950/95 px-3 py-2 backdrop-blur">
+      <nav aria-label={`${ws.label} tabs`} className="sticky top-0 z-10 flex items-center gap-1 overflow-x-auto border-b border-ink-700 bg-ink-950/95 px-3 py-2 backdrop-blur">
+        <NavControls compact />
+        <span aria-hidden className="mx-1 h-6 w-px shrink-0 bg-ink-700" />
         {ws.tabs.map(t => (
           <Link key={t.id} href={`${ws.base}/${t.id}`}
             className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${t.id === tab.id ? "bg-fire/20 text-fire-light border border-fire/40" : "text-zinc-400 hover:text-zinc-200 hover:bg-ink-800"}`}>
