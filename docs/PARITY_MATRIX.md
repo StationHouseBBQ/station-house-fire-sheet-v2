@@ -127,19 +127,19 @@ Definition-of-done columns per row: source component/route · expected behaviors
 | 75 | `/orders/:id/edit` | `EditOrder` | 1607 | orders.get, menu.list, orders.updateFull, orders.updateItems | — | NS |
 | 76 | `/orders/:id/pack` | `PackingScreen` | 209 | orders.get, orders.updateStatus | — | NS |
 | 77 | `/orders/:id/packing` | `PackingSheet` | 777 | packing.getSheet, orders.get, venues.list, packing.toggleItem, packing.toggleAddon, packing.addCustomItem, packing.removeItem, packing.updateQty, packing.complete, packing.regenerate | — | NS |
-| 78 | `/fire-drop` | `FireDropPage` | 907 | fireDrop.placeOrder, attribution.record, fireDrop.processPayment, fireDrop.getActiveDrop | — | NS |
-| 79 | `/fire-drop/confirmation` | `FireDropConfirmation` | 130 | fireDrop.getOrderConfirmation | — | NS |
-| 80 | `/fathers-day` | `FathersDayLanding` | 708 | fathersDay.getProducts, fathersDay.getDinoAvailability, fathersDay.placeOrder, attribution.record | — | NS |
+| 78 | `/fire-drop` | `FireDropPage` | 907 | fireDrop.placeOrder, attribution.record, fireDrop.processPayment, fireDrop.getActiveDrop | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 79 | `/fire-drop/confirmation` | `FireDropConfirmation` | 130 | fireDrop.getOrderConfirmation | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 80 | `/fathers-day` | `FathersDayLanding` | 708 | fathersDay.getProducts, fathersDay.getDinoAvailability, fathersDay.placeOrder, attribution.record | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
 | 81 | `/fathers-day/confirmation` | `FathersDayConfirmation` | 104 | — | — | NS |
 | 82 | `/c/:slug` | `CampaignLanding` | 105 | attribution.getCampaign | — | NS |
-| 83 | `/cuban-thursday` | `CubanThursdayLanding` | 801 | cubanThursday.getProducts, cubanThursday.placeOrder, attribution.record | — | NS |
-| 84 | `/cuban-thursday/confirmation` | `CubanThursdayConfirmation` | 83 | — | — | NS |
-| 85 | `/catering-request` | `CateringRequestForm` | 351 | publicCateringForm.submitLead | — | NS |
-| 86 | `/catering-landing` | `PublicCateringLanding` | 587 | publicCateringForm.submitLead | — | NS |
-| 87 | `/july4` | `July4Landing` | 183 | — | — | NS |
+| 83 | `/cuban-thursday` | `CubanThursdayLanding` | 801 | cubanThursday.getProducts, cubanThursday.placeOrder, attribution.record | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 84 | `/cuban-thursday/confirmation` | `CubanThursdayConfirmation` | 83 | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 85 | `/catering-request` | `CateringRequestForm` | 351 | publicCateringForm.submitLead | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 86 | `/catering-landing` | `PublicCateringLanding` | 587 | publicCateringForm.submitLead | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 87 | `/july4` | `July4Landing` | 183 | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
 | 88 | `/july4-drop` | `July4DropPage` | 857 | july4.getProducts, july4.getDiamondAvailability, july4.placeOrder, attribution.record | — | NS |
 | 89 | `/july4-drop/confirmation` | `July4DropConfirmation` | — | — | — | NS |
-| 90 | `/football-sunday` | `FootballSundayPage` | 785 | footballSunday.getProducts, fireDrop.placeOrder, attribution.record | — | NS |
+| 90 | `/football-sunday` | `FootballSundayPage` | 785 | footballSunday.getProducts, fireDrop.placeOrder, attribution.record | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
 | 91 | `/catering-drop` | `CateringDropPage` | 650 | cateringDrop.getProducts, cateringDrop.placeOrder, attribution.record, cateringDrop.validateDiscountCode | — | NS |
 | 92 | `/catering-drop/confirmation` | `CateringDropConfirmation` | — | — | — | NS |
 | 93 | `/order` | `CateringOrder` | 1030 | expressMenu.list, expressMenu.placeOrder, attribution.record, expressMenu.processPayment, expressMenu.getDeliveryFee, expressMenu.validateDiscountCode | sub-tabs: Feeds 10 / Feeds 20 / Feeds 30 / Feeds 50 | NS |
@@ -154,8 +154,8 @@ Definition-of-done columns per row: source component/route · expected behaviors
 | 102 | `/shop` | `CustomerAppLayout` | 229 | — | — | NS |
 | 103 | `/shop/checkout` | `CustomerAppLayout` | 229 | — | — | NS |
 | 104 | `/shop/confirmed` | `CustomerAppLayout` | 229 | — | — | NS |
-| 105 | `/track` | `CustomerAppLayout` | 229 | — | — | NS |
-| 106 | `/order-tracker` | `CustomerAppLayout` | 229 | — | — | NS |
+| 105 | `/track` | `CustomerAppLayout` | 229 | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 106 | `/order-tracker` | `CustomerAppLayout` | 229 | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
 | 107 | `/app/book` | `CateringExperience` | 1442 | eventVisualizer.uploadVenuePhoto, eventVisualizer.generateVisualization, booking.startSession, booking.saveProgress, booking.submit | sub-tabs: Mini Vegetable Spring Rolls / Mini Beef Empanadas / Bruschetta / Coconut Shrimp Skewers / Chicken Skewers / Caprese Skewers / Bite-Size Chicken & Waffles / Mini Cubanitos / Pretzel Sliders / Smoked Wings | NS |
 | 108 | `/quote/:token` | `QuoteAccept` | 344 | quotes.getByToken, quotes.accept, quotes.generateDepositPaymentLink | — | NS |
 | 109 | `/invoice/checkout/:token` | `InvoiceCheckout` | 475 | finance.getInvoiceByToken, finance.createInvoicePaymentLink | — | NS |
@@ -165,9 +165,9 @@ Definition-of-done columns per row: source component/route · expected behaviors
 
 | # | Route | Component | LOC | Data dependencies (tRPC) | Nested views / dialogs | Status |
 |---|-------|-----------|-----|--------------------------|------------------------|--------|
-| 111 | `/portal` | `PortalLandingPage` | — | — | — | NS |
-| 112 | `/portal/order` | `PortalLandingPage` | — | — | — | NS |
-| 113 | `/portal/sign-in` | `PortalSignInPage` | — | — | — | NS |
+| 111 | `/portal` | `PortalLandingPage` | — | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 112 | `/portal/order` | `PortalLandingPage` | — | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
+| 113 | `/portal/sign-in` | `PortalSignInPage` | — | — | — | IP — implemented in app/src/modules/public|portal (demo checkout: ET windows, caps, slots, server-computed totals enforced) |
 | 114 | `/portal/account` | `PortalAccountPage` | — | — | — | NS |
 | 115 | `/portal/auth` | `PortalAuthPage` | — | — | — | NS |
 | 116 | `/portal/beo/:orderId` | `PortalBEOPage` | — | — | — | NS |
