@@ -1,5 +1,6 @@
 /** Demo repositories: retail fire sheet, preorders, temp log, fire drop admin. */
 import { loadCol, saveCol, uid, nowIso } from "./store";
+import { FIRE_DROP_PRODUCTS } from "./menuData";
 import { todayEt, mondayOfWeek } from "./domains";
 import { orderTotals } from "../../lib/money";
 import { activeDropWeekend, isOrderingOpen } from "../../lib/time";
@@ -189,11 +190,9 @@ function dropSeed(): FireDrop[] {
   const windows = ["11AM–12PM", "12–1PM", "1–2PM"];
   return [{
     id: uid(), title: "Tampa Diamonds", fridayDate: friday, saturdayDate: saturday, soldOut: false,
-    products: [
-      { id: uid(), name: "Tampa Diamonds (lb)", priceCents: 2900, capQty: 20, soldQty: 5, soldOut: false, sortOrder: 1 },
-      { id: uid(), name: "Party Sampler · Feeds 10", priceCents: 26900, capQty: 6, soldQty: 1, soldOut: false, sortOrder: 2 },
-      { id: uid(), name: "Mac & Cheese (pan)", priceCents: 1200, capQty: null, soldQty: 1, soldOut: false, sortOrder: 3 },
-    ],
+    // Real drop-1 catalog from the Manus DB snapshot (see menuData.ts).
+    products: FIRE_DROP_PRODUCTS.filter(p => p.active)
+      .map(p => ({ id: uid(), name: p.name, priceCents: p.priceCents, capQty: p.capQty, soldQty: 0, soldOut: false, sortOrder: p.sortOrder })),
     slots: windows.flatMap(w => ([
       { id: uid(), day: "friday" as const, window: w, capacity: 8, booked: w === "11AM–12PM" ? 1 : w === "12–1PM" ? 1 : 0 },
       { id: uid(), day: "saturday" as const, window: w, capacity: 8, booked: w === "11AM–12PM" ? 1 : 0 },

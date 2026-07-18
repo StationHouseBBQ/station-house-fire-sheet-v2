@@ -5,6 +5,7 @@
  * and the Walk-In Sampler may only contain the five approved proteins.
  */
 import { loadCol, saveCol, uid, nowIso } from "./store";
+import { MENU_CATEGORIES as CATALOG_CATEGORIES, MENU_ITEMS as CATALOG_ITEMS } from "./menuData";
 import type {
   AppUser, AuditRepository, DiscountCode, DiscountsRepository, EventsRepository, ImportJob,
   ImportsRepository, MenuCategory, MenuItem, MenuRepository, OrderGuideRepository, OrderGuideRow,
@@ -17,37 +18,31 @@ const MENU_CATS = "menuCategories.v1";
 const MENU_ITEMS = "menuItems.v1";
 const THURSDAY_ONLY_CATEGORY = "Thursday Only";
 
-// Manus category order is preserved verbatim.
-const CATEGORY_ORDER = ["Smoked Meats", "Sandwiches", "Thursday Only", "Sides", "Desserts", "Drinks", "Retail"];
-
-function catId(name: string): string {
-  return "mc-" + name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+function catId(sourceId: string): string {
+  return "mc-" + sourceId.replace(/_/g, "-");
 }
+// Categories/items come verbatim from the Manus DB snapshot (see menuData.ts).
 function seedMenuCategories(): MenuCategory[] {
-  return CATEGORY_ORDER.map((name, i) => ({ id: catId(name), name, sortOrder: i, active: true }));
+  return CATALOG_CATEGORIES.map(c => ({ id: catId(c.id), name: c.name, sortOrder: c.sortOrder, active: c.active }));
 }
 function seedMenuItems(): MenuItem[] {
-  let sort = 0;
-  const mk = (category: string, name: string, description: string, priceCents: number, thursdayOnly = false): MenuItem =>
-    ({ id: uid(), categoryId: catId(category), name, description, priceCents, active: true, thursdayOnly, sortOrder: sort++, updatedAt: nowIso() });
-  return [
-    mk("Smoked Meats", "Pulled Pork (1/2 lb)", "Oak-smoked pork butt, pulled to order.", 950),
-    mk("Smoked Meats", "Sliced Brisket (1/2 lb)", "14-hour post oak packer brisket.", 1450),
-    mk("Smoked Meats", "St. Louis Ribs (half rack)", "Cherry + oak, guava glaze optional.", 1600),
-    mk("Smoked Meats", "Smoked Sausage Link", "Local Ybor sausage, snappy casing.", 550),
-    mk("Smoked Meats", "Chicken Quarter", "Alabama white on the side.", 750),
-    mk("Sandwiches", "Pulled Pork Sandwich", "House BBQ sauce, slaw on request.", 1150),
-    mk("Sandwiches", "Brisket Sandwich", "Sliced or chopped, pickles & onion.", 1450),
-    mk("Thursday Only", "Cuban Sandwich", "Mojo roast pork, ham, Swiss, pickles, pressed Cuban bread.", 1250, true),
-    mk("Thursday Only", "Brisket Smash Burger", "Double smashed brisket-blend patties, American cheese.", 1350, true),
-    mk("Sides", "Mac & Cheese", "Three-cheese mornay, baked.", 450),
-    mk("Sides", "Collard Greens", "Braised with smoked turkey stock.", 450),
-    mk("Sides", "Coleslaw", "Vinegar-forward house slaw.", 350),
-    mk("Desserts", "Banana Pudding", "Nilla wafers, fresh whipped cream.", 500),
-    mk("Drinks", "Sweet Tea", "Brewed daily.", 300),
-    mk("Drinks", "Fresh Lemonade", "Squeezed in-house.", 350),
-    mk("Retail", "House Rub Jar", "The rub on everything, 8 oz jar.", 1200),
-  ];
+  const catSort = new Map(CATALOG_CATEGORIES.map(c => [c.id, c.sortOrder]));
+  return CATALOG_ITEMS.map(r => {
+    const needsPrice = r.priceCents == null;
+    return {
+      id: uid(),
+      categoryId: catId(r.categoryId),
+      name: r.name,
+      // needsPrice convention: null snapshot price seeds as 0 cents with this description.
+      description: needsPrice ? "Price pending owner confirmation" : (r.unit ? `Sold by ${r.unit}.` : ""),
+      priceCents: r.priceCents ?? 0,
+      active: r.active,
+      // Menu truth: Cubans & Smash Burgers are Thursday-only, no exceptions.
+      thursdayOnly: r.thursdayOnly || /cuban|smash burger/i.test(r.name),
+      sortOrder: (catSort.get(r.categoryId) ?? 0) * 1000 + r.sortOrder,
+      updatedAt: nowIso(),
+    };
+  });
 }
 
 export class DemoMenu implements MenuRepository {

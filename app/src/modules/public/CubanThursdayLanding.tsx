@@ -41,7 +41,7 @@ export function CubanThursdayLanding() {
   const closed = orderingClosedNow();
 
   const menu = useMemo(
-    () => (items ?? []).filter(i => i.thursdayOnly && i.active).sort((a, b) => a.sortOrder - b.sortOrder),
+    () => (items ?? []).filter(i => i.thursdayOnly && i.active && i.priceCents > 0).sort((a, b) => a.sortOrder - b.sortOrder),
     [items],
   );
 
