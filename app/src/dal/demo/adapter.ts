@@ -4,6 +4,7 @@
  */
 import { get, set } from "idb-keyval";
 import type { AuditRecord, AuditRepository, Dal, PrepCategory, PrepEntry, PrepRepository, PrepSession, PrepStatus } from "../types";
+import { DemoFireDrop, DemoPreorders, DemoRetailFireSheet, DemoTempLog } from "./retail";
 import { DemoCalendar, DemoChecklists, DemoKds, DemoMeatCosts, DemoOrders, DemoPitChecklist, DemoPitmaster, DemoPrepRecipes, DemoProteins, DemoSmokedInventory, DemoSmokerForecast } from "./domains";
 import { seedPrepSession } from "./seed";
 import { etParts } from "../../lib/time";
@@ -106,5 +107,9 @@ export function createDemoDal(): Dal {
     pitmaster: new DemoPitmaster(audit),
     meatCosts: new DemoMeatCosts(audit),
     pitChecklist: new DemoPitChecklist(audit, smokerForecast),
+    retailFireSheet: new DemoRetailFireSheet(audit),
+    preorders: new DemoPreorders(audit),
+    tempLog: new DemoTempLog(audit),
+    fireDrop: new DemoFireDrop(audit),
   };
 }

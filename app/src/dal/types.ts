@@ -71,6 +71,10 @@ export interface Dal {
   pitmaster: PitmasterRepository;
   meatCosts: MeatCostsRepository;
   pitChecklist: PitChecklistRepository;
+  retailFireSheet: RetailFireSheetRepository;
+  preorders: PreordersRepository;
+  tempLog: TempLogRepository;
+  fireDrop: FireDropRepository;
 }
 
 // ── Orders / tickets ──────────────────────────────────────────────────────
@@ -199,4 +203,64 @@ export interface PitChecklistRepository {
   toggle(taskId: string, actor: string): Promise<void>;
   syncFromForecast(actor: string): Promise<void>;
   addTask(label: string, actor: string): Promise<void>;
+}
+
+// ── Retail daily fire sheet ───────────────────────────────────────────────
+export type RetailItemStatus = "queued" | "firing" | "in_case" | "sold_out_86";
+export interface RetailFireItem { id: string; name: string; unit: string; qty: number; status: RetailItemStatus; updatedAt: string; }
+export interface RetailSession { id: string; serviceDate: string; submittedToKitchenAt: string | null; items: RetailFireItem[]; }
+export interface RetailFireSheetRepository {
+  getSession(): Promise<RetailSession>;
+  addItem(input: { name: string; unit: string; qty: number }, actor: string): Promise<RetailFireItem>;
+  updateItemStatus(itemId: string, status: RetailItemStatus, actor: string): Promise<RetailFireItem>;
+  updateItemQty(itemId: string, qty: number, actor: string): Promise<RetailFireItem>;
+  removeItem(itemId: string, actor: string): Promise<void>;
+  submitToKitchen(actor: string): Promise<RetailSession>;
+  syncFromPar(actor: string): Promise<RetailSession>;
+}
+
+// ── Retail preorders (Fire Drop + Cuban Thursday customer orders) ─────────
+export type PreorderStatus = "pending" | "paid" | "ready" | "picked_up" | "cancelled" | "refunded";
+export interface Preorder {
+  id: string; orderRef: string; channel: "fire_drop" | "cuban_thursday";
+  customer: string; phone: string; email: string;
+  pickupDate: string; pickupWindow: string;
+  items: Array<{ id: string; name: string; qty: number; unitPriceCents: number }>;
+  subtotalCents: number; taxCents: number; totalCents: number;
+  status: PreorderStatus; hidden: boolean;
+  statusHistory: Array<{ from: PreorderStatus | null; to: PreorderStatus; at: string; actor: string }>;
+  createdAt: string; updatedAt: string;
+}
+export interface PreordersRepository {
+  list(filter?: { channel?: "fire_drop" | "cuban_thursday" | "all"; status?: PreorderStatus | "all"; includeHidden?: boolean }): Promise<Preorder[]>;
+  updateStatus(id: string, status: PreorderStatus, actor: string): Promise<Preorder>;
+  setHidden(id: string, hidden: boolean, actor: string): Promise<Preorder>;
+  createManual(input: { channel: "fire_drop" | "cuban_thursday"; customer: string; phone: string; email: string; pickupDate: string; pickupWindow: string; items: Array<{ name: string; qty: number; unitPriceCents: number }> }, actor: string): Promise<Preorder>;
+  stats(): Promise<{ activeCount: number; fridayCount: number; saturdayCount: number; activeRevenueCents: number }>;
+}
+
+// ── Temp log ──────────────────────────────────────────────────────────────
+export interface TempCheck { id: string; station: string; tempF: number; withinRange: boolean; rangeNote: string; takenBy: string; takenAt: string; }
+export interface TempLogRepository {
+  stations(): Array<{ name: string; minF: number | null; maxF: number | null; note: string }>;
+  todayChecks(): Promise<TempCheck[]>;
+  submitCheck(station: string, tempF: number, actor: string): Promise<TempCheck>;
+}
+
+// ── Fire Drop admin ───────────────────────────────────────────────────────
+export interface FireDropProduct { id: string; name: string; priceCents: number; capQty: number | null; soldQty: number; soldOut: boolean; sortOrder: number; }
+export interface FireDropSlot { id: string; day: "friday" | "saturday"; window: string; capacity: number; booked: number; }
+export interface FireDrop {
+  id: string; title: string; fridayDate: string; saturdayDate: string; soldOut: boolean;
+  products: FireDropProduct[]; slots: FireDropSlot[];
+}
+export interface FireDropRepository {
+  currentDrop(): Promise<FireDrop>;
+  updateDrop(patch: { title?: string; soldOut?: boolean }, actor: string): Promise<FireDrop>;
+  upsertProduct(p: Omit<FireDropProduct, "soldQty"> & { id?: string }, actor: string): Promise<FireDrop>;
+  removeProduct(productId: string, actor: string): Promise<FireDrop>;
+  toggleProductSoldOut(productId: string, actor: string): Promise<FireDrop>;
+  upsertSlot(s: Omit<FireDropSlot, "booked"> & { id?: string }, actor: string): Promise<FireDrop>;
+  removeSlot(slotId: string, actor: string): Promise<FireDrop>;
+  orderingStatus(): { friday: boolean; saturday: boolean };
 }
