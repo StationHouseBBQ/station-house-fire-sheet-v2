@@ -222,6 +222,13 @@ export class DemoDeliveries implements DeliveriesRepository {
     }, "delivery.advance");
   }
 
+  setStatus(id: string, status: DeliveryStatus, actor: string): Promise<Delivery> {
+    return this.mutate(id, actor, d => {
+      if (!STATUS_FLOW.includes(status)) throw new Error(`Unknown delivery status: ${status}`);
+      d.status = status;
+    }, "delivery.setStatus");
+  }
+
   updateNotes(id: string, notes: string, actor: string): Promise<Delivery> {
     return this.mutate(id, actor, d => { d.notes = notes; }, "delivery.notes");
   }

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { Delivery, DeliveryStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { useUndo } from "../shared/undo";
 
 /**
  * Packing · Deliveries — V2 implementation of the Manus DeliveriesTab.
@@ -37,6 +38,7 @@ export function DeliveriesView() {
   const { actor } = useRole();
   const qc = useQueryClient();
   const dal = getDal();
+  const undo = useUndo();
   const [sync, setSync] = useState<Sync>("idle");
   const drivers = dal.deliveries.drivers();
 
@@ -58,8 +60,15 @@ export function DeliveriesView() {
     onSuccess: invalidate,
   });
   const advanceMut = useMutation({
-    mutationFn: (id: string) => withSync(dal.deliveries.advance(id, actor)),
-    onSuccess: invalidate,
+    mutationFn: ({ id }: { id: string; from: DeliveryStatus; customer: string }) =>
+      withSync(dal.deliveries.advance(id, actor)),
+    onSuccess: (updated, { id, from, customer }) => {
+      invalidate();
+      undo.offer(`${customer} → ${STATUS_META[updated.status].label}`, async () => {
+        await withSync(dal.deliveries.setStatus(id, from, actor));
+        invalidate();
+      });
+    },
   });
   const notesMut = useMutation({
     mutationFn: ({ id, notes }: { id: string; notes: string }) =>
@@ -92,7 +101,7 @@ export function DeliveriesView() {
           {rows.map(d => (
             <DeliveryRow key={d.id} delivery={d} drivers={drivers}
               onAssign={driver => assignMut.mutate({ id: d.id, driver })}
-              onAdvance={() => advanceMut.mutate(d.id)}
+              onAdvance={() => advanceMut.mutate({ id: d.id, from: d.status, customer: d.customer })}
               onNotes={notes => notesMut.mutate({ id: d.id, notes })} />
           ))}
         </ul>

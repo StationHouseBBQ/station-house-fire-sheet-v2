@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { OrderChannel, OrderStatus, OrderTicket } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
 
 /**
@@ -51,6 +52,7 @@ export function FireSheets() {
   const { actor } = useRole();
   const dal = getDal();
   const qc = useQueryClient();
+  const undo = useUndo();
   const today = todayEt();
   const [selected, setSelected] = useState<string>(today);
   const [sync, setSync] = useState<Sync>("idle");
@@ -72,8 +74,17 @@ export function FireSheets() {
   const invalidate = () => qc.invalidateQueries({ queryKey: ["orders"] });
 
   const statusMut = useMutation({
-    mutationFn: ({ id, to }: { id: string; to: OrderStatus }) => withSync(dal.orders.updateStatus(id, to, actor)),
-    onSuccess: invalidate,
+    mutationFn: ({ id, to }: { id: string; to: OrderStatus; from: OrderStatus; customer: string }) =>
+      withSync(dal.orders.updateStatus(id, to, actor)),
+    onSuccess: (_order, { id, to, from, customer }) => {
+      invalidate();
+      if (from !== to) {
+        undo.offer(`${customer} → ${STATUS_META[to].label}`, async () => {
+          await withSync(dal.orders.updateStatus(id, from, actor));
+          invalidate();
+        });
+      }
+    },
   });
   const notesMut = useMutation({
     mutationFn: ({ id, notes }: { id: string; notes: string }) => withSync(dal.orders.updateNotes(id, notes, actor)),
@@ -131,7 +142,7 @@ export function FireSheets() {
             )}
             {orders.map(o => (
               <Ticket key={o.id} order={o}
-                onAdvance={to => statusMut.mutate({ id: o.id, to })}
+                onAdvance={to => statusMut.mutate({ id: o.id, to, from: o.status, customer: o.customer })}
                 onSaveNotes={notes => notesMut.mutate({ id: o.id, notes })}
                 busy={statusMut.isPending || notesMut.isPending} />
             ))}

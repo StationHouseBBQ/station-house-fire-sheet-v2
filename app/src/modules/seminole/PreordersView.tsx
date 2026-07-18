@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { Preorder, PreorderStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { useUndo } from "../shared/undo";
 import { formatCents, orderTotals } from "../../lib/money";
 import { activeDropWeekend } from "../../lib/time";
 
@@ -60,6 +61,7 @@ export function PreordersView() {
   const { actor } = useRole();
   const dal = getDal();
   const qc = useQueryClient();
+  const undo = useUndo();
   const [sync, setSync] = useState<Sync>("idle");
   const [channel, setChannel] = useState<ChannelFilter>("all");
   const [day, setDay] = useState<PickupDayTab>("all");
@@ -93,9 +95,20 @@ export function PreordersView() {
   };
 
   const statusMut = useMutation({
-    mutationFn: ({ id, to }: { id: string; to: PreorderStatus }) =>
+    mutationFn: ({ id, to }: { id: string; to: PreorderStatus; from: PreorderStatus; customer: string }) =>
       withSync(dal.preorders.updateStatus(id, to, actor)),
-    onSuccess: invalidate,
+    onSuccess: (_order, { id, to, from, customer }) => {
+      invalidate();
+      if (from !== to) {
+        undo.offer(
+          to === "picked_up" ? `${customer} picked up — undo?` : `${customer} → ${STATUS_META[to].label} — undo?`,
+          async () => {
+            await withSync(dal.preorders.updateStatus(id, from, actor));
+            invalidate();
+          },
+        );
+      }
+    },
   });
   const hideMut = useMutation({
     mutationFn: ({ id, hidden }: { id: string; hidden: boolean }) =>
@@ -244,7 +257,7 @@ export function PreordersView() {
                 {g.orders.map(o => (
                   <OrderCard key={o.id} order={o}
                     busy={statusMut.isPending}
-                    onStatus={to => statusMut.mutate({ id: o.id, to })}
+                    onStatus={to => statusMut.mutate({ id: o.id, to, from: o.status, customer: o.customer })}
                     onHide={hidden => hideMut.mutate({ id: o.id, hidden })} />
                 ))}
               </ul>

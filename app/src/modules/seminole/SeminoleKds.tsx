@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
-import type { KdsStage, KdsTicket, Preorder } from "../../dal/types";
+import type { KdsStage, KdsTicket, Preorder, PreorderStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
 
 /**
@@ -27,6 +28,7 @@ export function SeminoleKds() {
   const { actor } = useRole();
   const dal = getDal();
   const qc = useQueryClient();
+  const undo = useUndo();
   const date = todayEt();
 
   const { data: tickets = [], isLoading } = useQuery({
@@ -36,8 +38,14 @@ export function SeminoleKds() {
   });
 
   const handOffMut = useMutation({
-    mutationFn: (ticketId: string) => dal.kds.advance(ticketId, "handed_off", actor),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["kds", "seminole", date] }),
+    mutationFn: ({ id }: { id: string; orderRef: string }) => dal.kds.advance(id, "handed_off", actor),
+    onSuccess: (_ticket, { id, orderRef }) => {
+      void qc.invalidateQueries({ queryKey: ["kds", "seminole", date] });
+      undo.offer(`${orderRef} handed off — undo?`, async () => {
+        await dal.kds.advance(id, "ready", actor);
+        await qc.invalidateQueries({ queryKey: ["kds", "seminole", date] });
+      });
+    },
   });
 
   // FOH pickup board: today's active preorders (any channel), 10s refresh.
@@ -47,8 +55,15 @@ export function SeminoleKds() {
     refetchInterval: 10_000,
   });
   const bumpMut = useMutation({
-    mutationFn: (id: string) => dal.preorders.updateStatus(id, "picked_up", actor),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["preorders"] }),
+    mutationFn: ({ id }: { id: string; from: PreorderStatus; customer: string }) =>
+      dal.preorders.updateStatus(id, "picked_up", actor),
+    onSuccess: (_order, { id, from, customer }) => {
+      void qc.invalidateQueries({ queryKey: ["preorders"] });
+      undo.offer(`${customer} picked up — undo?`, async () => {
+        await dal.preorders.updateStatus(id, from, actor);
+        await qc.invalidateQueries({ queryKey: ["preorders"] });
+      });
+    },
   });
 
   const pickups = preorders
@@ -88,7 +103,7 @@ export function SeminoleKds() {
                   {group.length === 0 && <p className="py-6 text-center text-sm text-zinc-600">Empty</p>}
                   {group.map(t => (
                     <TicketCard key={t.id} ticket={t}
-                      onHandOff={stage === "ready" ? () => handOffMut.mutate(t.id) : undefined}
+                      onHandOff={stage === "ready" ? () => handOffMut.mutate({ id: t.id, orderRef: t.orderRef }) : undefined}
                       busy={handOffMut.isPending} />
                   ))}
                 </div>
@@ -110,7 +125,7 @@ export function SeminoleKds() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {pickups.map(p => (
                 <PickupCard key={p.id} order={p} busy={bumpMut.isPending}
-                  onBump={() => bumpMut.mutate(p.id)} />
+                  onBump={() => bumpMut.mutate({ id: p.id, from: p.status, customer: p.customer })} />
               ))}
             </div>
           )}

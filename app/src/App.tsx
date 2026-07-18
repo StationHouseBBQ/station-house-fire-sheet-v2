@@ -3,6 +3,7 @@ import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router } from "wouter";
 import { RoleProvider } from "./app/RoleContext";
+import { UndoProvider } from "./modules/shared/undo";
 import { Hub, NotFound, WorkspacePage } from "./app/Shell";
 import { WORKSPACES } from "./config/nav";
 
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <QueryClientProvider client={qc}>
       <RoleProvider>
+        <UndoProvider>
         <Router hook={useHashLocation}>
           <Switch>
             <Route path="/" component={Hub} />
@@ -69,6 +71,7 @@ export default function App() {
             <Route component={NotFound} />
           </Switch>
         </Router>
+        </UndoProvider>
       </RoleProvider>
     </QueryClientProvider>
   );

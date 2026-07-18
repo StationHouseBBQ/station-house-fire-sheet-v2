@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { KdsStage, KdsTicket } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
 
 /**
@@ -27,6 +28,13 @@ const ADVANCE: Partial<Record<KdsStage, { to: KdsStage; label: string }>> = {
   ready: { to: "handed_off", label: "🤝 Hand Off" },
 };
 
+/** One-tap back-step targets for lanes that can move a ticket back. */
+const BACK: Partial<Record<KdsStage, KdsStage>> = { expo: "kitchen", ready: "expo" };
+
+const STAGE_LABEL: Record<KdsStage, string> = {
+  kitchen: "Kitchen", expo: "Expo", ready: "Ready", handed_off: "Handed off",
+};
+
 function todayEt(): string {
   const p = etParts(new Date());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
@@ -36,6 +44,7 @@ export function ExpoKds() {
   const { actor } = useRole();
   const dal = getDal();
   const qc = useQueryClient();
+  const undo = useUndo();
   const today = todayEt();
   const [sync, setSync] = useState<Sync>("idle");
 
@@ -62,9 +71,18 @@ export function ExpoKds() {
     onSuccess: invalidate,
   });
   const advanceMut = useMutation({
-    mutationFn: ({ ticketId, to }: { ticketId: string; to: KdsStage }) =>
+    mutationFn: ({ ticketId, to }: { ticketId: string; to: KdsStage; from?: KdsStage; orderRef?: string }) =>
       withSync(dal.kds.advance(ticketId, to, actor)),
-    onSuccess: invalidate,
+    onSuccess: (_ticket, { ticketId, to, from, orderRef }) => {
+      void invalidate();
+      // Back-steps (no `from`) are their own undo — only forward bumps get one.
+      if (from && orderRef && from !== to) {
+        undo.offer(`${orderRef} → ${STAGE_LABEL[to]}`, async () => {
+          await withSync(dal.kds.advance(ticketId, from, actor));
+          await invalidate();
+        });
+      }
+    },
   });
 
   const byStage = useMemo(() => {
@@ -91,7 +109,9 @@ export function ExpoKds() {
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_16rem]">
         <div className="grid gap-3 md:grid-cols-3">
-          {LANES.map(lane => (
+          {LANES.map(lane => {
+            const back = BACK[lane.stage];
+            return (
             <section key={lane.stage} className="rounded-xl border border-ink-700 bg-ink-950/60 p-2">
               <header className={`rounded-lg border bg-ink-900 px-3 py-2 ${lane.accent}`}>
                 <p className="text-sm font-black uppercase tracking-wider">
@@ -110,14 +130,16 @@ export function ExpoKds() {
                     onToggle={(itemId, checkLane) => checkMut.mutate({ ticketId: t.id, itemId, lane: checkLane })}
                     onAdvance={() => {
                       const a = ADVANCE[lane.stage];
-                      if (a) advanceMut.mutate({ ticketId: t.id, to: a.to });
+                      if (a) advanceMut.mutate({ ticketId: t.id, to: a.to, from: lane.stage, orderRef: t.orderRef });
                     }}
+                    onBack={back ? () => advanceMut.mutate({ ticketId: t.id, to: back }) : undefined}
                     advanceLabel={ADVANCE[lane.stage]?.label ?? ""}
                     busy={advanceMut.isPending} />
                 ))}
               </div>
             </section>
-          ))}
+            );
+          })}
         </div>
 
         {/* All-day totals */}
@@ -152,12 +174,13 @@ export function ExpoKds() {
   );
 }
 
-function TicketCard({ ticket, lane, checksEnabled, onToggle, onAdvance, advanceLabel, busy }: {
+function TicketCard({ ticket, lane, checksEnabled, onToggle, onAdvance, onBack, advanceLabel, busy }: {
   ticket: KdsTicket;
   lane: "kitchen" | "expo";
   checksEnabled: boolean;
   onToggle: (itemId: string, lane: "kitchen" | "expo") => void;
   onAdvance: () => void;
+  onBack?: () => void;
   advanceLabel: string;
   busy: boolean;
 }) {
@@ -193,13 +216,23 @@ function TicketCard({ ticket, lane, checksEnabled, onToggle, onAdvance, advanceL
           );
         })}
       </ul>
-      {advanceLabel && (
-        <button onClick={onAdvance} disabled={busy}
-          className={`mt-2 min-h-[44px] w-full rounded-lg px-3 py-2 text-sm font-black uppercase tracking-wide text-white disabled:opacity-50 ${
-            allChecked || !checksEnabled ? "bg-fire" : "bg-ink-700 text-zinc-300"
-          }`}>
-          {advanceLabel}
-        </button>
+      {(advanceLabel !== "" || onBack) && (
+        <div className="mt-2 flex items-stretch gap-2">
+          {onBack && (
+            <button onClick={onBack} disabled={busy} aria-label="Move back a stage"
+              className="min-h-[44px] min-w-[44px] shrink-0 rounded-lg border border-ink-700 bg-ink-950 px-3 text-lg font-black text-zinc-300 hover:text-white disabled:opacity-50">
+              ↩
+            </button>
+          )}
+          {advanceLabel !== "" && (
+            <button onClick={onAdvance} disabled={busy}
+              className={`min-h-[44px] flex-1 rounded-lg px-3 py-2 text-sm font-black uppercase tracking-wide text-white disabled:opacity-50 ${
+                allChecked || !checksEnabled ? "bg-fire" : "bg-ink-700 text-zinc-300"
+              }`}>
+              {advanceLabel}
+            </button>
+          )}
+        </div>
       )}
     </article>
   );

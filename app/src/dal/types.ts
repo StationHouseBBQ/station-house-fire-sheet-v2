@@ -318,6 +318,7 @@ export interface DeliveriesRepository {
   list(): Promise<Delivery[]>;
   assignDriver(id: string, driver: string, actor: string): Promise<Delivery>;
   advance(id: string, actor: string): Promise<Delivery>;
+  setStatus(id: string, status: DeliveryStatus, actor: string): Promise<Delivery>;
   updateNotes(id: string, notes: string, actor: string): Promise<Delivery>;
 }
 
