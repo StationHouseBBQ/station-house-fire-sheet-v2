@@ -4,6 +4,7 @@
  */
 import { get, set } from "idb-keyval";
 import type { AuditRecord, AuditRepository, Dal, PrepCategory, PrepEntry, PrepRepository, PrepSession, PrepStatus } from "../types";
+import { DemoCalendar, DemoChecklists, DemoKds, DemoMeatCosts, DemoOrders, DemoPitChecklist, DemoPitmaster, DemoPrepRecipes, DemoProteins, DemoSmokedInventory, DemoSmokerForecast } from "./domains";
 import { seedPrepSession } from "./seed";
 import { etParts } from "../../lib/time";
 
@@ -89,5 +90,21 @@ class DemoPrep implements PrepRepository {
 
 export function createDemoDal(): Dal {
   const audit = new DemoAudit();
-  return { mode: "demo", prep: new DemoPrep(audit), audit };
+  const smokerForecast = new DemoSmokerForecast(audit);
+  return {
+    mode: "demo",
+    prep: new DemoPrep(audit),
+    audit,
+    orders: new DemoOrders(audit),
+    kds: new DemoKds(audit),
+    checklists: new DemoChecklists(audit),
+    proteins: new DemoProteins(),
+    prepRecipes: new DemoPrepRecipes(audit),
+    calendar: new DemoCalendar(),
+    smokerForecast,
+    smokedInventory: new DemoSmokedInventory(audit),
+    pitmaster: new DemoPitmaster(audit),
+    meatCosts: new DemoMeatCosts(audit),
+    pitChecklist: new DemoPitChecklist(audit, smokerForecast),
+  };
 }

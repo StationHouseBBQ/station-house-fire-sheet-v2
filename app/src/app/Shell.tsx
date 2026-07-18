@@ -4,11 +4,37 @@ import { ROLES } from "../config/roles";
 import { useRole } from "./RoleContext";
 import { ParityPending } from "../modules/shared/ParityPending";
 import { PrepBoard } from "../modules/kitchen/PrepBoard";
+import { WeeklyBoard } from "../modules/kitchen/WeeklyBoard";
+import { FireSheets } from "../modules/kitchen/FireSheets";
+import { KitchenCalendar } from "../modules/kitchen/KitchenCalendar";
+import { ExpoKds } from "../modules/kitchen/ExpoKds";
+import { MeatCalc } from "../modules/kitchen/MeatCalc";
+import { OrderHistoryView } from "../modules/kitchen/OrderHistory";
+import { MorningChecklist } from "../modules/kitchen/MorningChecklist";
+import { PrepRecipesView } from "../modules/kitchen/PrepRecipes";
+import { PitDashboard } from "../modules/pit/PitDashboard";
+import { SmokedInventoryView } from "../modules/pit/SmokedInventoryView";
+import { SmokerForecastView } from "../modules/pit/SmokerForecastView";
+import { PitmasterGuideView } from "../modules/pit/PitmasterGuideView";
+import { MeatCostGuide } from "../modules/pit/MeatCostGuide";
 import type { ComponentType } from "react";
 
 /** Registry of implemented tab views. Grows as parity rows land. */
 const IMPLEMENTED: Record<string, ComponentType> = {
+  "kitchen/weekly": WeeklyBoard,
+  "kitchen/fire-sheets": FireSheets,
+  "kitchen/calendar": KitchenCalendar,
+  "kitchen/expo": ExpoKds,
+  "kitchen/calculator": MeatCalc,
   "kitchen/prep": PrepBoard,
+  "kitchen/order-history": OrderHistoryView,
+  "kitchen/morning-checklist": MorningChecklist,
+  "kitchen/prep-recipes": PrepRecipesView,
+  "pit/dashboard": PitDashboard,
+  "pit/inventory": SmokedInventoryView,
+  "pit/forecast": SmokerForecastView,
+  "pit/guide": PitmasterGuideView,
+  "pit/cost": MeatCostGuide,
 };
 
 function TabView({ ws, tab }: { ws: WorkspaceDef; tab: TabDef }) {

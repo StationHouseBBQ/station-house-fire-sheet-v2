@@ -60,4 +60,143 @@ export interface Dal {
   mode: "demo" | "supabase";
   prep: PrepRepository;
   audit: AuditRepository;
+  orders: OrdersRepository;
+  kds: KdsRepository;
+  checklists: ChecklistRepository;
+  proteins: ProteinRepository;
+  prepRecipes: PrepRecipeRepository;
+  calendar: CalendarRepository;
+  smokerForecast: SmokerForecastRepository;
+  smokedInventory: SmokedInventoryRepository;
+  pitmaster: PitmasterRepository;
+  meatCosts: MeatCostsRepository;
+  pitChecklist: PitChecklistRepository;
+}
+
+// ── Orders / tickets ──────────────────────────────────────────────────────
+export type OrderStatus = "confirmed" | "in_prep" | "ready" | "picked_up" | "delivered" | "cancelled";
+export type OrderChannel = "catering" | "fire_drop" | "cuban_thursday" | "retail" | "walk_in";
+
+export interface OrderItem { id: string; name: string; qty: number; unit: string; notes?: string | null; }
+
+export interface OrderTicket {
+  id: string;
+  orderRef: string;            // immutable
+  channel: OrderChannel;
+  customer: string;
+  serviceDate: string;         // YYYY-MM-DD ET
+  timeWindow: string;
+  status: OrderStatus;
+  guests: number | null;
+  items: OrderItem[];
+  notes: string | null;
+  statusHistory: Array<{ from: OrderStatus | null; to: OrderStatus; at: string; actor: string }>;
+  updatedAt: string;
+}
+
+export interface OrdersRepository {
+  list(filter?: { date?: string; status?: OrderStatus | "all"; channel?: OrderChannel | "all" }): Promise<OrderTicket[]>;
+  get(id: string): Promise<OrderTicket | null>;
+  updateStatus(id: string, status: OrderStatus, actor: string): Promise<OrderTicket>;
+  updateNotes(id: string, notes: string, actor: string): Promise<OrderTicket>;
+  weekDates(): Promise<string[]>; // 7 service dates centered on current ET week (Mon–Sun)
+}
+
+// ── KDS ───────────────────────────────────────────────────────────────────
+export type KdsStage = "kitchen" | "expo" | "ready" | "handed_off";
+
+export interface KdsTicket {
+  id: string;
+  orderId: string;
+  orderRef: string;
+  customer: string;
+  serviceDate: string;
+  timeWindow: string;
+  stage: KdsStage;
+  items: Array<{ id: string; name: string; qty: number; unit: string; kitchenChecked: boolean; expoChecked: boolean }>;
+  firedAt: string;
+  updatedAt: string;
+}
+
+export interface KdsRepository {
+  tickets(date: string): Promise<KdsTicket[]>;
+  toggleItemCheck(ticketId: string, itemId: string, lane: "kitchen" | "expo", actor: string): Promise<KdsTicket>;
+  advance(ticketId: string, to: KdsStage, actor: string): Promise<KdsTicket>;
+  allDayTotals(date: string): Promise<Array<{ name: string; unit: string; total: number; checked: number }>>;
+}
+
+// ── Checklists (kitchen morning / FOH) ────────────────────────────────────
+export interface ChecklistItem { id: string; label: string; section: string; done: boolean; doneBy: string | null; doneAt: string | null; }
+export interface ChecklistRun {
+  id: string; templateId: string; templateName: string; runDate: string;
+  items: ChecklistItem[]; signedOffBy: string | null; signedOffAt: string | null;
+}
+export interface ChecklistRepository {
+  getTodayRun(templateId: string): Promise<ChecklistRun>;
+  toggleItem(runId: string, itemId: string, actor: string): Promise<ChecklistRun>;
+  managerSignOff(runId: string, actor: string): Promise<ChecklistRun>;
+}
+
+// ── Protein conversions / meat calc ───────────────────────────────────────
+export interface ProteinConversion { id: string; protein: string; rawUnit: string; cookedYieldLbsPerUnit: number; portionsPerCookedLb: number; notes: string | null; }
+export interface ProteinRepository { list(): Promise<ProteinConversion[]>; }
+
+// ── Prep recipes ──────────────────────────────────────────────────────────
+export interface PrepRecipe {
+  id: string; name: string; category: PrepCategory; yieldQty: number; yieldUnit: string;
+  ingredients: Array<{ id: string; name: string; qty: number; unit: string }>;
+  steps: string[]; updatedAt: string;
+}
+export interface PrepRecipeRepository {
+  list(): Promise<PrepRecipe[]>;
+  upsert(recipe: Omit<PrepRecipe, "updatedAt">, actor: string): Promise<PrepRecipe>;
+  remove(id: string, actor: string): Promise<void>;
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────
+export interface CalendarEvent { id: string; date: string; title: string; kind: "catering" | "fire_drop" | "cuban_thursday" | "retail" | "holiday"; orderId: string | null; }
+export interface CalendarRepository { eventsForMonth(yearMonth: string): Promise<CalendarEvent[]>; }
+
+// ── Pit: smoker forecast ──────────────────────────────────────────────────
+export interface SmokerEntry { id: string; date: string; protein: string; rawLbs: number; smoker: string; loadTime: string; targetDone: string; locked: boolean; }
+export interface SmokerForecastRepository {
+  week(startDate: string): Promise<SmokerEntry[]>;
+  upsert(entry: Omit<SmokerEntry, "id"> & { id?: string }, actor: string): Promise<SmokerEntry>;
+  remove(id: string, actor: string): Promise<void>;
+  autoFillFromDemand(startDate: string, actor: string): Promise<SmokerEntry[]>;
+  lockDay(date: string, actor: string): Promise<void>;
+}
+
+// ── Pit: smoked inventory ─────────────────────────────────────────────────
+export interface SmokeBatch { id: string; date: string; protein: string; rawLbs: number; cookedLbs: number; smoker: string; loggedBy: string; loggedAt: string; }
+export interface SmokedInventoryRepository {
+  summary(): Promise<Array<{ protein: string; cookedLbsOnHand: number; batches: number; lastBatchAt: string | null }>>;
+  batches(): Promise<SmokeBatch[]>;
+  logBatch(b: Omit<SmokeBatch, "id" | "loggedAt">): Promise<SmokeBatch>;
+}
+
+// ── Pit: pitmaster guide ──────────────────────────────────────────────────
+export interface GuideStep { id: string; order: number; title: string; detail: string; tempF: number | null; durationMin: number | null; }
+export interface PitmasterProtein { id: string; slug: string; name: string; targetInternalF: number; smokerTempF: number; estHoursPerLb: number; restMin: number; woods: string; steps: GuideStep[]; }
+export interface PitmasterRepository {
+  proteins(): Promise<PitmasterProtein[]>;
+  upsertStep(proteinId: string, step: Omit<GuideStep, "id"> & { id?: string }, actor: string): Promise<PitmasterProtein>;
+  removeStep(proteinId: string, stepId: string, actor: string): Promise<PitmasterProtein>;
+}
+
+// ── Pit: meat costs ───────────────────────────────────────────────────────
+export interface MeatCost { id: string; protein: string; vendor: string; costPerLbCents: number; caseLbs: number; yieldPct: number; updatedAt: string; }
+export interface MeatCostsRepository {
+  list(): Promise<MeatCost[]>;
+  upsert(mc: Omit<MeatCost, "updatedAt">, actor: string): Promise<MeatCost>;
+  remove(id: string, actor: string): Promise<void>;
+}
+
+// ── Pit: daily checklist ──────────────────────────────────────────────────
+export interface PitTask { id: string; label: string; protein: string | null; targetLbs: number | null; done: boolean; doneAt: string | null; }
+export interface PitChecklistRepository {
+  today(): Promise<{ id: string; date: string; tasks: PitTask[] }>;
+  toggle(taskId: string, actor: string): Promise<void>;
+  syncFromForecast(actor: string): Promise<void>;
+  addTask(label: string, actor: string): Promise<void>;
 }

@@ -35,15 +35,15 @@ export const WORKSPACES: WorkspaceDef[] = [
   {
     id: "kitchen", label: "Kitchen", base: "/kitchen", roles: R.kitchenOps,
     tabs: [
-      { id: "weekly", label: "Weekly Board", parityRow: 1, sourceComponent: "WeeklyMasterBoard", sourceFile: "client/src/pages/WeeklyMasterBoard.tsx" },
-      { id: "fire-sheets", label: "Fire Sheets", parityRow: 2, sourceComponent: "ProductionBoard", sourceFile: "client/src/pages/ProductionBoard.tsx" },
-      { id: "calendar", label: "Calendar", parityRow: 3, sourceComponent: "MasterCalendarPage", sourceFile: "client/src/pages/MasterCalendarPage.tsx" },
-      { id: "expo", label: "Expo KDS", parityRow: 4, sourceComponent: "ExpoKDS", sourceFile: "client/src/pages/ExpoKDS.tsx" },
-      { id: "calculator", label: "Meat Calc", parityRow: 5, sourceComponent: "MeatCalculator", sourceFile: "client/src/pages/MeatCalculator.tsx" },
+      { implemented: true, id: "weekly", label: "Weekly Board", parityRow: 1, sourceComponent: "WeeklyMasterBoard", sourceFile: "client/src/pages/WeeklyMasterBoard.tsx" },
+      { implemented: true, id: "fire-sheets", label: "Fire Sheets", parityRow: 2, sourceComponent: "ProductionBoard", sourceFile: "client/src/pages/ProductionBoard.tsx" },
+      { implemented: true, id: "calendar", label: "Calendar", parityRow: 3, sourceComponent: "MasterCalendarPage", sourceFile: "client/src/pages/MasterCalendarPage.tsx" },
+      { implemented: true, id: "expo", label: "Expo KDS", parityRow: 4, sourceComponent: "ExpoKDS", sourceFile: "client/src/pages/ExpoKDS.tsx" },
+      { implemented: true, id: "calculator", label: "Meat Calc", parityRow: 5, sourceComponent: "MeatCalculator", sourceFile: "client/src/pages/MeatCalculator.tsx" },
       { id: "prep", label: "Prep", parityRow: 6, sourceComponent: "DynamicPrepBoard", sourceFile: "client/src/pages/DynamicPrepBoard.tsx", implemented: true },
-      { id: "order-history", label: "Order History", parityRow: 7, sourceComponent: "KitchenOrderHistory", sourceFile: "client/src/pages/KitchenOrderHistory.tsx" },
-      { id: "morning-checklist", label: "Morning Checklist", parityRow: 8, sourceComponent: "KitchenChecklist", sourceFile: "client/src/pages/KitchenChecklist.tsx" },
-      { id: "prep-recipes", label: "Prep Recipes", parityRow: 9, sourceComponent: "PrepRecipeAdmin", sourceFile: "client/src/pages/PrepRecipeAdmin.tsx" },
+      { implemented: true, id: "order-history", label: "Order History", parityRow: 7, sourceComponent: "KitchenOrderHistory", sourceFile: "client/src/pages/KitchenOrderHistory.tsx" },
+      { implemented: true, id: "morning-checklist", label: "Morning Checklist", parityRow: 8, sourceComponent: "KitchenChecklist", sourceFile: "client/src/pages/KitchenChecklist.tsx" },
+      { implemented: true, id: "prep-recipes", label: "Prep Recipes", parityRow: 9, sourceComponent: "PrepRecipeAdmin", sourceFile: "client/src/pages/PrepRecipeAdmin.tsx" },
     ],
   },
   {
@@ -61,11 +61,11 @@ export const WORKSPACES: WorkspaceDef[] = [
   {
     id: "pit", label: "Pit", base: "/pit", roles: R.kitchenOps,
     tabs: [
-      { id: "dashboard", label: "Pit Dashboard", parityRow: 17, sourceComponent: "PitDashboard", sourceFile: "client/src/pages/PitDashboard.tsx" },
-      { id: "inventory", label: "Smoked Inventory", parityRow: 18, sourceComponent: "SmokedInventory", sourceFile: "client/src/pages/SmokedInventory.tsx" },
-      { id: "forecast", label: "Smoker Forecast", parityRow: 19, sourceComponent: "SmokerForecast", sourceFile: "client/src/pages/SmokerForecast.tsx" },
-      { id: "guide", label: "Pitmaster Guide", parityRow: 20, sourceComponent: "PitmasterGuide", sourceFile: "client/src/pages/PitmasterGuide.tsx" },
-      { id: "cost", label: "Meat Cost Guide", parityRow: 21, sourceComponent: "PitMeatCostGuide", sourceFile: "client/src/pages/PitMeatCostGuide.tsx" },
+      { implemented: true, id: "dashboard", label: "Pit Dashboard", parityRow: 17, sourceComponent: "PitDashboard", sourceFile: "client/src/pages/PitDashboard.tsx" },
+      { implemented: true, id: "inventory", label: "Smoked Inventory", parityRow: 18, sourceComponent: "SmokedInventory", sourceFile: "client/src/pages/SmokedInventory.tsx" },
+      { implemented: true, id: "forecast", label: "Smoker Forecast", parityRow: 19, sourceComponent: "SmokerForecast", sourceFile: "client/src/pages/SmokerForecast.tsx" },
+      { implemented: true, id: "guide", label: "Pitmaster Guide", parityRow: 20, sourceComponent: "PitmasterGuide", sourceFile: "client/src/pages/PitmasterGuide.tsx" },
+      { implemented: true, id: "cost", label: "Meat Cost Guide", parityRow: 21, sourceComponent: "PitMeatCostGuide", sourceFile: "client/src/pages/PitMeatCostGuide.tsx" },
     ],
   },
   {
