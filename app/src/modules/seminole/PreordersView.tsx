@@ -4,13 +4,16 @@ import { getDal } from "../../dal";
 import type { Preorder, PreorderStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { formatCents, orderTotals } from "../../lib/money";
+import { activeDropWeekend } from "../../lib/time";
 
 /**
- * Seminole · Preorders — V2 counterpart of the Manus RetailPreorders (core
- * workflows). Unified Fire Drop + Cuban Thursday order management: stats
- * header, channel tabs, status filters, search, status changes, hide/unhide,
- * status history, and manual order entry with live totals preview (display
- * only — the DAL computes authoritative totals).
+ * Seminole · Preorders — V2 counterpart of the Manus RetailPreorders,
+ * reorganized for floor use. Pickup-day tabs (Friday / Saturday of the
+ * active drop weekend, Thursday for Cuban) sit above the channel tabs,
+ * orders group under sticky day+window subheaders, and every active order
+ * gets a one-tap fire "Picked Up ✓" bump. The default view shows only
+ * active orders (pending/paid/ready); the other statuses, hide/unhide, and
+ * history live behind a compact "⋯" menu so nothing is lost.
  */
 
 const STATUSES: PreorderStatus[] = ["pending", "paid", "ready", "picked_up", "cancelled", "refunded"];
@@ -30,10 +33,28 @@ const CHANNEL_META = {
 } as const;
 
 type ChannelFilter = "all" | "fire_drop" | "cuban_thursday";
-type StatusFilter = "all" | PreorderStatus;
+type StatusFilter = "active" | "all" | "picked_up" | "cancelled" | "refunded";
+type PickupDayTab = "all" | "friday" | "saturday" | "thursday";
 type Sync = "idle" | "saving" | "saved" | "error";
 
 const PICKUP_WINDOWS = ["11AM–12PM", "12–1PM", "1–2PM"];
+
+/** Active = still on the floor: not picked up, cancelled, or refunded. */
+function isActive(s: PreorderStatus): boolean {
+  return s === "pending" || s === "paid" || s === "ready";
+}
+
+function shortDate(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function windowRank(w: string): number {
+  const i = PICKUP_WINDOWS.indexOf(w);
+  return i === -1 ? 99 : i;
+}
+
+const DAY_ORDER: Record<Exclude<PickupDayTab, "all">, number> = { thursday: 0, friday: 1, saturday: 2 };
+const DAY_LABEL: Record<Exclude<PickupDayTab, "all">, string> = { thursday: "THURSDAY", friday: "FRIDAY", saturday: "SATURDAY" };
 
 export function PreordersView() {
   const { actor } = useRole();
@@ -41,20 +62,24 @@ export function PreordersView() {
   const qc = useQueryClient();
   const [sync, setSync] = useState<Sync>("idle");
   const [channel, setChannel] = useState<ChannelFilter>("all");
-  const [status, setStatus] = useState<StatusFilter>("all");
+  const [day, setDay] = useState<PickupDayTab>("all");
+  const [status, setStatus] = useState<StatusFilter>("active");
   const [search, setSearch] = useState("");
   const [showHidden, setShowHidden] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+
+  const weekend = useMemo(() => activeDropWeekend(new Date()), []);
 
   const { data: stats } = useQuery({
     queryKey: ["preorders", "stats"],
     queryFn: () => dal.preorders.stats(),
     refetchInterval: 30_000,
   });
+  // Fetch all statuses so day-tab badges count active orders regardless of
+  // the current status chip; status filtering happens client-side below.
   const { data: orders = [], isLoading } = useQuery({
-    queryKey: ["preorders", "list", channel, status, showHidden],
-    queryFn: () => dal.preorders.list({ channel, status, includeHidden: showHidden }),
+    queryKey: ["preorders", "list", channel, showHidden],
+    queryFn: () => dal.preorders.list({ channel, status: "all", includeHidden: showHidden }),
     refetchInterval: 30_000,
   });
 
@@ -83,14 +108,55 @@ export function PreordersView() {
     onSuccess: () => { setAddOpen(false); invalidate(); },
   });
 
+  // Thursday (Cuban) = any pickup date that isn't the active weekend's Fri/Sat.
+  const dayOf = (o: Preorder): Exclude<PickupDayTab, "all"> =>
+    o.pickupDate === weekend.friday ? "friday" : o.pickupDate === weekend.saturday ? "saturday" : "thursday";
+
+  const dayCounts = useMemo(() => {
+    const c: Record<PickupDayTab, number> = { all: 0, friday: 0, saturday: 0, thursday: 0 };
+    for (const o of orders) {
+      if (!isActive(o.status)) continue;
+      c.all += 1;
+      c[dayOf(o)] += 1;
+    }
+    return c;
+  }, [orders, weekend]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return orders;
-    return orders.filter(o =>
-      o.customer.toLowerCase().includes(q) ||
-      o.phone.toLowerCase().includes(q) ||
-      o.orderRef.toLowerCase().includes(q));
-  }, [orders, search]);
+    return orders.filter(o => {
+      if (status === "active" ? !isActive(o.status) : status !== "all" && o.status !== status) return false;
+      if (day !== "all" && dayOf(o) !== day) return false;
+      if (!q) return true;
+      return o.customer.toLowerCase().includes(q) ||
+        o.phone.toLowerCase().includes(q) ||
+        o.orderRef.toLowerCase().includes(q);
+    });
+  }, [orders, search, status, day, weekend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Group under day + pickup-window subheaders; empty groups never render
+  // because groups are built from the filtered orders themselves.
+  const groups = useMemo(() => {
+    const map = new Map<string, { day: Exclude<PickupDayTab, "all">; window: string; orders: Preorder[] }>();
+    for (const o of filtered) {
+      const d = dayOf(o);
+      const key = `${d}|${o.pickupWindow}`;
+      const g = map.get(key) ?? { day: d, window: o.pickupWindow, orders: [] };
+      g.orders.push(o);
+      map.set(key, g);
+    }
+    return [...map.values()].sort((a, b) =>
+      DAY_ORDER[a.day] - DAY_ORDER[b.day] ||
+      windowRank(a.window) - windowRank(b.window) ||
+      a.window.localeCompare(b.window));
+  }, [filtered, weekend]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const DAY_TABS: Array<[PickupDayTab, string]> = [
+    ["all", "All days"],
+    ["friday", `Friday ${shortDate(weekend.friday)}`],
+    ["saturday", `Saturday ${shortDate(weekend.saturday)}`],
+    ["thursday", "Thursday (Cuban)"],
+  ];
 
   return (
     <div className="mx-auto max-w-5xl pt-6 pb-12">
@@ -114,8 +180,24 @@ export function PreordersView() {
         <Stat label="Active revenue" value={stats ? formatCents(stats.activeRevenueCents) : "—"} accent />
       </div>
 
+      {/* Pickup day tabs */}
+      <div className="mt-5 flex flex-wrap gap-1 rounded-xl border border-ink-700 bg-ink-900 p-1" role="tablist" aria-label="Pickup day">
+        {DAY_TABS.map(([d, label]) => (
+          <button key={d} onClick={() => setDay(d)} role="tab" aria-selected={day === d}
+            className={`min-h-[44px] flex-1 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
+              day === d ? "bg-fire text-white" : "text-zinc-400 hover:text-zinc-200"}`}>
+            {label}
+            <span className={`ml-1.5 inline-block min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-xs font-black ${
+              day === d ? "bg-white/20 text-white" : "bg-ink-700 text-zinc-300"}`}
+              aria-label={`${dayCounts[d]} active orders`}>
+              {dayCounts[d]}
+            </span>
+          </button>
+        ))}
+      </div>
+
       {/* Channel tabs */}
-      <div className="mt-5 flex gap-1 rounded-xl border border-ink-700 bg-ink-900 p-1">
+      <div className="mt-2 flex gap-1 rounded-xl border border-ink-700 bg-ink-900 p-1">
         {([["all", "All"], ["fire_drop", "🔥 Fire Drop"], ["cuban_thursday", "🥖 Cuban Thursday"]] as Array<[ChannelFilter, string]>).map(([c, label]) => (
           <button key={c} onClick={() => setChannel(c)}
             className={`min-h-[44px] flex-1 rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
@@ -127,13 +209,13 @@ export function PreordersView() {
 
       {/* Status chips + search + hidden toggle */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        {(["all", ...STATUSES] as StatusFilter[]).map(s => (
+        {(["active", "all", "picked_up", "cancelled", "refunded"] as StatusFilter[]).map(s => (
           <button key={s} onClick={() => setStatus(s)}
             className={`min-h-[36px] rounded-full border px-3 py-1.5 text-xs font-bold ${
               status === s
                 ? "border-fire bg-fire/20 text-fire-light"
                 : "border-ink-700 bg-ink-900 text-zinc-400 hover:text-zinc-200"}`}>
-            {s === "all" ? "All" : STATUS_META[s].label}
+            {s === "active" ? "Active" : s === "all" ? "All" : STATUS_META[s].label}
           </button>
         ))}
         <label className="ml-auto flex items-center gap-2 text-xs font-semibold text-zinc-400">
@@ -146,21 +228,29 @@ export function PreordersView() {
         className="mt-3 w-full rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600"
         aria-label="Search preorders" />
 
-      {/* Orders */}
+      {/* Orders, grouped under sticky day + window subheaders */}
       {isLoading ? (
         <p className="py-20 text-center text-zinc-500">Loading preorders…</p>
-      ) : filtered.length === 0 ? (
+      ) : groups.length === 0 ? (
         <p className="py-20 text-center text-zinc-500">No preorders match the current filters.</p>
       ) : (
-        <ul className="mt-4 space-y-2">
-          {filtered.map(o => (
-            <OrderCard key={o.id} order={o}
-              expanded={expandedId === o.id}
-              onToggleExpand={() => setExpandedId(id => (id === o.id ? null : o.id))}
-              onStatus={to => statusMut.mutate({ id: o.id, to })}
-              onHide={hidden => hideMut.mutate({ id: o.id, hidden })} />
+        <div className="mt-4 space-y-5">
+          {groups.map(g => (
+            <section key={`${g.day}|${g.window}`} aria-label={`${DAY_LABEL[g.day]} ${g.window} pickups`}>
+              <h2 className="sticky top-0 z-10 rounded-lg border border-ink-700 bg-ink-800/95 px-3 py-2 text-xs font-black uppercase tracking-widest text-fire-light backdrop-blur">
+                {DAY_LABEL[g.day]} · {g.window} <span className="text-zinc-400">({g.orders.length})</span>
+              </h2>
+              <ul className="mt-2 space-y-2">
+                {g.orders.map(o => (
+                  <OrderCard key={o.id} order={o}
+                    busy={statusMut.isPending}
+                    onStatus={to => statusMut.mutate({ id: o.id, to })}
+                    onHide={hidden => hideMut.mutate({ id: o.id, hidden })} />
+                ))}
+              </ul>
+            </section>
           ))}
-        </ul>
+        </div>
       )}
 
       {addOpen && (
@@ -180,11 +270,14 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function OrderCard({ order, expanded, onToggleExpand, onStatus, onHide }: {
-  order: Preorder; expanded: boolean; onToggleExpand: () => void;
+function OrderCard({ order, busy, onStatus, onHide }: {
+  order: Preorder; busy: boolean;
   onStatus: (to: PreorderStatus) => void; onHide: (hidden: boolean) => void;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const ch = CHANNEL_META[order.channel];
+  const active = isActive(order.status);
   const itemsSummary = order.items.map(i => `${i.qty}× ${i.name}`).join(", ");
   return (
     <li className={`rounded-xl border bg-ink-900 p-3 ${order.hidden ? "border-ink-700 opacity-60" : "border-ink-700"}`}>
@@ -203,27 +296,46 @@ function OrderCard({ order, expanded, onToggleExpand, onStatus, onHide }: {
       </p>
       <p className="mt-1 truncate text-sm text-zinc-300" title={itemsSummary}>{itemsSummary}</p>
 
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs font-semibold text-zinc-500">
-          Status
-          <select value={order.status} onChange={e => onStatus(e.target.value as PreorderStatus)}
-            className="min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-xs font-bold text-zinc-100"
-            aria-label={`Status for ${order.orderRef}`}>
-            {STATUSES.map(s => <option key={s} value={s}>{STATUS_META[s].label}</option>)}
-          </select>
-        </label>
-        <button onClick={() => onHide(!order.hidden)}
-          className="min-h-[40px] rounded-lg border border-ink-700 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
-          {order.hidden ? "Unhide" : "Hide"}
+      {/* Primary action: one-tap bump. Everything else lives behind ⋯ */}
+      <div className="mt-2.5 flex items-stretch gap-2">
+        {active && (
+          <button onClick={() => onStatus("picked_up")} disabled={busy}
+            className="min-h-[56px] flex-1 rounded-xl bg-fire px-4 text-lg font-black uppercase tracking-wide text-white disabled:opacity-50"
+            aria-label={`Mark ${order.orderRef} picked up`}>
+            Picked Up ✓
+          </button>
+        )}
+        <button onClick={() => setMoreOpen(v => !v)} aria-expanded={moreOpen}
+          aria-label={`More actions for ${order.orderRef}`}
+          className={`rounded-xl border border-ink-700 px-4 text-xl font-black text-zinc-400 hover:text-zinc-200 ${
+            active ? "min-h-[56px] w-16" : "min-h-[44px] flex-none px-5"}`}>
+          ⋯
         </button>
-        <button onClick={onToggleExpand}
-          className="min-h-[40px] rounded-lg border border-ink-700 px-3 py-1.5 text-xs font-semibold text-zinc-400 hover:text-zinc-200"
-          aria-expanded={expanded}>
-          {expanded ? "Hide history ▲" : "History ▼"}
-        </button>
+        {!active && <span className="self-center text-xs text-zinc-600">{STATUS_META[order.status].label} — use ⋯ to reopen</span>}
       </div>
 
-      {expanded && (
+      {moreOpen && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-ink-700 bg-ink-950/50 p-2">
+          <span className="px-1 text-[11px] font-bold uppercase tracking-wider text-zinc-600">Set status</span>
+          {STATUSES.filter(s => s !== order.status).map(s => (
+            <button key={s} onClick={() => onStatus(s)} disabled={busy}
+              className="min-h-[36px] rounded-full border border-ink-700 px-3 py-1 text-xs font-bold text-zinc-400 hover:text-zinc-100 disabled:opacity-50">
+              {STATUS_META[s].label}
+            </button>
+          ))}
+          <span className="mx-1 h-5 w-px bg-ink-700" aria-hidden="true" />
+          <button onClick={() => onHide(!order.hidden)}
+            className="min-h-[36px] rounded-full border border-ink-700 px-3 py-1 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
+            {order.hidden ? "Unhide" : "Hide"}
+          </button>
+          <button onClick={() => setShowHistory(v => !v)} aria-expanded={showHistory}
+            className="min-h-[36px] rounded-full border border-ink-700 px-3 py-1 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
+            {showHistory ? "Hide history ▲" : "History ▼"}
+          </button>
+        </div>
+      )}
+
+      {moreOpen && showHistory && (
         <div className="mt-2 rounded-lg border border-ink-700 bg-ink-950/50 p-3">
           <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Status history</p>
           {order.statusHistory.length === 0 ? (

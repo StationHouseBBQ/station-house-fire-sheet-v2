@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
-import type { KdsStage, KdsTicket } from "../../dal/types";
+import type { KdsStage, KdsTicket, Preorder } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { etParts } from "../../lib/time";
 
@@ -8,7 +8,8 @@ import { etParts } from "../../lib/time";
  * Seminole · FOH KDS — V2 counterpart of the Manus SeminoleKDS. Read-focused
  * board for the retail counter: today's tickets grouped Kitchen / Expo /
  * Ready with big floor-visible type. Item check marks mirror the kitchen and
- * expo lanes read-only; the only action here is handing off a ready ticket.
+ * expo lanes read-only; the actions here are handing off a ready ticket and
+ * bumping today's preorder pickups off the PICKUPS board below the lanes.
  */
 
 const STAGES: Array<{ stage: KdsStage; label: string; cls: string }> = [
@@ -38,6 +39,22 @@ export function SeminoleKds() {
     mutationFn: (ticketId: string) => dal.kds.advance(ticketId, "handed_off", actor),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["kds", "seminole", date] }),
   });
+
+  // FOH pickup board: today's active preorders (any channel), 10s refresh.
+  const { data: preorders = [] } = useQuery({
+    queryKey: ["preorders", "kds-pickups", date],
+    queryFn: () => dal.preorders.list({ channel: "all", status: "all" }),
+    refetchInterval: 10_000,
+  });
+  const bumpMut = useMutation({
+    mutationFn: (id: string) => dal.preorders.updateStatus(id, "picked_up", actor),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["preorders"] }),
+  });
+
+  const pickups = preorders
+    .filter(p => p.pickupDate === date &&
+      (p.status === "pending" || p.status === "paid" || p.status === "ready"))
+    .sort((a, b) => a.pickupWindow.localeCompare(b.pickupWindow) || a.customer.localeCompare(b.customer));
 
   if (isLoading) return <p className="py-20 text-center text-zinc-500">Loading tickets…</p>;
 
@@ -80,7 +97,48 @@ export function SeminoleKds() {
           })}
         </div>
       )}
+
+      {/* FOH pickup bump board */}
+      <section aria-label="Pickups" className="mt-8">
+        <h2 className="rounded-t-xl border border-b-0 border-fire/40 bg-ink-900 px-4 py-2.5 text-base font-black uppercase tracking-widest text-fire-light">
+          Pickups <span className="text-sm font-bold text-zinc-500">({pickups.length} waiting today)</span>
+        </h2>
+        <div className="rounded-b-xl border border-ink-700 bg-ink-950/40 p-3">
+          {pickups.length === 0 ? (
+            <p className="py-8 text-center text-lg font-bold text-zinc-500">No pickups waiting</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {pickups.map(p => (
+                <PickupCard key={p.id} order={p} busy={bumpMut.isPending}
+                  onBump={() => bumpMut.mutate(p.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
+  );
+}
+
+function PickupCard({ order, onBump, busy }: { order: Preorder; onBump: () => void; busy: boolean }) {
+  const ch = order.channel === "fire_drop"
+    ? { icon: "🔥", label: "Fire Drop" }
+    : { icon: "🥖", label: "Cuban Thu" };
+  const items = order.items.map(i => `${i.qty}× ${i.name}`).join(", ");
+  return (
+    <article className="flex flex-col rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 truncate text-xl font-black text-zinc-100">{order.customer}</p>
+        <span className="shrink-0 rounded bg-ink-800 px-2 py-1 text-xs font-bold text-zinc-300">{ch.icon} {ch.label}</span>
+      </div>
+      <p className="mt-1 text-base font-bold text-fire-light">⏰ {order.pickupWindow}</p>
+      <p className="mt-1.5 flex-1 text-sm text-zinc-300" title={items}>{items}</p>
+      <button onClick={onBump} disabled={busy}
+        className="mt-3 min-h-[56px] w-full rounded-xl bg-fire px-4 py-2.5 text-lg font-black uppercase tracking-wide text-white disabled:opacity-50"
+        aria-label={`Mark ${order.orderRef} picked up`}>
+        Picked Up ✓
+      </button>
+    </article>
   );
 }
 

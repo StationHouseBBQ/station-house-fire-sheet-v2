@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
-import type { FireDropProduct, FireDropSlot } from "../../dal/types";
+import type { FireDropProduct, FireDropSlot, Preorder, PreorderStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { formatCents } from "../../lib/money";
 
@@ -42,6 +42,13 @@ export function FireDropAdminView() {
   });
   const ordering = dal.fireDrop.orderingStatus();
 
+  // Read-only pickups summary — bumping happens in Preorders / the FOH board.
+  const { data: dropPreorders = [] } = useQuery({
+    queryKey: ["preorders", "list", "fire_drop", "admin-summary"],
+    queryFn: () => dal.preorders.list({ channel: "fire_drop" }),
+    refetchInterval: 30_000,
+  });
+
   const withSync = <T,>(p: Promise<T>): Promise<T> => {
     setSync("saving");
     return p.then(r => { setSync("saved"); return r; }, e => { setSync("error"); throw e; });
@@ -74,6 +81,11 @@ export function FireDropAdminView() {
   });
 
   if (isLoading || !drop) return <p className="py-20 text-center text-zinc-500">Loading drop…</p>;
+
+  const activePickups = dropPreorders.filter(
+    o => o.status === "pending" || o.status === "paid" || o.status === "ready");
+  const fridayPickups = activePickups.filter(o => o.pickupDate === drop.fridayDate);
+  const saturdayPickups = activePickups.filter(o => o.pickupDate === drop.saturdayDate);
 
   const commitTitle = () => {
     const t = titleDraft.trim();
@@ -132,6 +144,18 @@ export function FireDropAdminView() {
         <WindowBadge label="Friday ordering" open={ordering.friday} />
         <WindowBadge label="Saturday ordering" open={ordering.saturday} />
       </div>
+
+      {/* Pickups by day (read-only summary) */}
+      <section className="mt-6" aria-label="Pickups by day">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-black uppercase tracking-wider text-zinc-300">Pickups by day</h2>
+          <p className="text-xs text-zinc-500">Bump pickups from the Preorders tab or FOH board.</p>
+        </div>
+        <div className="mt-2 grid gap-4 sm:grid-cols-2">
+          <PickupDayColumn label="Friday" date={drop.fridayDate} orders={fridayPickups} />
+          <PickupDayColumn label="Saturday" date={drop.saturdayDate} orders={saturdayPickups} />
+        </div>
+      </section>
 
       {/* Products */}
       <section className="mt-6" aria-label="Products">
@@ -269,6 +293,52 @@ export function FireDropAdminView() {
           error={upsertSlotMut.error?.message ?? null}
           onCancel={() => setSlotDialog({ open: false, slot: null })}
           onSubmit={s => upsertSlotMut.mutate(s)} />
+      )}
+    </div>
+  );
+}
+
+const PICKUP_DOT: Partial<Record<PreorderStatus, string>> = {
+  pending: "bg-amber-400",
+  paid: "bg-blue-400",
+  ready: "bg-green-400",
+};
+
+function PickupDayColumn({ label, date, orders }: { label: string; date: string; orders: Preorder[] }) {
+  const totalCents = orders.reduce((sum, o) => sum + o.totalCents, 0);
+  const windows = new Map<string, Preorder[]>();
+  for (const o of orders) {
+    const list = windows.get(o.pickupWindow) ?? [];
+    list.push(o);
+    windows.set(o.pickupWindow, list);
+  }
+  const grouped = [...windows.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  return (
+    <div className="rounded-xl border border-ink-700 bg-ink-900 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-xs font-black uppercase tracking-widest text-fire-light">{label} · {date}</h3>
+        <span className="text-xs font-bold text-zinc-400">
+          {orders.length} {orders.length === 1 ? "order" : "orders"} · <span className="text-fire-light">{formatCents(totalCents)}</span>
+        </span>
+      </div>
+      {orders.length === 0 ? (
+        <p className="py-4 text-center text-sm text-zinc-600">No active pickups.</p>
+      ) : (
+        grouped.map(([window, list]) => (
+          <div key={window} className="mt-2.5">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">⏰ {window} ({list.length})</p>
+            <ul className="mt-1 space-y-1">
+              {list.map(o => (
+                <li key={o.id} className="flex items-center gap-2 rounded-lg bg-ink-800/70 px-2.5 py-1.5 text-sm">
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${PICKUP_DOT[o.status] ?? "bg-zinc-600"}`}
+                    title={o.status} aria-label={`Status ${o.status}`} />
+                  <span className="min-w-0 flex-1 truncate font-semibold text-zinc-200">{o.customer}</span>
+                  <span className="shrink-0 font-mono text-xs text-zinc-400">{formatCents(o.totalCents)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
       )}
     </div>
   );
