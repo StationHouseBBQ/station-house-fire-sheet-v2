@@ -257,7 +257,8 @@ export interface RetailFireSheetRepository {
 // ── Retail preorders (Fire Drop + Cuban Thursday customer orders) ─────────
 export type PreorderStatus = "pending" | "paid" | "ready" | "picked_up" | "cancelled" | "refunded";
 export interface Preorder {
-  id: string; orderRef: string; channel: "fire_drop" | "cuban_thursday";
+  // "catering" = Express Catering receipt rows (tracked by ref like retail preorders).
+  id: string; orderRef: string; channel: "fire_drop" | "cuban_thursday" | "catering";
   customer: string; phone: string; email: string;
   pickupDate: string; pickupWindow: string;
   items: Array<{ id: string; name: string; qty: number; unitPriceCents: number }>;
@@ -523,6 +524,18 @@ export interface PublicCheckoutInput {
   attribution: Record<string, string | null> | null;
 }
 export interface PublicCheckoutResult { orderRef: string; totalCents: number; pickupDate: string; pickupWindow: string; }
+
+/** Express Catering funnel checkout (Guests → Pickup/Delivery → Menu → Pay). */
+export interface ExpressCheckoutInput {
+  guests: number;
+  eventAt: string;                              // ISO datetime of the event
+  fulfillment: "pickup" | "delivery";
+  items: Array<{ id: string; qty: number }>;    // express package / à la carte ids
+  customer: { name: string; email: string; phone: string };
+  notes: string | null;
+  discountCode: string | null;
+}
+export interface ExpressCheckoutResult { orderRef: string; totalCents: number; }
 export interface PublicCheckoutRepository {
   /**
    * Demo analog of create-checkout: validates ordering windows (ET), product
@@ -530,6 +543,13 @@ export interface PublicCheckoutRepository {
    * server-side style. Client-provided prices are never accepted.
    */
   checkout(input: PublicCheckoutInput): Promise<PublicCheckoutResult>;
+  /**
+   * Express Catering checkout: ≥24h notice, prices read from the
+   * "expressCatering" settings key only, discount codes, delivery fee +
+   * $250/$500 minimums, 7.5% tax — all enforced server-side style.
+   */
+  expressCheckout(input: ExpressCheckoutInput): Promise<ExpressCheckoutResult>;
+  /** Looks up retail preorders first, then Express Catering receipts. */
   trackByRef(ref: string): Promise<Preorder | null>;
 }
 

@@ -76,6 +76,24 @@ export class DemoOrders implements OrdersRepository {
     return rows.sort((a, b) => a.serviceDate.localeCompare(b.serviceDate) || a.timeWindow.localeCompare(b.timeWindow));
   }
   async get(id: string) { return (await loadCol(ORDERS, seedOrders)).find(r => r.id === id) ?? null; }
+  /** Creates a confirmed operational ticket (used by Express Catering checkout). */
+  async create(input: { orderRef: string; channel: OrderChannel; customer: string; serviceDate: string; timeWindow: string; guests: number | null; items: Array<{ name: string; qty: number; unit: string; notes?: string | null }>; notes: string | null }, actor: string): Promise<OrderTicket> {
+    if (!input.customer.trim()) throw new Error("Customer required");
+    if (!input.items.length) throw new Error("At least one item");
+    const o: OrderTicket = {
+      id: uid(), orderRef: input.orderRef, channel: input.channel,
+      customer: input.customer.trim(), serviceDate: input.serviceDate, timeWindow: input.timeWindow,
+      status: "confirmed", guests: input.guests,
+      items: input.items.map(i => ({ id: uid(), name: i.name, qty: i.qty, unit: i.unit, notes: i.notes ?? null })),
+      notes: input.notes,
+      statusHistory: [{ from: null, to: "confirmed", at: nowIso(), actor }],
+      updatedAt: nowIso(),
+    };
+    const rows = await loadCol(ORDERS, seedOrders);
+    rows.push(o); await saveCol(ORDERS, rows);
+    await this.audit.log({ actor, action: "order.create", entity: "order", entityId: o.orderRef, before: null, after: { channel: o.channel, serviceDate: o.serviceDate, items: o.items.length } });
+    return { ...o };
+  }
   private async mutate(id: string, actor: string, fn: (o: OrderTicket) => void, action: string): Promise<OrderTicket> {
     const rows = await loadCol(ORDERS, seedOrders);
     const o = rows.find(r => r.id === id); if (!o) throw new Error("Order not found");

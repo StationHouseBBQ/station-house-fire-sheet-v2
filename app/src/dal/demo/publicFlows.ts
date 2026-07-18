@@ -10,10 +10,17 @@ import { orderTotals } from "../../lib/money";
 import { isOrderingOpen, etParts } from "../../lib/time";
 import { currentTime } from "../../lib/clock";
 import type {
-  AuditRepository, Company, MenuRepository, PortalAdminRepository, PortalOrder, PortalRepository,
-  Preorder, PublicCheckoutInput, PublicCheckoutRepository, PublicCheckoutResult,
+  AuditRepository, Company, DiscountsRepository, ExpressCheckoutInput, ExpressCheckoutResult,
+  MenuRepository, PortalAdminRepository, PortalOrder, PortalRepository,
+  Preorder, PublicCheckoutInput, PublicCheckoutRepository, PublicCheckoutResult, SettingsRepository,
 } from "../types";
 import { DemoPreorders, DemoFireDrop } from "./retail";
+import type { DemoOrders } from "./domains";
+import {
+  EXPRESS_DEFAULTS, EXPRESS_DELIVERY_FEE_CENTS, EXPRESS_DELIVERY_FEE_LABEL,
+  EXPRESS_DELIVERY_MIN_CENTS, EXPRESS_MIN_NOTICE_HOURS, EXPRESS_PICKUP_MIN_CENTS,
+  EXPRESS_SETTINGS_KEY, type ExpressCateringSettings,
+} from "../../lib/expressMenu";
 
 export class DemoPublicCheckout implements PublicCheckoutRepository {
   constructor(
@@ -21,6 +28,9 @@ export class DemoPublicCheckout implements PublicCheckoutRepository {
     private fireDrop: DemoFireDrop,
     private preorders: DemoPreorders,
     private menu: MenuRepository,
+    private orders: DemoOrders,
+    private settings: SettingsRepository,
+    private discounts: DiscountsRepository,
   ) {}
 
   async checkout(input: PublicCheckoutInput): Promise<PublicCheckoutResult> {
@@ -119,10 +129,128 @@ export class DemoPublicCheckout implements PublicCheckoutRepository {
     return { orderRef: order.orderRef, totalCents: order.totalCents, pickupDate: thursday, pickupWindow: "11AM–2PM" };
   }
 
-  async trackByRef(ref: string): Promise<Preorder | null> {
-    const all = await this.preorders.list({ includeHidden: true });
-    return all.find(p => p.orderRef.toLowerCase() === ref.trim().toLowerCase()) ?? null;
+  // ── Express Catering (Guests → Pickup/Delivery → Menu → Details & Payment) ──
+  async expressCheckout(input: ExpressCheckoutInput): Promise<ExpressCheckoutResult> {
+    if (!input.customer.name.trim()) throw new Error("Name is required");
+    if (!input.customer.email.trim()) throw new Error("Email is required");
+    if (!Number.isInteger(input.guests) || input.guests < 1) throw new Error("Guest count must be at least 1");
+    if (!input.items.length) throw new Error("Cart is empty");
+    for (const i of input.items) if (!Number.isInteger(i.qty) || i.qty < 1) throw new Error("Invalid quantity");
+
+    // ≥24h notice, validated against the demo clock (live rule verbatim).
+    const eventDate = new Date(input.eventAt);
+    if (Number.isNaN(eventDate.getTime())) throw new Error("Choose a valid event date and time");
+    if (eventDate.getTime() - currentTime().getTime() < EXPRESS_MIN_NOTICE_HOURS * 3600_000) {
+      throw new Error("Orders require at least 24 hours notice.");
+    }
+
+    // Prices come from the "expressCatering" settings key ONLY.
+    const menu = await this.settings.get<ExpressCateringSettings>(EXPRESS_SETTINGS_KEY, EXPRESS_DEFAULTS);
+    const lines: Array<{ name: string; qty: number; unit: string; unitPriceCents: number }> = [];
+    for (const it of input.items) {
+      const pkg = menu.packages.find(x => x.id === it.id);
+      if (pkg) { lines.push({ name: pkg.name, qty: it.qty, unit: "package", unitPriceCents: pkg.priceCents }); continue; }
+      const alc = menu.alaCarte.find(x => x.id === it.id);
+      if (!alc) throw new Error("Menu item not found — please refresh and try again.");
+      lines.push({ name: alc.name, qty: it.qty, unit: alc.unit, unitPriceCents: alc.priceCents });
+    }
+    const subtotalCents = lines.reduce((s, l) => s + l.unitPriceCents * l.qty, 0);
+
+    // Discount (active codes only) applies to the subtotal before tax.
+    let discountCents = 0;
+    let appliedCode: string | null = null;
+    if (input.discountCode && input.discountCode.trim()) {
+      const code = input.discountCode.trim().toUpperCase();
+      const d = (await this.discounts.list()).find(x => x.code === code && x.active);
+      if (!d) throw new Error("Invalid or inactive discount code.");
+      discountCents = d.kind === "percent"
+        ? Math.floor((subtotalCents * Math.min(100, Math.max(1, d.value))) / 100)
+        : d.value;
+      discountCents = Math.min(subtotalCents, Math.max(0, discountCents));
+      appliedCode = d.code;
+    }
+    const discountedSubtotal = subtotalCents - discountCents;
+
+    // Minimums are enforced AFTER discount and BEFORE tax/fee.
+    if (input.fulfillment === "pickup" && discountedSubtotal < EXPRESS_PICKUP_MIN_CENTS) {
+      throw new Error("Pickup orders have a $250 minimum — add a little more to your order.");
+    }
+    if (input.fulfillment === "delivery" && discountedSubtotal < EXPRESS_DELIVERY_MIN_CENTS) {
+      throw new Error("Delivery orders have a $500 minimum — add more, or switch to pickup ($250 minimum).");
+    }
+
+    const feeCents = input.fulfillment === "delivery" ? EXPRESS_DELIVERY_FEE_CENTS : 0;
+    const taxableLines = [{ unitPriceCents: discountedSubtotal, qty: 1 }];
+    if (feeCents > 0) taxableLines.push({ unitPriceCents: feeCents, qty: 1 });
+    const totals = orderTotals(taxableLines);
+
+    // Event date/time in ET drive the operational ticket.
+    const ep = etParts(eventDate);
+    const serviceDate = `${ep.year}-${String(ep.month).padStart(2, "0")}-${String(ep.day).padStart(2, "0")}`;
+    const timeWindow = formatEventWindow(ep.hour);
+
+    const receipts = await loadCol<Preorder>(EXPRESS_RECEIPTS, () => []);
+    const orderRef = `EX-${serviceDate.replace(/-/g, "").slice(4)}-${1000 + receipts.length}`;
+
+    const contact = [input.customer.email.trim(), input.customer.phone.trim()].filter(Boolean).join(" / ");
+    const noteParts = [
+      `[EXPRESS ${input.fulfillment.toUpperCase()}]`,
+      `Guests: ${input.guests}`,
+      `Contact: ${contact}`,
+    ];
+    if (appliedCode) noteParts.push(`Discount: ${appliedCode} (−${(discountCents / 100).toFixed(2)})`);
+    if (input.notes && input.notes.trim()) noteParts.push(input.notes.trim());
+
+    await this.orders.create({
+      orderRef, channel: "catering", customer: input.customer.name.trim(),
+      serviceDate, timeWindow, guests: input.guests,
+      items: lines.map(l => ({ name: l.name, qty: l.qty, unit: l.unit })),
+      notes: noteParts.join(" · "),
+    }, "public-express");
+
+    // Customer-facing receipt row (money lives here; OrderTicket carries none).
+    const receiptItems: Preorder["items"] = lines.map(l => ({ id: uid(), name: l.name, qty: l.qty, unitPriceCents: l.unitPriceCents }));
+    if (discountCents > 0 && appliedCode) receiptItems.push({ id: uid(), name: `Discount (${appliedCode})`, qty: 1, unitPriceCents: -discountCents });
+    if (feeCents > 0) receiptItems.push({ id: uid(), name: EXPRESS_DELIVERY_FEE_LABEL, qty: 1, unitPriceCents: feeCents });
+    const receipt: Preorder = {
+      id: uid(), orderRef, channel: "catering",
+      customer: input.customer.name.trim(), phone: input.customer.phone.trim(), email: input.customer.email.trim(),
+      pickupDate: serviceDate, pickupWindow: timeWindow,
+      items: receiptItems,
+      subtotalCents: totals.subtotalCents, taxCents: totals.taxCents, totalCents: totals.totalCents,
+      status: "paid", hidden: false,
+      statusHistory: [{ from: null, to: "paid", at: nowIso(), actor: "demo-payment" }],
+      createdAt: nowIso(), updatedAt: nowIso(),
+    };
+    receipts.push(receipt);
+    await saveCol(EXPRESS_RECEIPTS, receipts);
+    await this.audit.log({
+      actor: "public", action: "express.checkout", entity: "express_order", entityId: orderRef,
+      before: null, after: { fulfillment: input.fulfillment, guests: input.guests, totalCents: totals.totalCents, discountCode: appliedCode },
+    });
+    return { orderRef, totalCents: totals.totalCents };
   }
+
+  async trackByRef(ref: string): Promise<Preorder | null> {
+    const needle = ref.trim().toLowerCase();
+    const all = await this.preorders.list({ includeHidden: true });
+    const hit = all.find(p => p.orderRef.toLowerCase() === needle);
+    if (hit) return hit;
+    const receipts = await loadCol<Preorder>(EXPRESS_RECEIPTS, () => []);
+    return receipts.find(p => p.orderRef.toLowerCase() === needle) ?? null;
+  }
+}
+
+const EXPRESS_RECEIPTS = "expressReceipts.v1";
+
+/** "12–1PM" style one-hour window from a 24h start hour (matches live copy). */
+export function formatEventWindow(startHour: number): string {
+  const h12 = (h: number) => ((h % 24) + 11) % 12 + 1;
+  const mer = (h: number) => (h % 24) < 12 ? "AM" : "PM";
+  const end = startHour + 1;
+  return mer(startHour) === mer(end)
+    ? `${h12(startHour)}–${h12(end)}${mer(end)}`
+    : `${h12(startHour)}${mer(startHour)}–${h12(end)}${mer(end)}`;
 }
 
 export class DemoPortal implements PortalRepository {

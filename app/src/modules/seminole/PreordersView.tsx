@@ -32,6 +32,7 @@ const STATUS_META: Record<PreorderStatus, { label: string; cls: string }> = {
 const CHANNEL_META = {
   fire_drop: { label: "Fire Drop", icon: "🔥" },
   cuban_thursday: { label: "Cuban Thu", icon: "🥖" },
+  catering: { label: "Express", icon: "🚚" },   // Express Catering receipt rows
 } as const;
 
 type ChannelFilter = "all" | "fire_drop" | "cuban_thursday";

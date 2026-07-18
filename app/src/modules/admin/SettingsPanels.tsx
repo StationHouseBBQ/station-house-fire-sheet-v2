@@ -4,6 +4,10 @@ import { getDal } from "../../dal";
 import type { ImportJob, SpecialEvent } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { formatCents } from "../../lib/money";
+import {
+  EXPRESS_DEFAULTS, EXPRESS_SETTINGS_KEY,
+  type ExpressAlaCarteItem, type ExpressCategory, type ExpressCateringSettings, type ExpressPackage,
+} from "../../lib/expressMenu";
 
 /**
  * Admin · settings-backed panels — V2 counterparts of the smaller Manus admin
@@ -331,15 +335,10 @@ export function AiImportHub() {
   );
 }
 
-// ── Express Menu ──────────────────────────────────────────────────────────
-interface ExpressMenuSettings { active: boolean; items: Array<{ name: string; priceCents: number }>; }
-const DEFAULT_EXPRESS: ExpressMenuSettings = {
-  active: false,
-  items: [
-    { name: "Pulled Pork Sandwich + chips", priceCents: 1250 },
-    { name: "Brisket Sandwich + chips", priceCents: 1550 },
-  ],
-};
+// ── Express Menu (Express Catering funnel pricing) ───────────────────────
+// Edits the "expressCatering" settings shape read by the public /express
+// funnel: Party Sampler packages + à la carte items. Prices use the same
+// tap-to-edit pattern as the master Menu editor; saves audit via settings.set.
 
 export function ExpressMenu() {
   const { actor } = useRole();
@@ -348,91 +347,177 @@ export function ExpressMenu() {
   const [sync, setSync] = useState<Sync>("idle");
 
   const { data } = useQuery({
-    queryKey: ["settings", "expressMenu"],
-    queryFn: () => dal.settings.get<ExpressMenuSettings>("expressMenu", DEFAULT_EXPRESS),
+    queryKey: ["settings", EXPRESS_SETTINGS_KEY],
+    queryFn: () => dal.settings.get<ExpressCateringSettings>(EXPRESS_SETTINGS_KEY, EXPRESS_DEFAULTS),
   });
 
   const saveMut = useMutation({
-    mutationFn: (v: ExpressMenuSettings) => {
+    mutationFn: (v: ExpressCateringSettings) => {
       setSync("saving");
-      return dal.settings.set("expressMenu", v, actor).then(() => setSync("saved"), e => { setSync("error"); throw e; });
+      return dal.settings.set(EXPRESS_SETTINGS_KEY, v, actor).then(() => setSync("saved"), e => { setSync("error"); throw e; });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings", "expressMenu"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["settings", EXPRESS_SETTINGS_KEY] }),
   });
 
   if (!data) return <p className="py-20 text-center text-zinc-500">Loading express menu…</p>;
 
   return (
-    <div className="mx-auto max-w-2xl pt-6 pb-12">
+    <div className="mx-auto max-w-4xl pt-6 pb-12">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black uppercase text-zinc-100">Express Menu</h1>
         <SyncBadge sync={sync} />
       </header>
-      <p className="mt-1 text-sm text-zinc-500">Fast lunch line — a short list separate from the master menu</p>
-      <ExpressMenuForm key={JSON.stringify(data)} initial={data} busy={saveMut.isPending}
+      <p className="mt-1 text-sm text-zinc-500">
+        Powers the public Express Catering funnel (/express) — Party Sampler packages and à la carte pricing. Tap a price to edit.
+      </p>
+      <ExpressCateringForm key={JSON.stringify(data)} initial={data} busy={saveMut.isPending}
         error={saveMut.error?.message ?? null} onSave={v => saveMut.mutate(v)} />
     </div>
   );
 }
 
-function ExpressMenuForm({ initial, onSave, busy, error }: {
-  initial: ExpressMenuSettings; onSave: (v: ExpressMenuSettings) => void; busy: boolean; error: string | null;
-}) {
-  const [active, setActive] = useState(initial.active);
-  const [items, setItems] = useState(initial.items);
-  const [dirty, setDirty] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newPrice, setNewPrice] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+const EXPRESS_CATEGORIES: Array<{ key: ExpressCategory; label: string }> = [
+  { key: "proteins", label: "🥩 Proteins" },
+  { key: "sides", label: "🥗 Sides" },
+  { key: "extras", label: "🍞 Extras" },
+];
 
-  const addItem = () => {
-    setFormError(null);
-    if (!newName.trim()) return setFormError("Item name is required.");
-    const cents = dollarsToCents(newPrice);
-    if (cents === null) return setFormError("Price must be a valid non-negative dollar amount.");
-    setItems(cur => [...cur, { name: newName.trim(), priceCents: cents }]);
-    setNewName(""); setNewPrice(""); setDirty(true);
+function slugId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function ExpressCateringForm({ initial, onSave, busy, error }: {
+  initial: ExpressCateringSettings; onSave: (v: ExpressCateringSettings) => void; busy: boolean; error: string | null;
+}) {
+  const [packages, setPackages] = useState<ExpressPackage[]>(initial.packages);
+  const [alaCarte, setAlaCarte] = useState<ExpressAlaCarteItem[]>(initial.alaCarte);
+  const [dirty, setDirty] = useState(false);
+
+  const patchPackage = (id: string, patch: Partial<ExpressPackage>) => {
+    setPackages(cur => cur.map(p => p.id === id ? { ...p, ...patch } : p)); setDirty(true);
   };
-  const removeItem = (idx: number) => { setItems(cur => cur.filter((_, i) => i !== idx)); setDirty(true); };
+  const patchAlc = (id: string, patch: Partial<ExpressAlaCarteItem>) => {
+    setAlaCarte(cur => cur.map(a => a.id === id ? { ...a, ...patch } : a)); setDirty(true);
+  };
+
+  const rowInput = "min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-sm text-zinc-100";
 
   return (
-    <form className="mt-6 rounded-xl border border-ink-700 bg-ink-900 p-4"
-      onSubmit={e => { e.preventDefault(); onSave({ active, items }); }}>
-      {(formError || error) && <p className="mb-3 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">{formError ?? error}</p>}
-      <label className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-ink-700 bg-ink-800 px-3 text-sm font-semibold text-zinc-200">
-        Express menu active
-        <input type="checkbox" checked={active} onChange={e => { setActive(e.target.checked); setDirty(true); }} className="h-5 w-5" />
-      </label>
-      <ul className="mt-3 space-y-1.5">
-        {items.map((it, idx) => (
-          <li key={`${it.name}-${idx}`} className="flex items-center gap-3 rounded-lg border border-ink-700 bg-ink-800 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-100">{it.name}</span>
-            <span className="font-mono text-sm text-zinc-300">{formatCents(it.priceCents)}</span>
-            <button type="button" onClick={() => removeItem(idx)} aria-label={`Remove ${it.name}`}
-              className="min-h-[36px] rounded-lg border border-ink-700 px-2.5 py-1 text-xs font-semibold text-zinc-500 hover:text-red-400">
-              Remove
-            </button>
-          </li>
-        ))}
-        {items.length === 0 && <li className="py-4 text-center text-sm text-zinc-600">No express items.</li>}
-      </ul>
-      <div className="mt-3 flex gap-2">
-        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Item name"
-          aria-label="New express item name"
-          className="min-h-[44px] min-w-0 flex-1 rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600" />
-        <input value={newPrice} onChange={e => setNewPrice(e.target.value)} placeholder="$" inputMode="decimal"
-          aria-label="New express item price in dollars"
-          className="min-h-[44px] w-24 rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-right font-mono text-sm text-zinc-100 placeholder:text-zinc-600" />
-        <button type="button" onClick={addItem}
-          className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-bold text-zinc-200">+ Add</button>
-      </div>
-      <div className="mt-4 flex justify-end">
+    <form className="mt-6 space-y-6"
+      onSubmit={e => {
+        e.preventDefault();
+        if (packages.some(p => !p.name.trim()) || alaCarte.some(a => !a.name.trim())) return;
+        onSave({ packages, alaCarte });
+      }}>
+      {error && <p role="alert" className="rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">{error}</p>}
+
+      {/* Packages */}
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <h2 className="text-sm font-black uppercase tracking-wider text-zinc-300">🍖 Party Sampler packages</h2>
+        <ul className="mt-3 space-y-2">
+          {packages.map(p => (
+            <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-700 bg-ink-800/60 px-3 py-2">
+              <input value={p.name} onChange={e => patchPackage(p.id, { name: e.target.value })}
+                aria-label={`Package name for ${p.name || "new package"}`}
+                className={`${rowInput} min-w-0 flex-1`} />
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase text-zinc-500">
+                Feeds
+                <input value={String(p.feeds)} inputMode="numeric" aria-label={`Feeds count for ${p.name}`}
+                  onChange={e => { const n = parseInt(e.target.value, 10); patchPackage(p.id, { feeds: Number.isFinite(n) && n > 0 ? n : 0 }); }}
+                  className={`${rowInput} w-16 text-right font-mono`} />
+              </label>
+              <ExpressPriceCell label={p.name} priceCents={p.priceCents} onSave={cents => patchPackage(p.id, { priceCents: cents })} />
+              <button type="button" onClick={() => { setPackages(cur => cur.filter(x => x.id !== p.id)); setDirty(true); }}
+                aria-label={`Remove package ${p.name}`}
+                className="min-h-[36px] rounded-lg border border-ink-700 px-2.5 text-xs font-semibold text-zinc-500 hover:text-red-400">
+                Remove
+              </button>
+              <textarea value={p.contents} onChange={e => patchPackage(p.id, { contents: e.target.value })}
+                aria-label={`Contents for ${p.name}`} rows={2}
+                className={`${rowInput} w-full text-xs text-zinc-400`} />
+            </li>
+          ))}
+          {packages.length === 0 && <li className="py-4 text-center text-sm text-zinc-600">No packages.</li>}
+        </ul>
+        <button type="button"
+          onClick={() => {
+            setPackages(cur => [...cur, {
+              id: slugId("pkg"), name: "New package", feeds: 10, priceCents: 0,
+              contents: "", note: "All 5 meats · 3 sides · bread & fixings. Not available for full service.",
+            }]); setDirty(true);
+          }}
+          className="mt-3 min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-4 text-sm font-bold text-zinc-200">
+          + Add package
+        </button>
+      </section>
+
+      {/* À la carte */}
+      <section className="rounded-xl border border-ink-700 bg-ink-900 p-4">
+        <h2 className="text-sm font-black uppercase tracking-wider text-zinc-300">🥩 À la carte items</h2>
+        <ul className="mt-3 space-y-2">
+          {alaCarte.map(a => (
+            <li key={a.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-700 bg-ink-800/60 px-3 py-2">
+              <select value={a.category} onChange={e => patchAlc(a.id, { category: e.target.value as ExpressCategory })}
+                aria-label={`Category for ${a.name}`} className={`${rowInput} w-32`}>
+                {EXPRESS_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+              <input value={a.name} onChange={e => patchAlc(a.id, { name: e.target.value })}
+                aria-label={`Item name for ${a.name || "new item"}`} className={`${rowInput} min-w-0 flex-1`} />
+              <label className="flex items-center gap-1.5 text-xs font-bold uppercase text-zinc-500">
+                Unit
+                <input value={a.unit} onChange={e => patchAlc(a.id, { unit: e.target.value })}
+                  aria-label={`Unit for ${a.name}`} className={`${rowInput} w-20`} />
+              </label>
+              <ExpressPriceCell label={a.name} priceCents={a.priceCents} onSave={cents => patchAlc(a.id, { priceCents: cents })} />
+              <button type="button" onClick={() => { setAlaCarte(cur => cur.filter(x => x.id !== a.id)); setDirty(true); }}
+                aria-label={`Remove item ${a.name}`}
+                className="min-h-[36px] rounded-lg border border-ink-700 px-2.5 text-xs font-semibold text-zinc-500 hover:text-red-400">
+                Remove
+              </button>
+            </li>
+          ))}
+          {alaCarte.length === 0 && <li className="py-4 text-center text-sm text-zinc-600">No à la carte items.</li>}
+        </ul>
+        <button type="button"
+          onClick={() => { setAlaCarte(cur => [...cur, { id: slugId("alc"), category: "proteins", name: "New item", unit: "lb", priceCents: 0 }]); setDirty(true); }}
+          className="mt-3 min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-4 text-sm font-bold text-zinc-200">
+          + Add item
+        </button>
+      </section>
+
+      <div className="flex justify-end">
         <button type="submit" disabled={busy || !dirty}
           className="min-h-[44px] rounded-lg bg-fire px-5 py-2 text-sm font-bold text-white disabled:opacity-50">
           {busy ? "Saving…" : dirty ? "Save express menu" : "Saved"}
         </button>
       </div>
     </form>
+  );
+}
+
+/** Tap-to-edit price (same interaction as MenuEditor's PriceCell). */
+function ExpressPriceCell({ label, priceCents, onSave }: { label: string; priceCents: number; onSave: (cents: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  if (!editing) {
+    return (
+      <button type="button" onClick={() => { setVal((priceCents / 100).toFixed(2)); setEditing(true); }}
+        title="Tap to edit price" aria-label={`Edit price for ${label}`}
+        className="min-h-[36px] rounded-lg border border-transparent px-2.5 py-1 font-mono text-sm text-zinc-200 hover:border-ink-700 hover:bg-ink-800">
+        {formatCents(priceCents)}
+      </button>
+    );
+  }
+  const commit = () => {
+    const cents = dollarsToCents(val);
+    if (cents !== null && cents !== priceCents) onSave(cents);
+    setEditing(false);
+  };
+  return (
+    <input autoFocus inputMode="decimal" value={val} onChange={e => setVal(e.target.value)}
+      onBlur={commit} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(); } if (e.key === "Escape") setEditing(false); }}
+      className="w-24 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1 text-right font-mono text-sm text-zinc-100"
+      aria-label={`Price in dollars for ${label}`} />
   );
 }
 

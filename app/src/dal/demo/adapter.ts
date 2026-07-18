@@ -104,6 +104,8 @@ export function createDemoDal(): Dal {
   const preorders = new DemoPreorders(audit);
   const fireDrop = new DemoFireDrop(audit);
   const menu = new DemoMenu(audit);
+  const settings = new DemoSettings(audit);
+  const discounts = new DemoDiscounts(audit);
   return {
     mode: "demo",
     prep: new DemoPrep(audit),
@@ -137,14 +139,14 @@ export function createDemoDal(): Dal {
     marketing: new DemoMarketing(audit, leads),
     menu,
     users: new DemoUsers(audit),
-    discounts: new DemoDiscounts(audit),
+    discounts,
     events: new DemoEvents(audit),
     orderGuide: new DemoOrderGuide(audit),
     prepTemplates: new DemoPrepTemplates(audit),
     samplers: new DemoSamplers(audit),
-    settings: new DemoSettings(audit),
+    settings,
     imports: new DemoImports(),
-    publicCheckout: new DemoPublicCheckout(audit, fireDrop, preorders, menu),
+    publicCheckout: new DemoPublicCheckout(audit, fireDrop, preorders, menu, orders, settings, discounts),
     portal: new DemoPortal(audit, portalAdmin),
   };
 }

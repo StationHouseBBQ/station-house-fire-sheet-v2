@@ -97,15 +97,15 @@ export function CateringLanding() {
         </div>
       </section>
 
-      {/* Express catering (honest placeholder — tray checkout arrives with payments) */}
+      {/* Express catering — 4-step demo checkout (simulated payment like the rest) */}
       <section className="mt-14 rounded-2xl border border-ink-700 bg-ink-900 p-6 text-center" aria-label="Express catering">
         <h2 className="text-lg font-black uppercase text-zinc-100">⚡ Express Catering</h2>
         <p className="mx-auto mt-1 max-w-md text-sm text-zinc-400">
-          Smaller order? Full express tray ordering comes online with payments.
+          Party Sampler packages or build-your-own trays — pick guests, pickup or delivery, and check out in four quick steps.
         </p>
-        <Link href="/catering-request"
+        <Link href="/express"
           className="mt-4 inline-flex min-h-[48px] items-center rounded-xl border border-fire/60 px-6 text-sm font-black uppercase tracking-wider text-fire-light hover:bg-ink-800">
-          Request trays the quick way
+          Order Express Catering →
         </Link>
       </section>
 

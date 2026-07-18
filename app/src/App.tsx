@@ -16,6 +16,7 @@ const FireDropLanding = lazy(() => import("./modules/public/FireDropLanding").th
 const OrderConfirmation = lazy(() => import("./modules/public/OrderConfirmation").then(m => ({ default: m.OrderConfirmation })));
 const CubanThursdayLanding = lazy(() => import("./modules/public/CubanThursdayLanding").then(m => ({ default: m.CubanThursdayLanding })));
 const CateringLanding = lazy(() => import("./modules/public/CateringLanding").then(m => ({ default: m.CateringLanding })));
+const ExpressCatering = lazy(() => import("./modules/public/ExpressCatering").then(m => ({ default: m.ExpressCatering })));
 const CateringRequest = lazy(() => import("./modules/public/CateringRequest").then(m => ({ default: m.CateringRequest })));
 const OrderTrackerView = lazy(() => import("./modules/public/OrderTracker").then(m => ({ default: m.OrderTrackerView })));
 const EventLanding = lazy(() => import("./modules/public/EventLanding").then(m => ({ default: m.EventLanding })));
@@ -56,6 +57,8 @@ export default function App() {
             <Route path="/cuban-thursday" component={pub(CubanThursdayLanding)} />
             <Route path="/cuban-thursday/confirmation" component={pub(OrderConfirmation)} />
             <Route path="/catering" component={pub(CateringLanding)} />
+            <Route path="/express" component={pub(ExpressCatering)} />
+            <Route path="/express/confirmation" component={pub(OrderConfirmation)} />
             <Route path="/catering-request" component={pub(CateringRequest)} />
             <Route path="/track" component={pub(OrderTrackerView)} />
             <Route path="/fathers-day" component={pub(() => <EventLanding slug="fathers-day" fallbackTitle="Father's Day" />)} />
