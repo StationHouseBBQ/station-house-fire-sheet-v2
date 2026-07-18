@@ -12,7 +12,7 @@ import { etParts } from "../../lib/time";
 
 const KIND_META: Record<CalendarEvent["kind"], { label: string; cls: string; dot: string }> = {
   catering: { label: "Catering", cls: "bg-purple-500/20 text-purple-300 border-purple-500/30", dot: "bg-purple-400" },
-  fire_drop: { label: "Fire Drop", cls: "bg-orange-500/20 text-orange-300 border-orange-500/30", dot: "bg-orange-400" },
+  fire_drop: { label: "Weekend Pre-Order", cls: "bg-orange-500/20 text-orange-300 border-orange-500/30", dot: "bg-orange-400" },
   cuban_thursday: { label: "Cuban Thursday", cls: "bg-green-500/20 text-green-300 border-green-500/30", dot: "bg-green-400" },
   retail: { label: "Retail", cls: "bg-blue-500/20 text-blue-300 border-blue-500/30", dot: "bg-blue-400" },
   holiday: { label: "Holiday", cls: "bg-zinc-500/20 text-zinc-300 border-zinc-500/30", dot: "bg-zinc-400" },

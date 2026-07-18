@@ -92,7 +92,7 @@ function preorderSeed(): Preorder[] {
     };
   };
   return [
-    // Item names & prices mirror the LIVE funnels (Fire Drop + Cuban Thursday).
+    // Item names & prices mirror the LIVE funnels (Weekend Pre-Order + Cuban Thursday).
     mk("fire_drop", "Maria Santos", "813-555-0184", "maria@example.com", friday, "11AM–12PM", [["Brisket (1 lb)", 2, 3699], ["Mac & Cheese (Pint)", 1, 1199]], "paid"),
     mk("fire_drop", "James Walker", "813-555-0119", "james@example.com", friday, "12–1PM", [["Walk-In Sampler (5-6 People)", 1, 11999]], "paid"),
     mk("fire_drop", "Aisha Brooks", "813-555-0142", "aisha@example.com", saturday, "11AM–12PM", [["Pork Belly Burnt Ends (1 lb)", 3, 3699]], "pending"),
@@ -207,7 +207,7 @@ export class DemoTempLog implements TempLogRepository {
   }
 }
 
-// ── Fire Drop admin ───────────────────────────────────────────────────────
+// ── Weekend Pre-Order admin ───────────────────────────────────────────────────────
 const DROPS = "fireDrops.v1";
 function dropSeed(): FireDrop[] {
   const { friday, saturday } = activeDropWeekend(currentTime());

@@ -70,7 +70,7 @@ export function OrderTrackerView() {
           <div className="mt-8 rounded-2xl border border-amber-600/40 bg-amber-950/30 p-5 text-center">
             <p className="text-base font-black uppercase text-amber-400">No order found for "{ref}"</p>
             <p className="mt-1 text-sm text-zinc-400">
-              Check the ref against your confirmation — dashes and digits matter. Fire Drop refs start with FD, Cuban Thursday with CT.
+              Check the ref against your confirmation — dashes and digits matter. Weekend Pre-Order refs start with FD, Cuban Thursday with CT.
             </p>
           </div>
         )}

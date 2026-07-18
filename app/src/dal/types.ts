@@ -254,7 +254,7 @@ export interface RetailFireSheetRepository {
   syncFromPar(actor: string): Promise<RetailSession>;
 }
 
-// ── Retail preorders (Fire Drop + Cuban Thursday customer orders) ─────────
+// ── Retail preorders (Weekend Pre-Order + Cuban Thursday customer orders) ─────────
 export type PreorderStatus = "pending" | "paid" | "ready" | "picked_up" | "cancelled" | "refunded";
 export interface Preorder {
   // "catering" = Express Catering receipt rows (tracked by ref like retail preorders).
@@ -285,7 +285,7 @@ export interface TempLogRepository {
   submitCheck(station: string, tempF: number, actor: string): Promise<TempCheck>;
 }
 
-// ── Fire Drop admin ───────────────────────────────────────────────────────
+// ── Weekend Pre-Order admin ───────────────────────────────────────────────────────
 export interface FireDropProduct {
   id: string; name: string; priceCents: number; capQty: number | null; soldQty: number; soldOut: boolean; sortOrder: number;
   /** Live-funnel menu section: "platters" | "meats" | "sides" | "essentials" | "desserts". Optional/additive. */

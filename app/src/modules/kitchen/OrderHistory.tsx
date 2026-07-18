@@ -27,7 +27,7 @@ const STATUS_META: Record<OrderStatus, { label: string; cls: string }> = {
 };
 
 const CHANNEL_LABEL: Record<OrderChannel, string> = {
-  catering: "Catering", fire_drop: "Fire Drop", cuban_thursday: "Cuban Thursday", retail: "Retail", walk_in: "Walk-in",
+  catering: "Catering", fire_drop: "Weekend Pre-Order", cuban_thursday: "Cuban Thursday", retail: "Retail", walk_in: "Walk-in",
 };
 
 export function OrderHistoryView() {

@@ -75,7 +75,7 @@ export function PreorderChannelAdmin({ channel, title }: { channel: "fire_drop" 
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black uppercase text-zinc-100">{title}</h1>
-          <p className="text-sm text-zinc-500">{channel === "fire_drop" ? "Fire Drop weekend pickup preorders" : "Cuban Thursday preorders"}</p>
+          <p className="text-sm text-zinc-500">{channel === "fire_drop" ? "Weekend Pre-Order weekend pickup preorders" : "Cuban Thursday preorders"}</p>
         </div>
         <SyncBadge sync={sync} />
       </header>

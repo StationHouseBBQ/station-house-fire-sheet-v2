@@ -8,7 +8,7 @@ import { downloadCsv } from "../../lib/csv";
 import { preorderCsv } from "./PreordersView";
 
 /**
- * Seminole · Fire Drop Admin — V2 counterpart of the Manus FireDropAdmin.
+ * Seminole · Weekend Pre-Order Admin — V2 counterpart of the Manus FireDropAdmin.
  * Manages the current weekend drop: title, drop-level sold-out kill switch,
  * ordering-window badges, product catalog (price/cap/86/sort), and pickup
  * slots with capacity fill. Note: upsert payloads pass id: "" to create —
@@ -163,7 +163,7 @@ export function FireDropAdminView() {
             <p className="text-xs text-zinc-500">Bump pickups from the Preorders tab or FOH board.</p>
             <button onClick={() => downloadCsv(`fire-drop-orders-${drop.fridayDate}.csv`, preorderCsv(dropPreorders))}
               disabled={dropPreorders.length === 0}
-              title={dropPreorders.length === 0 ? "No Fire Drop orders yet" : `Export ${dropPreorders.length} Fire Drop orders`}
+              title={dropPreorders.length === 0 ? "No Weekend Pre-Order orders yet" : `Export ${dropPreorders.length} Weekend Pre-Order orders`}
               className="no-print min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-xs font-bold text-zinc-200 disabled:opacity-40">
               ⬇ Export orders CSV
             </button>

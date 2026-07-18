@@ -1,5 +1,5 @@
 /**
- * All business time is America/New_York. These helpers compute Fire Drop
+ * All business time is America/New_York. These helpers compute Weekend Pre-Order
  * ordering windows per the authoritative rules:
  *  - Friday pickup ordering closes Thursday 5:00 PM ET.
  *  - Saturday ordering opens Thursday 5:00 PM ET, closes Friday 3:00 PM ET.

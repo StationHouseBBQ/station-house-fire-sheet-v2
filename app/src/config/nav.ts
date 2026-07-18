@@ -55,7 +55,7 @@ export const WORKSPACES: WorkspaceDef[] = [
       { implemented: true, id: "preorders", label: "Preorders", parityRow: 13, sourceComponent: "RetailPreorders", sourceFile: "client/src/pages/RetailPreorders.tsx" },
       { implemented: true, id: "checklist", label: "FOH Checklist", parityRow: 14, sourceComponent: "RetailChecklist", sourceFile: "client/src/pages/RetailChecklist.tsx" },
       { implemented: true, id: "temp-log", label: "Temp Log", parityRow: 15, sourceComponent: "FoodTempLog", sourceFile: "client/src/pages/FoodTempLog.tsx" },
-      { implemented: true, id: "fire-drop", label: "Fire Drop", parityRow: 16, sourceComponent: "FireDropAdmin", sourceFile: "client/src/pages/FireDropAdmin.tsx" },
+      { implemented: true, id: "fire-drop", label: "Weekend Pre-Order Setup", parityRow: 16, sourceComponent: "FireDropAdmin", sourceFile: "client/src/pages/FireDropAdmin.tsx" },
     ],
   },
   {

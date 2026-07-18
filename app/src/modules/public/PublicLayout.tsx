@@ -4,14 +4,14 @@ import { NavControls } from "../../app/NavControls";
 import { ADDRESS_LINE, INSTAGRAM, NONPROFIT, PHONE } from "../../config/brand";
 
 /**
- * Public-facing chrome shared by every customer page (Fire Drop, Cuban
+ * Public-facing chrome shared by every customer page (Weekend Pre-Order, Cuban
  * Thursday, Catering, Tracker, Events). No roles, no login — this is the
  * storefront. Visual language follows the live prototype: near-black ink,
  * fire-orange gradient accents, big uppercase display type.
  */
 
 const NAV = [
-  { href: "/fire-drop", label: "Fire Drop" },
+  { href: "/fire-drop", label: "Weekend Pre-Order" },
   { href: "/cuban-thursday", label: "Cuban Thursday" },
   { href: "/catering", label: "Catering" },
   { href: "/track", label: "Track Order" },

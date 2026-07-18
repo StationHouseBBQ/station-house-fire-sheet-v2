@@ -3,7 +3,7 @@
  * then RECONCILED against the LIVE sales funnels (captured from the live
  * Manus app, 2026-07-18 — authoritative for names & prices).
  *
- * Price sources: the live Fire Drop funnel (26-product catalog below), the
+ * Price sources: the live Weekend Pre-Order funnel (26-product catalog below), the
  * live Cuban Thursday funnel + cuban_thursday_products dump, and the snapshot
  * tables (invoice_menu_catalog, catering_packages) for everything the funnels
  * don't sell. Items whose only known prices are size-dependent (half/full
@@ -108,7 +108,7 @@ export const MENU_ITEMS: Array<MenuItemSeed> = [
   { name: "Beef Empanadas", categoryId: "appetizer", unit: "pc", sizeOptions: null, sortOrder: 91, active: true, priceCents: null, thursdayOnly: false },
   { name: "Vegetable Spring Rolls", categoryId: "appetizer", unit: "pc", sizeOptions: null, sortOrder: 92, active: true, priceCents: null, thursdayOnly: false },
   // ── retail_meat ───────────────────────────────────────────────────────
-  // Sampler names follow the LIVE Fire Drop funnel ("People", not "lb").
+  // Sampler names follow the LIVE Weekend Pre-Order funnel ("People", not "lb").
   { name: "Walk-In Sampler (2-3 People)", categoryId: "retail_meat", unit: "pkg", sizeOptions: null, sortOrder: 10, active: true, priceCents: 5999, thursdayOnly: false },
   { name: "Walk-In Sampler (5-6 People)", categoryId: "retail_meat", unit: "pkg", sizeOptions: null, sortOrder: 11, active: true, priceCents: 11999, thursdayOnly: false },
   // Legacy inactive duplicate, renamed to the live product name.
@@ -127,7 +127,7 @@ export const MENU_ITEMS: Array<MenuItemSeed> = [
   { name: "Mac & Cheese", categoryId: "retail_side", unit: "pans", sizeOptions: null, sortOrder: 110, active: true, priceCents: null, thursdayOnly: false },
   { name: "Baked Beans", categoryId: "retail_side", unit: "pans", sizeOptions: null, sortOrder: 111, active: true, priceCents: null, thursdayOnly: false },
   { name: "Free Simple Slaw", categoryId: "retail_side", unit: "pans", sizeOptions: null, sortOrder: 112, active: true, priceCents: null, thursdayOnly: false },
-  // Live Fire Drop funnel side sizes (confirmed prices):
+  // Live Weekend Pre-Order funnel side sizes (confirmed prices):
   { name: "Mac & Cheese (6oz)", categoryId: "retail_side", unit: "each", sizeOptions: null, sortOrder: 113, active: true, priceCents: 599, thursdayOnly: false },
   { name: "Mac & Cheese (Pint)", categoryId: "retail_side", unit: "pint", sizeOptions: null, sortOrder: 113, active: true, priceCents: 1199, thursdayOnly: false },
   { name: "Baked Beans (6oz)", categoryId: "retail_side", unit: "each", sizeOptions: null, sortOrder: 114, active: true, priceCents: 599, thursdayOnly: false },
@@ -144,7 +144,7 @@ export const MENU_ITEMS: Array<MenuItemSeed> = [
   { name: "Special Item", categoryId: "salad_misc", unit: null, sizeOptions: null, sortOrder: 3, active: true, priceCents: null, thursdayOnly: false },
   { name: "BBQ Sauce (Bottle)", categoryId: "salad_misc", unit: "bottle", sizeOptions: null, sortOrder: 116, active: true, priceCents: 999, thursdayOnly: false },
   { name: "Bread (2 slices)", categoryId: "salad_misc", unit: "each", sizeOptions: null, sortOrder: 117, active: true, priceCents: null, thursdayOnly: false },
-  // Live Fire Drop "Essentials" sauce jars ($9.99/jar each, confirmed):
+  // Live Weekend Pre-Order "Essentials" sauce jars ($9.99/jar each, confirmed):
   { name: "The Rescue – Sweet Guava BBQ Sauce", categoryId: "salad_misc", unit: "jar", sizeOptions: null, sortOrder: 118, active: true, priceCents: 999, thursdayOnly: false },
   { name: "The Flashover – Spicy Guava BBQ Sauce", categoryId: "salad_misc", unit: "jar", sizeOptions: null, sortOrder: 119, active: true, priceCents: 999, thursdayOnly: false },
   { name: "The Golden Alarm – Carolina Gold BBQ Sauce", categoryId: "salad_misc", unit: "jar", sizeOptions: null, sortOrder: 120, active: true, priceCents: 999, thursdayOnly: false },
@@ -195,7 +195,7 @@ export const MENU_ITEMS: Array<MenuItemSeed> = [
   { name: "Drinks", categoryId: "thursday_only", unit: "each", sizeOptions: null, sortOrder: 33, active: true, priceCents: 200, thursdayOnly: true },
 ];
 
-// Fire Drop products — LIVE funnel catalog (captured from the live Manus app,
+// Weekend Pre-Order products — LIVE funnel catalog (captured from the live Manus app,
 // 2026-07-18). 26 products across five sections: platters / meats / sides /
 // essentials / desserts. Names, prices and descriptions are verbatim from the
 // live page. capQty mirrors the live "ONLY N LEFT" counters (soldQty seeds 0);

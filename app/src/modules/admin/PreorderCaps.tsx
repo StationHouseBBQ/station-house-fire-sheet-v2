@@ -8,7 +8,7 @@ import { formatCents } from "../../lib/money";
 /**
  * Admin · Preorder Inventory Caps — V2 counterpart of Manus
  * PreorderInventoryDashboard (parity row 60). Per-product caps on the current
- * Fire Drop with inline cap editing and 86 toggles. Caps are enforced
+ * Weekend Pre-Order with inline cap editing and 86 toggles. Caps are enforced
  * server-side at checkout; this screen only sets the numbers.
  */
 

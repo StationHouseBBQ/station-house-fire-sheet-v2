@@ -10,7 +10,7 @@ import { ADDRESS_LINE } from "../../config/brand";
 import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
 
 /**
- * Public Fire Drop landing — customer-facing weekend drop page. Prices shown
+ * Public Weekend Pre-Order landing — customer-facing weekend drop page. Prices shown
  * here are display-only; the authoritative totals (and every enforcement
  * rule: windows, caps, 86s, slot capacity) come from dal.publicCheckout.
  */
@@ -132,7 +132,7 @@ export function FireDropLanding() {
     <PublicLayout>
       {/* Hero */}
       <section className="pt-10 text-center">
-        <p className="text-xs font-black uppercase tracking-[0.3em] text-fire-light">This Weekend's Limited Fire Drop</p>
+        <p className="text-xs font-black uppercase tracking-[0.3em] text-fire-light">This Weekend's Limited Weekend Pre-Order</p>
         <h1 className="mt-3 text-5xl font-black uppercase leading-none tracking-tight text-zinc-100 sm:text-6xl">
           {drop.title.split(" ").map((w, i) => (
             <span key={i} className={i % 2 === 1 ? "text-transparent bg-clip-text bg-gradient-to-r from-fire to-fire-light" : undefined}>{w}{" "}</span>

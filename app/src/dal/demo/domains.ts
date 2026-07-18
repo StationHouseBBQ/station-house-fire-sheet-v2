@@ -228,7 +228,7 @@ const PROTEINS: ProteinConversion[] = [
   { id: "pc4", protein: "Smoked Sausage", rawUnit: "each", cookedYieldLbsPerUnit: 0.28, portionsPerCookedLb: 3.5, notes: "" },
   { id: "pc5", protein: "Chicken Quarters", rawUnit: "each", cookedYieldLbsPerUnit: 0.55, portionsPerCookedLb: 2, notes: "" },
   { id: "pc6", protein: "Turkey Breast", rawUnit: "lbs", cookedYieldLbsPerUnit: 0.65, portionsPerCookedLb: 3.5, notes: "" },
-  { id: "pc7", protein: "Oxtail (Tampa Diamonds)", rawUnit: "lbs", cookedYieldLbsPerUnit: 0.45, portionsPerCookedLb: 2.5, notes: "Fire Drop special" },
+  { id: "pc7", protein: "Oxtail (Tampa Diamonds)", rawUnit: "lbs", cookedYieldLbsPerUnit: 0.45, portionsPerCookedLb: 2.5, notes: "Weekend Pre-Order special" },
 ];
 const PROTEIN_COL = "proteinConversions.v1";
 export class DemoProteins implements ProteinRepository {
@@ -329,8 +329,8 @@ export class DemoCalendar implements CalendarRepository {
       const iso = `${yearMonth}-${String(d).padStart(2, "0")}`;
       const dow = weekdayOf(iso);
       if (dow === 4) evts.push({ id: `cu-${iso}`, date: iso, title: "Cuban Thursday (Cubans & Smash Burgers)", kind: "cuban_thursday", orderId: null });
-      if (dow === 5) evts.push({ id: `fd-${iso}`, date: iso, title: "Fire Drop · Friday pickup", kind: "fire_drop", orderId: null });
-      if (dow === 6) evts.push({ id: `fs-${iso}`, date: iso, title: "Fire Drop · Saturday pickup", kind: "fire_drop", orderId: null });
+      if (dow === 5) evts.push({ id: `fd-${iso}`, date: iso, title: "Weekend Pre-Order · Friday pickup", kind: "fire_drop", orderId: null });
+      if (dow === 6) evts.push({ id: `fs-${iso}`, date: iso, title: "Weekend Pre-Order · Saturday pickup", kind: "fire_drop", orderId: null });
     }
     return evts.sort((a, b) => a.date.localeCompare(b.date));
   }

@@ -6,7 +6,7 @@ Demo controls → "Reset demo data", then pick the clock preset that matches
 the story you want to tell.
 
 ## 1. The customer orders (2 min) — clock preset: "Tue 10:00 AM"
-Hub → Public pages → 🔥 Fire Drop. Show the countdown to the Thursday 5 PM
+Hub → Public pages → 🔥 Weekend Pre-Order. Show the countdown to the Thursday 5 PM
 cutoff, the real product catalog with caps ("Only 15 left"), pick Friday,
 add Tampa Diamonds ×2, choose a pickup window (note "1 of 8 booked"),
 enter a name/phone, Place order → confirmation with order number and 7.5%

@@ -57,7 +57,7 @@ export function EventLanding({ slug, fallbackTitle }: { slug: string; fallbackTi
           <div className="mt-6 flex justify-center gap-2">
             <Link href="/fire-drop"
               className="inline-flex min-h-[48px] items-center rounded-xl bg-gradient-to-r from-fire to-fire-light px-6 text-sm font-black uppercase tracking-wider text-white">
-              See this week's Fire Drop
+              See this week's Weekend Pre-Order
             </Link>
             <Link href="/catering"
               className="inline-flex min-h-[48px] items-center rounded-xl border border-ink-700 px-6 text-sm font-black uppercase tracking-wider text-zinc-300">

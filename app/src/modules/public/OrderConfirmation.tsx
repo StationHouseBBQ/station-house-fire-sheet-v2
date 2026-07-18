@@ -5,7 +5,7 @@ import { formatCents } from "../../lib/money";
 import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
 
 /**
- * Shared confirmation page for Fire Drop + Cuban Thursday checkouts. The ref
+ * Shared confirmation page for Weekend Pre-Order + Cuban Thursday checkouts. The ref
  * arrives as a hash-route query (`#/fire-drop/confirmation?ref=FD-…`), so we
  * parse it off location.hash rather than location.search.
  */

@@ -14,7 +14,7 @@ import { etParts } from "../../lib/time";
 
 const CHANNEL_META: Record<OrderChannel, { label: string; cls: string }> = {
   catering: { label: "Catering", cls: "bg-purple-500/20 text-purple-300 border-purple-500/30" },
-  fire_drop: { label: "Fire Drop", cls: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
+  fire_drop: { label: "Weekend Pre-Order", cls: "bg-orange-500/20 text-orange-300 border-orange-500/30" },
   cuban_thursday: { label: "Cuban Thu", cls: "bg-green-500/20 text-green-300 border-green-500/30" },
   retail: { label: "Retail", cls: "bg-blue-500/20 text-blue-300 border-blue-500/30" },
   walk_in: { label: "Walk-in", cls: "bg-zinc-500/20 text-zinc-300 border-zinc-500/30" },

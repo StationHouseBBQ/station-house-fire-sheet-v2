@@ -67,7 +67,7 @@ export class DemoPublicCheckout implements PublicCheckoutRepository {
         : "Saturday ordering is open Thu 5:00 PM – Fri 3:00 PM ET only.");
     }
     const drop = await this.fireDrop.currentDrop();
-    if (drop.soldOut) throw new Error("This week's Fire Drop is sold out.");
+    if (drop.soldOut) throw new Error("This week's Weekend Pre-Order is sold out.");
     if (!input.slotId) throw new Error("Choose a pickup window");
     const slot = drop.slots.find(s => s.id === input.slotId && s.day === day);
     if (!slot) throw new Error("Pickup window not found for that day");

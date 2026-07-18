@@ -20,7 +20,7 @@ function seedPages(): LandingPage[] {
   const mk = (slug: string, title: string, kind: string, status: "live" | "draft", visits: number, conversions: number): LandingPage =>
     ({ id: uid(), slug, title, kind, status, visits, conversions });
   return [
-    mk("/fire-drop", "Fire Drop — Weekend BBQ Preorder", "fire_drop", "live", 4180, 512),
+    mk("/fire-drop", "Weekend Pre-Order — Weekend BBQ Preorder", "fire_drop", "live", 4180, 512),
     mk("/cuban-thursday", "Cuban Thursday", "event", "live", 2210, 296),
     mk("/catering-landing", "BBQ Catering in Tampa", "catering", "live", 1875, 84),
     mk("/july4", "July 4th Cookout Packs", "event", "draft", 1502, 173),
@@ -39,7 +39,7 @@ function seedPosts(): ContentPost[] {
   return [
     mk(addDays(t, -2), "instagram", "Brisket pull reel", "Slow pull on the 14-hr packer — post oak only. Sound on.", "posted"),
     mk(addDays(t, 0), "facebook", "Cuban Thursday reminder", "Cubans & Brisket Smash Burgers, Thursday only. Preorder link in bio.", "scheduled"),
-    mk(addDays(t, 1), "tiktok", "Fire Drop menu drop", "This weekend's Fire Drop menu reveal — oxtail is BACK.", "drafted"),
+    mk(addDays(t, 1), "tiktok", "Weekend Pre-Order menu drop", "This weekend's Weekend Pre-Order menu reveal — oxtail is BACK.", "drafted"),
     mk(addDays(t, 3), "instagram", "Sampler tray carousel", "Walk-In Sampler: pulled pork, brisket, sausage, ribs, chicken quarters. $34.", "drafted"),
     mk(addDays(t, 5), "facebook", "Catering testimonial", "Photo set from the Bayfront Realty client dinner + review quote.", "idea"),
   ];
@@ -91,7 +91,7 @@ function seedAds(): AdCampaign[] {
   return [
     { id: uid(), platform: "meta", name: "Catering — Tampa 15mi", status: "active", spendCents: 84200, leads: 23, costPerLeadCents: 3661 },
     { id: uid(), platform: "google", name: "Search: bbq catering tampa", status: "active", spendCents: 121500, leads: 31, costPerLeadCents: 3919 },
-    { id: uid(), platform: "tiktok", name: "Fire Drop awareness", status: "paused", spendCents: 30000, leads: 4, costPerLeadCents: 7500 },
+    { id: uid(), platform: "tiktok", name: "Weekend Pre-Order awareness", status: "paused", spendCents: 30000, leads: 4, costPerLeadCents: 7500 },
   ];
 }
 
@@ -100,9 +100,9 @@ function seedBriefs(): CreativeBrief[] {
   const mk = (kind: CreativeBrief["kind"], title: string, brief: string, status: CreativeBrief["status"]): CreativeBrief =>
     ({ id: uid(), kind, title, brief, status, createdAt: nowIso() });
   return [
-    mk("content", "August content calendar", "30-day grid mixing Cuban Thursday, Fire Drop and catering proof.", "in_review"),
+    mk("content", "August content calendar", "30-day grid mixing Cuban Thursday, Weekend Pre-Order and catering proof.", "in_review"),
     mk("content", "Pitmaster Q&A series", "Weekly caption series answering top smoking questions.", "queued"),
-    mk("design", "Fire Drop story template refresh", "New countdown template matching brand red/charcoal.", "approved"),
+    mk("design", "Weekend Pre-Order story template refresh", "New countdown template matching brand red/charcoal.", "approved"),
     mk("design", "Catering one-pager PDF", "Leave-behind sheet for venue partners with menus & minimums.", "queued"),
     mk("video", "Brisket trim-to-slice mini-doc", "90-second vertical: trim, smoke, wrap, slice.", "in_review"),
     mk("video", "Cuban Thursday hype loop", "15-second loop for stories every Wednesday night.", "done"),

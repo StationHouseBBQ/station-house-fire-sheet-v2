@@ -30,7 +30,7 @@ const STATUS_META: Record<PreorderStatus, { label: string; cls: string }> = {
 };
 
 const CHANNEL_META = {
-  fire_drop: { label: "Fire Drop", icon: "🔥" },
+  fire_drop: { label: "Weekend Pre-Order", icon: "🔥" },
   cuban_thursday: { label: "Cuban Thu", icon: "🥖" },
   catering: { label: "Express", icon: "🚚" },   // Express Catering receipt rows
 } as const;
@@ -42,13 +42,13 @@ type Sync = "idle" | "saving" | "saved" | "error";
 
 const PICKUP_WINDOWS = ["11AM–12PM", "12–1PM", "1–2PM"];
 
-/** Builds the standard preorder CSV (shared with Fire Drop Admin's export). */
+/** Builds the standard preorder CSV (shared with Weekend Pre-Order Admin's export). */
 export function preorderCsv(orders: Preorder[]): string {
   const dollars = (cents: number) => (cents / 100).toFixed(2);
   const headers = ["Ref", "Channel", "Customer", "Phone", "Email", "Pickup Date", "Window", "Items", "Subtotal", "Tax", "Total", "Status"];
   const rows = orders.map(o => [
     o.orderRef,
-    o.channel === "fire_drop" ? "Fire Drop" : "Cuban Thursday",
+    o.channel === "fire_drop" ? "Weekend Pre-Order" : "Cuban Thursday",
     o.customer,
     o.phone,
     o.email,
@@ -215,7 +215,7 @@ export function PreordersView() {
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black uppercase text-zinc-100">Preorders</h1>
-          <p className="text-sm text-zinc-500">Fire Drop + Cuban Thursday pickups</p>
+          <p className="text-sm text-zinc-500">Weekend Pre-Order + Cuban Thursday pickups</p>
         </div>
         <div className="no-print flex items-center gap-2">
           <SyncBadge sync={sync} />
@@ -256,7 +256,7 @@ export function PreordersView() {
 
       {/* Channel tabs */}
       <div className="mt-2 flex gap-1 rounded-xl border border-ink-700 bg-ink-900 p-1">
-        {([["all", "All"], ["fire_drop", "🔥 Fire Drop"], ["cuban_thursday", "🥖 Cuban Thursday"]] as Array<[ChannelFilter, string]>).map(([c, label]) => (
+        {([["all", "All"], ["fire_drop", "🔥 Weekend Pre-Order"], ["cuban_thursday", "🥖 Cuban Thursday"]] as Array<[ChannelFilter, string]>).map(([c, label]) => (
           <button key={c} onClick={() => setChannel(c)}
             className={`min-h-[44px] flex-1 rounded-lg px-3 py-2 text-sm font-bold transition-colors ${
               channel === c ? "bg-fire text-white" : "text-zinc-400 hover:text-zinc-200"}`}>
@@ -587,7 +587,7 @@ function ManualOrderDialog({ onSubmit, onCancel, busy, error }: {
           <label className="block text-sm font-semibold text-zinc-400">Channel
             <select value={channel} onChange={e => setChannel(e.target.value as "fire_drop" | "cuban_thursday")}
               className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-2 py-2.5 text-zinc-100">
-              <option value="fire_drop">Fire Drop</option>
+              <option value="fire_drop">Weekend Pre-Order</option>
               <option value="cuban_thursday">Cuban Thursday</option>
             </select>
           </label>

@@ -4,7 +4,7 @@ import { isOrderingOpen } from "./time";
 /** Build a Date from an ET wall-clock time (EDT offset -4 used for July dates). */
 const et = (iso: string) => new Date(iso + "-04:00");
 
-describe("Fire Drop ordering windows (America/New_York)", () => {
+describe("Weekend Pre-Order ordering windows (America/New_York)", () => {
   // Week of 2026-07-13 (Mon) … pickup Fri 2026-07-17 / Sat 2026-07-18
   it("Friday ordering is open before Thu 5:00 PM ET", () => {
     expect(isOrderingOpen("friday", et("2026-07-13T09:00:00"))).toBe(true);  // Mon

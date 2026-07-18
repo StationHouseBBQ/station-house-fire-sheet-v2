@@ -1,6 +1,6 @@
 # Station House BBQ — Fire Sheet V2 Operating Guide
 
-Fire Sheet V2 is the whole restaurant on one screen: kitchen production, the Seminole Heights counter, the pit, packing, catering sales, marketing, and admin — plus the customer-facing ordering pages (Fire Drop, Cuban Thursday, catering requests, order tracking, quotes, and the client portal). It runs in two modes: **demo mode** keeps all data in your browser with realistic seed data, a simulated clock, and a role switcher so anyone can walk every flow safely. **Supabase mode** is the same app pointed at the shared database — real clock, real sign-in, roles come from your staff profile, and the server enforces every rule. Try it here: <https://stationhousebbq.github.io/station-house-fire-sheet-v2/v2/>. For a 10-minute walkthrough to show someone, see [DEMO_SCRIPT.md](DEMO_SCRIPT.md).
+Fire Sheet V2 is the whole restaurant on one screen: kitchen production, the Seminole Heights counter, the pit, packing, catering sales, marketing, and admin — plus the customer-facing ordering pages (Weekend Pre-Order, Cuban Thursday, catering requests, order tracking, quotes, and the client portal). It runs in two modes: **demo mode** keeps all data in your browser with realistic seed data, a simulated clock, and a role switcher so anyone can walk every flow safely. **Supabase mode** is the same app pointed at the shared database — real clock, real sign-in, roles come from your staff profile, and the server enforces every rule. Try it here: <https://stationhousebbq.github.io/station-house-fire-sheet-v2/v2/>. For a 10-minute walkthrough to show someone, see [DEMO_SCRIPT.md](DEMO_SCRIPT.md).
 
 ---
 
@@ -30,7 +30,7 @@ In Supabase mode there is no switcher — your role derives from your signed-in 
 
 **Printing.** Kitchen → Fire Sheets has a `🖨 Print` button that produces a clean black-and-white production sheet — the print stylesheet strips the navigation and dark theme automatically.
 
-**CSV exports.** Seminole → Preorders has `⬇ Export CSV` (exports exactly the filtered list you're looking at) and Seminole → Fire Drop has `⬇ Export orders CSV` — both produce the same standard preorder CSV format.
+**CSV exports.** Seminole → Preorders has `⬇ Export CSV` (exports exactly the filtered list you're looking at) and Seminole → Weekend Pre-Order has `⬇ Export orders CSV` — both produce the same standard preorder CSV format.
 
 **Mobile.** Every button is at least 44px tall for gloved/greasy fingers, navigation collapses to icons on narrow screens, and the whole app works from a phone on the same URLs.
 
@@ -43,7 +43,7 @@ In Supabase mode there is no switcher — your role derives from your signed-in 
 ### Weekly Board
 What it's for: one look at the whole week's orders. Read-only.
 1. Open Kitchen → Weekly Board. You get a Mon–Sun grid built from the live order list.
-2. Each day shows order cards with channel badges (Catering, Fire Drop, Cuban Thu, Retail, Walk-in) and status badges.
+2. Each day shows order cards with channel badges (Catering, Weekend Pre-Order, Cuban Thu, Retail, Walk-in) and status badges.
 3. Tap a card to expand its items inline.
 4. Each day's footer totals up items so you can eyeball volume per day. No mutations here — work the orders from Fire Sheets.
 
@@ -59,7 +59,7 @@ Improvements over the old build: status advances are one-tap with undo, notes au
 ### Calendar
 What it's for: month view of everything scheduled. Read-only.
 1. Use ‹ / › to move months. Today (ET) is highlighted.
-2. Events are color-coded by kind: Catering (purple), Fire Drop (orange), Cuban Thursday (green), Retail (blue), Holiday (gray).
+2. Events are color-coded by kind: Catering (purple), Weekend Pre-Order (orange), Cuban Thursday (green), Retail (blue), Holiday (gray).
 
 ### Expo KDS
 What it's for: the ticket screen from cook to handoff.
@@ -114,7 +114,7 @@ What it's for: the recipe book behind the prep list.
 
 ### Dashboard
 What it's for: the counter's at-a-glance morning read.
-1. Open it and you see preorder pickup counts and revenue for the weekend, today's fire-sheet case status, and whether the Fire Drop ordering window is currently OPEN or CLOSED — computed from the same authoritative ET rules the checkout uses.
+1. Open it and you see preorder pickup counts and revenue for the weekend, today's fire-sheet case status, and whether the Weekend Pre-Order ordering window is currently OPEN or CLOSED — computed from the same authoritative ET rules the checkout uses.
 
 ### Fire Sheet
 What it's for: what's in the hot case right now.
@@ -147,7 +147,7 @@ What it's for: food-safety temperature checks with a verdict.
 2. Type the temp and log it — you get an instant pass/**FAIL** verdict from the data layer, not your own mental math.
 3. Today's checks stream below, newest first, refreshing every 30 seconds.
 
-### Fire Drop
+### Weekend Pre-Order
 What it's for: managing this weekend's drop — the merchant side of the public page.
 1. Edit the drop title; flip the drop-level **sold-out kill switch** to close the whole weekend at once.
 2. Ordering-window badges show what's open right now.
@@ -360,7 +360,7 @@ One generic special-event admin serving all three tabs.
 The same per-channel preorder manager on two tabs: status filter chips, text search, a per-row status dropdown, hide/unhide, and a totals summary. (Catering drops currently ride the fire_drop channel until the channel enum expands in Supabase — noted in the parity matrix.)
 
 ### Preorder Inventory Caps
-Per-product caps on the current Fire Drop with inline cap editing and 86 toggles. This screen only sets the numbers — the caps are enforced at customer checkout by the data layer.
+Per-product caps on the current Weekend Pre-Order with inline cap editing and 86 toggles. This screen only sets the numbers — the caps are enforced at customer checkout by the data layer.
 
 ### Order Guide Setup
 Vendor order guide with inline on-hand entry. Order quantity is computed for you — PAR minus on-hand, floored at zero — and highlighted whenever it's above zero. Walk the shelves, type counts, read the order.
@@ -390,16 +390,16 @@ Settings-backed panels: simple key/value configuration persisted through the set
 
 All reachable from the Hub's "Public pages (no login)" row. No login, no roles — this is the storefront.
 
-### Fire Drop ordering (/fire-drop)
+### Weekend Pre-Order ordering (/fire-drop)
 1. The page opens with a live per-second countdown: "Friday ordering closes" (until Thu 5:00 PM ET) or "Saturday ordering closes" (until Fri 3:00 PM ET). Outside a window the day shows **Closed** with the exact hours and a note: you can browse, but checkout for that day is closed.
 2. Pick your pickup day (Friday or Saturday), then add items. Scarcity is real: items show **Sold out** or `🔥 Only N left` from live cap math.
 3. Choose a pickup window — each option shows fill, e.g. "11:00–11:30 — 3 of 8 booked", with "(full)" appended when it's done.
 4. Enter name and phone, place the order, and land on the confirmation page with your order ref (FD-…) and a total that includes 7.5% tax.
-5. If something changed while you shopped, the data layer refuses the order with a plain message: "This week's Fire Drop is sold out." / "Choose a pickup window" / "That pickup window is full — choose another." / "Brisket is sold out (86'd)." / "Only 2 left of Tampa Diamonds." Prices on the page are display-only — the authoritative totals and every enforcement rule come from the checkout data layer.
+5. If something changed while you shopped, the data layer refuses the order with a plain message: "This week's Weekend Pre-Order is sold out." / "Choose a pickup window" / "That pickup window is full — choose another." / "Brisket is sold out (86'd)." / "Only 2 left of Tampa Diamonds." Prices on the page are display-only — the authoritative totals and every enforcement rule come from the checkout data layer.
 
 ### Cuban Thursday (/cuban-thursday)
 1. Thursday-only menu (Cubans and brisket smash burgers) pulled from the admin menu — these items never appear anywhere else in the app on other days.
-2. Pickup is Thursday 11 AM–2 PM. Order the same way as Fire Drop.
+2. Pickup is Thursday 11 AM–2 PM. Order the same way as Weekend Pre-Order.
 3. After the cutoff, a proactive closed banner keeps you from building a doomed cart, and the data layer enforces it regardless: "Cuban Thursday ordering for this week has closed (Thu 2:00 PM ET). Check back Monday."
 
 ### Catering landing (/catering) and Catering Request (/catering-request)
@@ -425,7 +425,7 @@ The link from Quotes & Invoices opens the quote — token-addressed, no login �
 
 All business time is **America/New_York (ET)**, everywhere, always.
 
-**Fire Drop ordering windows**
+**Weekend Pre-Order ordering windows**
 - Friday-pickup ordering: opens with the Monday advance (Mon 12:00 AM ET), closes **Thursday 5:00 PM ET**.
 - Saturday-pickup ordering: opens **Thursday 5:00 PM ET**, closes **Friday 3:00 PM ET**.
 - Cuban Thursday ordering: closes **Thursday 2:00 PM ET**; reopens Monday.

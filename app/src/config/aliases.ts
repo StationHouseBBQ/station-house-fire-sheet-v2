@@ -75,6 +75,6 @@ export const ROUTE_ALIASES: Record<string, string> = {
   "/portal/order": "/portal", "/portal/account": "/portal",
   "/cuban-thursday/confirmation": "/cuban-thursday/confirmation",
   "/fire-drop/confirmation": "/fire-drop/confirmation",
-  "/july4-drop": "/july4", "/catering-drop": "/fire-drop", "/app": "/fire-drop", "/shop": "/fire-drop",
+  "/july4-drop": "/july4", "/weekend-preorder": "/fire-drop", "/weekend-preorders": "/fire-drop", "/catering-drop": "/fire-drop", "/app": "/fire-drop", "/shop": "/fire-drop",
   "/order": "/express", "/app/order": "/express",
 };

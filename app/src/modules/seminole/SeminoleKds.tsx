@@ -137,7 +137,7 @@ export function SeminoleKds() {
 
 function PickupCard({ order, onBump, busy }: { order: Preorder; onBump: () => void; busy: boolean }) {
   const ch = order.channel === "fire_drop"
-    ? { icon: "🔥", label: "Fire Drop" }
+    ? { icon: "🔥", label: "Weekend Pre-Order" }
     : { icon: "🥖", label: "Cuban Thu" };
   const items = order.items.map(i => `${i.qty}× ${i.name}`).join(", ");
   return (

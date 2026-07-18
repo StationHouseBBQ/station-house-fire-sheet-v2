@@ -13,7 +13,7 @@ import { etParts } from "../../lib/time";
 
 const CHANNEL_META: Record<OrderChannel, { label: string; cls: string }> = {
   catering: { label: "Catering", cls: "border-purple-700/50 bg-purple-600/20 text-purple-300" },
-  fire_drop: { label: "Fire Drop", cls: "border-fire/40 bg-fire/20 text-fire-light" },
+  fire_drop: { label: "Weekend Pre-Order", cls: "border-fire/40 bg-fire/20 text-fire-light" },
   cuban_thursday: { label: "Cuban Thursday", cls: "border-emerald-700/50 bg-emerald-600/20 text-emerald-300" },
   retail: { label: "Retail", cls: "border-sky-700/50 bg-sky-600/20 text-sky-300" },
   walk_in: { label: "Walk-in", cls: "border-ink-700 bg-ink-800 text-zinc-300" },

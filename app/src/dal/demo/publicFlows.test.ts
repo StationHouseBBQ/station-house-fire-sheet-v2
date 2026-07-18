@@ -17,7 +17,7 @@ async function fireDropSetup(dal = createDemoDal()) {
   return { dal, drop, product, cappedProduct, fridaySlot };
 }
 
-describe("public demo checkout — Fire Drop rules enforced server-side style", () => {
+describe("public demo checkout — Weekend Pre-Order rules enforced server-side style", () => {
   it("accepts a valid Friday order inside the window and computes 7.5% totals", async () => {
     vi.useFakeTimers();
     try {

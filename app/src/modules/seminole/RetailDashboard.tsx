@@ -6,7 +6,7 @@ import { formatCents } from "../../lib/money";
 /**
  * Seminole · Retail Dashboard — V2 counterpart of the Manus RetailDashboard.
  * At-a-glance FOH stats: preorder pickup counts + revenue, today's fire-sheet
- * case status, and the Fire Drop ordering-window state per the authoritative
+ * case status, and the Weekend Pre-Order ordering-window state per the authoritative
  * ET rules (see src/lib/time.ts).
  */
 
@@ -46,7 +46,7 @@ export function RetailDashboard() {
     <div className="mx-auto max-w-4xl pt-6 pb-12">
       <header>
         <h1 className="text-2xl font-black uppercase text-zinc-100">Seminole Heights · Retail</h1>
-        <p className="text-sm text-zinc-500">Preorders, case status, and Fire Drop windows at a glance</p>
+        <p className="text-sm text-zinc-500">Preorders, case status, and Weekend Pre-Order windows at a glance</p>
       </header>
 
       {/* Preorder stats */}
@@ -89,10 +89,10 @@ export function RetailDashboard() {
         )}
       </section>
 
-      {/* Fire Drop ordering windows */}
-      <section className="mt-6 rounded-xl border border-ink-700 bg-ink-900 p-4" aria-label="Fire Drop ordering windows">
+      {/* Weekend Pre-Order ordering windows */}
+      <section className="mt-6 rounded-xl border border-ink-700 bg-ink-900 p-4" aria-label="Weekend Pre-Order ordering windows">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-sm font-black uppercase tracking-wider text-zinc-300">🛒 Fire Drop Ordering</h2>
+          <h2 className="text-sm font-black uppercase tracking-wider text-zinc-300">🛒 Weekend Pre-Order Ordering</h2>
           {drop && <span className="text-sm font-bold text-fire-light">{drop.title}</span>}
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
