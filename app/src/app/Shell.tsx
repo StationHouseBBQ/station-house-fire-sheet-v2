@@ -3,6 +3,7 @@ import { WORKSPACES, findWorkspace, type TabDef, type WorkspaceDef } from "../co
 import { ROLES } from "../config/roles";
 import { useRole } from "./RoleContext";
 import { LoginGate } from "./LoginGate";
+import { Suspense } from "react";
 import { ParityPending } from "../modules/shared/ParityPending";
 import { IMPLEMENTED } from "./registry";
 import { NavControls } from "./NavControls";
@@ -10,7 +11,12 @@ import { DemoControls } from "./DemoControls";
 
 function TabView({ ws, tab }: { ws: WorkspaceDef; tab: TabDef }) {
   const Impl = IMPLEMENTED[`${ws.id}/${tab.id}`];
-  return Impl ? <Impl /> : <ParityPending tab={tab} workspace={ws.label} />;
+  if (!Impl) return <ParityPending tab={tab} workspace={ws.label} />;
+  return (
+    <Suspense fallback={<p className="py-20 text-center text-sm text-zinc-600">Loading {tab.label}…</p>}>
+      <Impl />
+    </Suspense>
+  );
 }
 
 export function WorkspacePage({ wsId, tabId }: { wsId: string; tabId?: string }) {

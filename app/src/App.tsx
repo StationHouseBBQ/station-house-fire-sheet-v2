@@ -1,3 +1,4 @@
+import React from "react";
 import { Route, Switch } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -9,16 +10,18 @@ import { DemoClockChip } from "./app/DemoControls";
 import { Hub, NotFound, WorkspacePage } from "./app/Shell";
 import { WORKSPACES } from "./config/nav";
 
-import { FireDropLanding } from "./modules/public/FireDropLanding";
-import { OrderConfirmation } from "./modules/public/OrderConfirmation";
-import { CubanThursdayLanding } from "./modules/public/CubanThursdayLanding";
-import { CateringLanding } from "./modules/public/CateringLanding";
-import { CateringRequest } from "./modules/public/CateringRequest";
-import { OrderTrackerView } from "./modules/public/OrderTracker";
-import { EventLanding } from "./modules/public/EventLanding";
-import { PortalApp } from "./modules/portal/PortalApp";
-import { QuoteAccept } from "./modules/public/QuoteAccept";
 import { ROUTE_ALIASES } from "./config/aliases";
+import { lazy, Suspense } from "react";
+const FireDropLanding = lazy(() => import("./modules/public/FireDropLanding").then(m => ({ default: m.FireDropLanding })));
+const OrderConfirmation = lazy(() => import("./modules/public/OrderConfirmation").then(m => ({ default: m.OrderConfirmation })));
+const CubanThursdayLanding = lazy(() => import("./modules/public/CubanThursdayLanding").then(m => ({ default: m.CubanThursdayLanding })));
+const CateringLanding = lazy(() => import("./modules/public/CateringLanding").then(m => ({ default: m.CateringLanding })));
+const CateringRequest = lazy(() => import("./modules/public/CateringRequest").then(m => ({ default: m.CateringRequest })));
+const OrderTrackerView = lazy(() => import("./modules/public/OrderTracker").then(m => ({ default: m.OrderTrackerView })));
+const EventLanding = lazy(() => import("./modules/public/EventLanding").then(m => ({ default: m.EventLanding })));
+const PortalApp = lazy(() => import("./modules/portal/PortalApp").then(m => ({ default: m.PortalApp })));
+const QuoteAccept = lazy(() => import("./modules/public/QuoteAccept").then(m => ({ default: m.QuoteAccept })));
+
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
@@ -30,7 +33,11 @@ function Redirect({ to }: { to: string }) {
 
 const qc = new QueryClient();
 
-const pub = (C: () => JSX.Element) => C; // public components self-wrap in PublicLayout
+const pub = (C: React.ComponentType) => () => (
+  <Suspense fallback={<p className="py-24 text-center text-sm text-zinc-600">Loading…</p>}>
+    <C />
+  </Suspense>
+); // public components self-wrap in PublicLayout
 
 /** Hash routing keeps deep links working on GitHub Pages previews. */
 export default function App() {
