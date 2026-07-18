@@ -1,4 +1,5 @@
 const modules = [
+  {id:'v2',icon:'🚀',title:'Fire Sheet V2 (Full App)',desc:'The complete rebuild: every module live with demo data.',live:true},
   {id:'kitchen',icon:'🔪',title:'Kitchen',desc:'Cook, catering execution and prep systems.',live:false},
   {id:'seminole',icon:'🏠',title:'Seminole Heights',desc:'Front of house and weekend Fire Drop orders.',live:true},
   {id:'pit',icon:'🔥',title:'Pit',desc:'Smoker schedule and pitmaster command.',live:false},
@@ -60,7 +61,7 @@ function layout(content){
 }
 
 function home(){ return layout(`<main class="container"><section class="hero"><div class="eyebrow">Station House Command Center</div><h1>Where do you want <span class="orange">to go?</span></h1><p>One connected operations hub for the restaurant, catering, weekend drops and the crew behind it all.</p></section><section class="module-grid">${modules.map(m=>`<article class="module-card" onclick="openModule('${m.id}',${m.live})"><div class="module-icon">${m.icon}</div><h3>${m.title}</h3><p>${m.desc}</p><div class="card-bottom"><span class="badge ${m.live?'live':'soon'}">● ${m.live?'LIVE':'SOON'}</span><span class="open">${m.live?'Open →':'Preview'}</span></div></article>`).join('')}</section></main>`); }
-function openModule(id,live){ if(!live) return toast('This module is queued for the next build phase.'); go(id); }
+function openModule(id,live){ if(id==='v2'){location.href='v2/';return;} if(!live) return toast('This module is queued for the next build phase.'); go(id); }
 
 function drop(){
   const quantities=Object.values(state.cart).reduce((a,b)=>a+b,0);
