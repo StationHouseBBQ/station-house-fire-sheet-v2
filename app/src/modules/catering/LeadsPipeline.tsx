@@ -121,8 +121,20 @@ export function LeadsPipeline() {
                           {l.guests !== null ? `${l.guests} guests` : "Guests TBD"}
                           {l.budgetCents !== null ? ` · ${formatCents(l.budgetCents)}` : ""}
                         </p>
-                        <span className="mt-2 inline-block rounded-full border border-ink-700 bg-ink-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-                          {l.source}
+                        <span className="mt-2 flex flex-wrap gap-1">
+                          <span className="inline-block rounded-full border border-ink-700 bg-ink-800 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
+                            {l.source}
+                          </span>
+                          {l.serviceType && (
+                            <span className="inline-block rounded-full border border-fire/40 bg-ink-800 px-2 py-0.5 text-[10px] font-semibold text-fire-light">
+                              {l.serviceType.split(" (")[0]}
+                            </span>
+                          )}
+                          {l.menuCategory && (
+                            <span className="inline-block rounded-full border border-ink-700 bg-ink-800 px-2 py-0.5 text-[10px] font-semibold text-zinc-300">
+                              {l.menuCategory}
+                            </span>
+                          )}
                         </span>
                       </button>
                     </li>
@@ -206,9 +218,14 @@ function LeadDrawer({ lead, busy, onClose, onStage, onPriority, onLog }: {
           <Row k="Date" v={fmtDate(lead.eventDate)} />
           <Row k="Guests" v={lead.guests !== null ? String(lead.guests) : "TBD"} />
           <Row k="Budget" v={lead.budgetCents !== null ? formatCents(lead.budgetCents) : "TBD"} />
+          {lead.budgetRange && <Row k="Budget range" v={lead.budgetRange} />}
+          {lead.serviceType && <Row k="Service" v={lead.serviceType} />}
+          {lead.menuCategory && <Row k="Menu" v={lead.menuCategory} />}
+          {lead.eventAddress && <Row k="Address" v={lead.eventAddress} />}
           <Row k="Email" v={lead.email} />
           <Row k="Phone" v={lead.phone} />
           <Row k="Source" v={lead.source} />
+          {lead.heardAbout && <Row k="Heard about us" v={lead.heardAbout} />}
         </dl>
         {lead.notes && <p className="mt-3 rounded-xl border border-ink-700 bg-ink-800/60 p-3 text-sm text-zinc-300">{lead.notes}</p>}
 

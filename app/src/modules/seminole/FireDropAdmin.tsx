@@ -86,7 +86,8 @@ export function FireDropAdminView() {
   const saveProduct = (p: FireDropProduct, patch: Partial<Pick<FireDropProduct, "priceCents" | "capQty">>) =>
     upsertProductMut.mutate({
       id: p.id, name: p.name, priceCents: p.priceCents, capQty: p.capQty,
-      soldOut: p.soldOut, sortOrder: p.sortOrder, ...patch,
+      soldOut: p.soldOut, sortOrder: p.sortOrder,
+      category: p.category ?? null, description: p.description ?? null, ...patch,
     });
 
   if (isLoading || !drop) return <p className="py-20 text-center text-zinc-500">Loading drop…</p>;
@@ -435,13 +436,14 @@ function ProductCapCell({ product, onSave }: { product: FireDropProduct; onSave:
 
 function ProductDialog({ product, onSubmit, onCancel, busy, error }: {
   product: FireDropProduct | null;
-  onSubmit: (p: { id: string; name: string; priceCents: number; capQty: number | null; soldOut: boolean; sortOrder: number }) => void;
+  onSubmit: (p: { id: string; name: string; priceCents: number; capQty: number | null; soldOut: boolean; sortOrder: number; category: string | null; description: string | null }) => void;
   onCancel: () => void; busy: boolean; error: string | null;
 }) {
   const [name, setName] = useState(product?.name ?? "");
   const [price, setPrice] = useState(product ? (product.priceCents / 100).toFixed(2) : "");
   const [cap, setCap] = useState(product?.capQty != null ? String(product.capQty) : "");
   const [sortOrder, setSortOrder] = useState(String(product?.sortOrder ?? 0));
+  const [description, setDescription] = useState(product?.description ?? "");
   const [formError, setFormError] = useState<string | null>(null);
 
   const submit = () => {
@@ -461,6 +463,8 @@ function ProductDialog({ product, onSubmit, onCancel, busy, error }: {
       name: name.trim(), priceCents: cents, capQty,
       soldOut: product?.soldOut ?? false,
       sortOrder: Number.isFinite(so) ? so : 0,
+      category: product?.category ?? null,
+      description: description.trim() || null,
     });
   };
 
@@ -489,6 +493,11 @@ function ProductDialog({ product, onSubmit, onCancel, busy, error }: {
               className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
           </label>
         </div>
+        <label className="mt-3 block text-sm font-semibold text-zinc-400">Description (optional — shows under the name on the landing)
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2}
+            placeholder="e.g. Texas-style smoked brisket. Sliced to order."
+            className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
+        </label>
         <div className="mt-5 flex justify-end gap-2">
           <button type="button" onClick={onCancel} className="rounded-lg border border-ink-700 px-4 py-2 text-sm font-semibold text-zinc-300">Cancel</button>
           <button type="submit" disabled={busy} className="rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white disabled:opacity-50">

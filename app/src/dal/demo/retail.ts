@@ -92,11 +92,12 @@ function preorderSeed(): Preorder[] {
     };
   };
   return [
-    mk("fire_drop", "Maria Santos", "813-555-0184", "maria@example.com", friday, "11AM–12PM", [["Tampa Diamonds (lb)", 2, 2900], ["Mac & Cheese (pan)", 1, 1200]], "paid"),
-    mk("fire_drop", "James Walker", "813-555-0119", "james@example.com", friday, "12–1PM", [["Party Sampler · Feeds 10", 1, 26900]], "paid"),
-    mk("fire_drop", "Aisha Brooks", "813-555-0142", "aisha@example.com", saturday, "11AM–12PM", [["Tampa Diamonds (lb)", 3, 2900]], "pending"),
-    mk("cuban_thursday", "Luis Ramirez", "813-555-0177", "luis@example.com", thursday, "12–1PM", [["Cuban Sandwich", 4, 1450], ["Brisket Smash Burger", 2, 1600]], "paid"),
-    mk("cuban_thursday", "Ybor Social Club", "813-555-0163", "events@yborsocial.com", thursday, "11AM–12PM", [["Cuban Sandwich", 12, 1450]], "ready"),
+    // Item names & prices mirror the LIVE funnels (Fire Drop + Cuban Thursday).
+    mk("fire_drop", "Maria Santos", "813-555-0184", "maria@example.com", friday, "11AM–12PM", [["Brisket (1 lb)", 2, 3699], ["Mac & Cheese (Pint)", 1, 1199]], "paid"),
+    mk("fire_drop", "James Walker", "813-555-0119", "james@example.com", friday, "12–1PM", [["Walk-In Sampler (5-6 People)", 1, 11999]], "paid"),
+    mk("fire_drop", "Aisha Brooks", "813-555-0142", "aisha@example.com", saturday, "11AM–12PM", [["Pork Belly Burnt Ends (1 lb)", 3, 3699]], "pending"),
+    mk("cuban_thursday", "Luis Ramirez", "813-555-0177", "luis@example.com", thursday, "12–1PM", [["Smokin Cuban", 4, 1299], ["Brisket Tallow Smash Burger", 2, 1299]], "paid"),
+    mk("cuban_thursday", "Ybor Social Club", "813-555-0163", "events@yborsocial.com", thursday, "11AM–12PM", [["Smokin Cuban", 12, 1299]], "ready"),
   ];
 }
 export class DemoPreorders implements PreordersRepository {
@@ -213,9 +214,9 @@ function dropSeed(): FireDrop[] {
   const windows = ["11AM–12PM", "12–1PM", "1–2PM"];
   return [{
     id: uid(), title: "Tampa Diamonds", fridayDate: friday, saturdayDate: saturday, soldOut: false,
-    // Real drop-1 catalog from the Manus DB snapshot (see menuData.ts).
+    // LIVE funnel catalog (26 products, five sections — see menuData.ts).
     products: FIRE_DROP_PRODUCTS.filter(p => p.active)
-      .map(p => ({ id: uid(), name: p.name, priceCents: p.priceCents, capQty: p.capQty, soldQty: 0, soldOut: false, sortOrder: p.sortOrder })),
+      .map(p => ({ id: uid(), name: p.name, priceCents: p.priceCents, capQty: p.capQty, soldQty: 0, soldOut: false, sortOrder: p.sortOrder, category: p.category, description: p.description })),
     slots: windows.flatMap(w => ([
       { id: uid(), day: "friday" as const, window: w, capacity: 8, booked: w === "11AM–12PM" ? 1 : w === "12–1PM" ? 1 : 0 },
       { id: uid(), day: "saturday" as const, window: w, capacity: 8, booked: w === "11AM–12PM" ? 1 : 0 },

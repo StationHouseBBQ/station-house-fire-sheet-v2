@@ -6,6 +6,7 @@ import type { FireDropProduct, PublicCheckoutInput } from "../../dal/types";
 import { formatCents, orderTotals } from "../../lib/money";
 import { etParts, isOrderingOpen, type EtParts, type PickupDay } from "../../lib/time";
 import { captureAttribution, getAttribution } from "../../lib/attribution";
+import { ADDRESS_LINE } from "../../config/brand";
 import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
 
 /**
@@ -13,6 +14,15 @@ import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
  * here are display-only; the authoritative totals (and every enforcement
  * rule: windows, caps, 86s, slot capacity) come from dal.publicCheckout.
  */
+
+/** Live funnel section headers, in display order (product.category → label). */
+const SECTIONS: Array<{ key: string; label: string }> = [
+  { key: "platters", label: "🍽️ Platters" },
+  { key: "meats", label: "🥩 Meats" },
+  { key: "sides", label: "🥗 Sides" },
+  { key: "essentials", label: "➕ Essentials" },
+  { key: "desserts", label: "🍪 Desserts" },
+];
 
 const THU_5PM = 3 * 1440 + 17 * 60; // minutes since Mon 00:00 ET
 const FRI_3PM = 4 * 1440 + 15 * 60;
@@ -129,7 +139,10 @@ export function FireDropLanding() {
           ))}
         </h1>
         <p className="mt-3 text-sm text-zinc-400">
-          {fmtDate(drop.fridayDate)} · {fmtDate(drop.saturdayDate)} · Seminole Heights pickup only
+          {fmtDate(drop.fridayDate)} · {fmtDate(drop.saturdayDate)} · Pickup at {ADDRESS_LINE}
+        </p>
+        <p className="mt-1 text-xs font-semibold text-zinc-500">
+          Limited weekly BBQ drop. Pre-order by 5pm the day before for à la carte items.
         </p>
 
         <div className="mx-auto mt-6 max-w-md rounded-2xl border border-ink-700 bg-ink-900 p-4">
@@ -189,12 +202,28 @@ export function FireDropLanding() {
             )}
           </section>
 
-          {/* Products */}
-          <section className="mt-6 grid gap-3 sm:grid-cols-2" aria-label="Drop menu">
-            {[...drop.products].sort((a, b) => a.sortOrder - b.sortOrder).map(p => (
-              <ProductCard key={p.id} product={p} qty={qty[p.id] ?? 0}
-                onChange={n => setQty(q => ({ ...q, [p.id]: n }))} />
-            ))}
+          {/* Products — grouped under the live funnel's five section headers */}
+          <section className="mt-6" aria-label="Drop menu">
+            {(() => {
+              const sorted = [...drop.products].sort((a, b) => a.sortOrder - b.sortOrder);
+              const known = new Set<string>(SECTIONS.map(sec => sec.key));
+              const groups = SECTIONS
+                .map(sec => ({ ...sec, products: sorted.filter(pr => (pr.category ?? "") === sec.key) }))
+                .filter(g => g.products.length > 0);
+              const other = sorted.filter(pr => !known.has(pr.category ?? ""));
+              if (other.length > 0) groups.push({ key: "other", label: "More from the drop", products: other });
+              return groups.map(g => (
+                <div key={g.key} className="mt-6 first:mt-0">
+                  <h2 className="text-sm font-black uppercase tracking-[0.2em] text-fire-light">{g.label}</h2>
+                  <div className="mt-2 grid gap-3 sm:grid-cols-2">
+                    {g.products.map(p => (
+                      <ProductCard key={p.id} product={p} qty={qty[p.id] ?? 0}
+                        onChange={n => setQty(q => ({ ...q, [p.id]: n }))} />
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()}
           </section>
 
           {/* Cart + checkout */}
@@ -273,6 +302,7 @@ function ProductCard({ product: p, qty, onChange }: { product: FireDropProduct; 
         <h3 className="text-base font-black uppercase text-zinc-100">{p.name}</h3>
         <span className="text-base font-black tabular-nums text-fire-light">{formatCents(p.priceCents)}</span>
       </div>
+      {p.description && <p className="mt-1 text-xs text-zinc-500">{p.description}</p>}
       <div className="mt-1 flex items-center gap-2 text-xs">
         {unavailable ? (
           <span className="rounded bg-red-600 px-1.5 py-0.5 font-black uppercase text-white">Sold out</span>

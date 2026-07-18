@@ -5,7 +5,7 @@
  * supplies prices.
  */
 import { loadCol, saveCol, uid, nowIso } from "./store";
-import { todayEt, mondayOfWeek } from "./domains";
+import { todayEt } from "./domains";
 import { orderTotals } from "../../lib/money";
 import { isOrderingOpen, etParts } from "../../lib/time";
 import { currentTime } from "../../lib/clock";
@@ -87,14 +87,21 @@ export class DemoPublicCheckout implements PublicCheckoutRepository {
   }
 
   private async cubanCheckout(input: PublicCheckoutInput): Promise<PublicCheckoutResult> {
-    // Cubans & Smash Burgers are Thursday-only: pickup is always the coming Thursday.
-    const monday = mondayOfWeek(todayEt());
-    const thursday = (() => { const d = new Date(monday + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 3); return d.toISOString().slice(0, 10); })();
+    // LIVE rule: "Orders open Sunday — close Thursday at 9am" (ET). Open on
+    // Sunday and Mon–Wed all day, plus Thursday before 9:00 AM; closed from
+    // Thursday 9:00 AM through Saturday night.
     const p = etParts(currentTime());
-    const todayIso = todayEt();
-    if (todayIso > thursday || (todayIso === thursday && p.hour >= 14)) {
-      throw new Error("Cuban Thursday ordering for this week has closed (Thu 2:00 PM ET). Check back Monday.");
+    const open = p.weekday === 0 || (p.weekday >= 1 && p.weekday <= 3) || (p.weekday === 4 && p.hour < 9);
+    if (!open) {
+      throw new Error("Cuban Thursday ordering is closed — orders open Sunday and close Thursday at 9:00 AM ET.");
     }
+    // Pickup is the upcoming Thursday (today, when it's Thursday before 9 AM).
+    const todayIso = todayEt();
+    const thursday = (() => {
+      const d = new Date(todayIso + "T12:00:00Z");
+      d.setUTCDate(d.getUTCDate() + ((4 - p.weekday + 7) % 7));
+      return d.toISOString().slice(0, 10);
+    })();
     const items = await this.menu.items();
     const lines: Array<{ name: string; qty: number; unitPriceCents: number }> = [];
     for (const it of input.items) {

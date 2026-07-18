@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "wouter";
 import { NavControls } from "../../app/NavControls";
+import { ADDRESS_LINE, INSTAGRAM, NONPROFIT, PHONE } from "../../config/brand";
 
 /**
  * Public-facing chrome shared by every customer page (Fire Drop, Cuban
@@ -47,8 +48,10 @@ export function PublicLayout({ children }: { children: ReactNode }) {
       <footer className="border-t border-ink-700 bg-ink-900">
         <div className="mx-auto max-w-5xl space-y-2 px-4 py-8 text-sm text-zinc-500">
           <p className="font-bold uppercase tracking-widest text-zinc-300">Station House BBQ</p>
-          <p>Seminole Heights, Tampa FL</p>
+          <p>{ADDRESS_LINE}</p>
+          <p>{PHONE} · Instagram {INSTAGRAM}</p>
           <p>Thursday: Cubans &amp; Smash Burgers · Fri–Sat: BBQ preorders</p>
+          <p>{NONPROFIT}</p>
           <p className="pt-2 text-xs text-zinc-600">Demo preview — no live payments.</p>
         </div>
       </footer>

@@ -1,11 +1,40 @@
 # Prices to confirm before go-live
 
+**70 items still need owner confirmation.**
 
-**70 items need confirmation.**
+Updated 2026-07-18 after reconciling the demo against the LIVE sales funnels
+(Fire Drop, Cuban Thursday, Catering — captured from the live Manus app).
 
-Items below had no price anywhere in the Manus data snapshot. The demo shows
-category-typical ESTIMATES flagged "⚠ Estimated price — owner to confirm".
-Edit them in Admin → Menu Editor or send corrections.
+## Confirmed by the live funnels (no action needed)
+
+All 26 live Fire Drop products now carry exact live prices in both the Fire
+Drop catalog and the menu seed: Walk-In Samplers ($59.99 / $119.99), Brisket
+1 lb / ½ lb ($36.99 / $18.50), Pulled Pork 1 lb / ½ lb ($19.99 / $9.99), Ribs
+half/full rack ($23.99 / $46.99), Chicken Leg Quarter ($7.99), Jalapeño
+Cheddar Sausage Link ($5.99), Pork Belly Burnt Ends ½ lb / 1 lb ($18.99 /
+$36.99), Mac & Cheese / Baked Beans / Apple Slaw 6oz & Pint ($5.99 / $11.99),
+all six sauce jars ($9.99), Rookie Cookie and Banana Pudding ($5.99).
+
+The full live Cuban Thursday menu is seeded with dump prices: Thursday
+Sampler $54.99, Smokin Cuban $12.99, Brisket Cuban $17.99, Brisket Tallow
+Smash Burger $12.99, Smoked Gouda Mac and Cheese $5.99/$11.99, Brisket Baked
+Beans $5.99/$11.99, Station House T-Shirt $24.99, Smoked Brisket Tallow
+$18.99, BBQ Rub or BBQ Sauce Pint $9.99, Drinks $2.00.
+
+## ⚠ Flags for the owner
+
+1. **Zip-code discrepancy on the live pages:** the Fire Drop page shows
+   "5214 N Nebraska Ave, Tampa, FL **33603**" while the Cuban Thursday page
+   shows "… **33617**". Until confirmed, all V2 UI copy uses
+   "5214 N Nebraska Ave, Tampa, FL" with no zip (src/config/brand.ts).
+2. **Cuban menu naming:** the live product is "Smokin Cuban" (not "Cuban
+   Sandwich"); the smash burger is "Brisket Tallow Smash Burger". Seeds,
+   demo orders and tests now use the live names.
+
+## Still unpriced (demo shows category-typical ESTIMATES, flagged "⚠ Estimated price — owner to confirm")
+
+Edit them in Admin → Menu Editor or send corrections. Estimated-price items
+are never shown on the public storefronts.
 
 | Item | Category |
 |------|----------|

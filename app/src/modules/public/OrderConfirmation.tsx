@@ -66,6 +66,9 @@ export function OrderConfirmation() {
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-zinc-500">Pickup</p>
               <p className="text-base font-black text-zinc-100">{order.pickupDate} · {order.pickupWindow}</p>
+              {order.channel === "cuban_thursday" && (
+                <p className="mt-0.5 text-xs text-zinc-500">Pickup starts at 11 AM Thursday.</p>
+              )}
             </div>
             <span className={`rounded px-2 py-1 text-[10px] font-black uppercase ${STATUS_CLS[order.status] ?? "bg-ink-700 text-zinc-300"}`}>
               {order.status.replace("_", " ")}

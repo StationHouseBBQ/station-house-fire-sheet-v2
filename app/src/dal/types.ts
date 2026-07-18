@@ -285,7 +285,13 @@ export interface TempLogRepository {
 }
 
 // ── Fire Drop admin ───────────────────────────────────────────────────────
-export interface FireDropProduct { id: string; name: string; priceCents: number; capQty: number | null; soldQty: number; soldOut: boolean; sortOrder: number; }
+export interface FireDropProduct {
+  id: string; name: string; priceCents: number; capQty: number | null; soldQty: number; soldOut: boolean; sortOrder: number;
+  /** Live-funnel menu section: "platters" | "meats" | "sides" | "essentials" | "desserts". Optional/additive. */
+  category?: string | null;
+  /** Customer-facing description shown under the name on the landing. Optional/additive. */
+  description?: string | null;
+}
 export interface FireDropSlot { id: string; day: "friday" | "saturday"; window: string; capacity: number; booked: number; }
 export interface FireDrop {
   id: string; title: string; fridayDate: string; saturdayDate: string; soldOut: boolean;
@@ -348,6 +354,12 @@ export interface Lead {
   utm: { source: string | null; medium: string | null; campaign: string | null; gclid: string | null; fbclid: string | null; referrer: string | null; landingPage: string | null };
   notes: string | null; createdAt: string; updatedAt: string;
   activity: Array<{ id: string; kind: string; body: string; actor: string; at: string }>;
+  // Live catering-funnel fields (all optional/additive — demo seeds may omit them):
+  serviceType?: string | null;    // Drop-off / Buffet Setup / Full Service / Food Truck / Not sure yet
+  menuCategory?: string | null;   // Weddings & Formals, Corporate & Events, …
+  budgetRange?: string | null;    // raw budget-range label as selected on the form
+  heardAbout?: string | null;     // "How did you hear about us"
+  eventAddress?: string | null;   // event street address, city, zip
 }
 export interface LeadsRepository {
   list(): Promise<Lead[]>;

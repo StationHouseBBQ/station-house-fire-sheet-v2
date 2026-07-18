@@ -6,20 +6,23 @@ import type { MenuItem, PublicCheckoutInput } from "../../dal/types";
 import { formatCents, orderTotals } from "../../lib/money";
 import { etParts } from "../../lib/time";
 import { captureAttribution, getAttribution } from "../../lib/attribution";
+import { ADDRESS_LINE, INSTAGRAM, NONPROFIT, PHONE } from "../../config/brand";
 import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
 
 /**
- * Cuban Thursday landing — Thursday-only Cubans & brisket smash burgers,
- * 11AM–2PM pickup. Menu comes from the admin menu (thursdayOnly items); the
- * DAL checkout enforces the Thursday 2PM ET cutoff authoritatively, but we
- * also show a proactive closed banner so nobody builds a doomed cart.
+ * Cuban Thursday landing — Thursday-only Cubans & brisket smash burgers.
+ * LIVE rules: orders open Sunday 00:00 ET, close Thursday 9:00 AM ET;
+ * pickup Thursday starting 11 AM. Menu comes from the admin menu
+ * (thursdayOnly items); the DAL checkout enforces the window
+ * authoritatively, but we also show a proactive closed banner so nobody
+ * builds a doomed cart.
  */
 
-/** Thu after 2PM ET, or Fri/Sat/Sun → this week's window has passed. */
+/** Closed Thu 9:00 AM ET through Saturday night; reopens Sunday 00:00 ET. */
 function orderingClosedNow(now: Date = new Date()): boolean {
   const p = etParts(now);
-  if (p.weekday === 4 && p.hour >= 14) return true;   // Thu 2PM+
-  return p.weekday === 5 || p.weekday === 6 || p.weekday === 0; // Fri/Sat/Sun
+  if (p.weekday === 4 && p.hour >= 9) return true;    // Thu 9AM+
+  return p.weekday === 5 || p.weekday === 6;          // Fri/Sat
 }
 
 export function CubanThursdayLanding() {
@@ -40,8 +43,12 @@ export function CubanThursdayLanding() {
   const [error, setError] = useState<string | null>(null);
   const closed = orderingClosedNow();
 
+  // Public storefront only sells confirmed prices — estimated-price items
+  // (flagged "⚠" in the admin menu) never show to customers.
   const menu = useMemo(
-    () => (items ?? []).filter(i => i.thursdayOnly && i.active && i.priceCents > 0).sort((a, b) => a.sortOrder - b.sortOrder),
+    () => (items ?? [])
+      .filter(i => i.thursdayOnly && i.active && i.priceCents > 0 && !i.description.startsWith("⚠"))
+      .sort((a, b) => a.sortOrder - b.sortOrder),
     [items],
   );
 
@@ -78,13 +85,19 @@ export function CubanThursdayLanding() {
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
           Smoked mojo pork Cubans pressed to order, plus brisket smash burgers off the flat top.
-          Thursday only, 11AM–2PM, Seminole Heights. When they're gone, they're gone.
+          Pre-order by Thursday 9am for same-day pickup — pickup starts 11 AM. When they're gone, they're gone.
+        </p>
+        <p className="mx-auto mt-3 max-w-xl text-xs font-bold uppercase tracking-widest text-zinc-500">
+          Every Thursday · {ADDRESS_LINE}
+        </p>
+        <p className="mx-auto mt-2 max-w-xl rounded-lg border border-lime-700/40 bg-lime-950/30 px-3 py-2 text-xs font-semibold text-lime-300">
+          Orders open Sunday — close Thursday at 9am.
         </p>
       </section>
 
       {closed && (
         <p className="mx-auto mt-6 max-w-xl rounded-xl border border-amber-600/40 bg-amber-950/40 px-4 py-3 text-center text-sm font-bold text-amber-400">
-          Ordering for this week's Cuban Thursday is closed — back Monday. Menu below is view-only.
+          Ordering for this week's Cuban Thursday is closed — orders reopen Sunday. Menu below is view-only.
         </p>
       )}
 
@@ -107,7 +120,7 @@ export function CubanThursdayLanding() {
       {/* Cart + checkout */}
       {!closed && cartLines.length > 0 && (
         <section className="mx-auto mt-8 max-w-2xl rounded-2xl border border-ink-700 bg-ink-900 p-5" aria-label="Your order">
-          <h2 className="text-sm font-black uppercase tracking-widest text-zinc-300">Your order · pickup Thursday 11AM–2PM</h2>
+          <h2 className="text-sm font-black uppercase tracking-widest text-zinc-300">Your order · pickup Thursday, starts 11 AM</h2>
           <ul className="mt-2 space-y-1 text-sm">
             {cartLines.map(l => (
               <li key={l.item.id} className="flex justify-between text-zinc-300">
@@ -147,6 +160,13 @@ export function CubanThursdayLanding() {
           </div>
         </section>
       )}
+
+      {/* Contact / brand strip (live funnel footer facts) */}
+      <section className="mx-auto mt-10 max-w-2xl rounded-2xl border border-ink-700 bg-ink-900 p-4 text-center text-xs text-zinc-500">
+        <p className="font-black uppercase tracking-widest text-zinc-300">Every Thursday · {ADDRESS_LINE}</p>
+        <p className="mt-1">{PHONE} · Instagram {INSTAGRAM}</p>
+        <p className="mt-1">{NONPROFIT}</p>
+      </section>
     </PublicLayout>
   );
 }

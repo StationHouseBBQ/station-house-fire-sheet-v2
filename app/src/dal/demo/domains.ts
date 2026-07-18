@@ -32,7 +32,7 @@ export function mondayOfWeek(iso: string): string {
 // ── Orders seed ───────────────────────────────────────────────────────────
 const CUSTOMERS = ["Maria Santos", "James Walker", "Aisha Brooks", "Tampa Tech Co.", "Bayfront Realty", "Derek Owens", "Luis Ramirez", "Megan Ford", "Seminole Little League", "Ybor Social Club"];
 const BBQ_ITEMS: Array<[string, string]> = [["Pulled Pork", "lbs"], ["Brisket (sliced)", "lbs"], ["St. Louis Ribs", "racks"], ["Smoked Sausage", "each"], ["Chicken Quarters", "each"], ["Mac & Cheese", "pans"], ["Collard Greens", "pans"], ["Coleslaw", "quarts"], ["Banana Pudding", "each"]];
-const THU_ITEMS: Array<[string, string]> = [["Cuban Sandwich", "each"], ["Brisket Smash Burger", "each"]];
+const THU_ITEMS: Array<[string, string]> = [["Smokin Cuban", "each"], ["Brisket Tallow Smash Burger", "each"]];
 
 function seedOrders(): OrderTicket[] {
   const monday = mondayOfWeek(todayEt());

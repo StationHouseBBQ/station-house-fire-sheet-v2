@@ -8,10 +8,12 @@ import { PublicLayout } from "./PublicLayout";
  * no pricing engine, no login, nothing interactive that could dead-end.
  */
 
+// Live-funnel trust markers (brand facts, verbatim from the live catering page).
 const TRUST = [
-  { icon: "💍", title: "Weddings", body: "Plated-quality BBQ without the banquet-hall markup. We handle timing so the toast never waits on the brisket." },
-  { icon: "🏢", title: "Corporate", body: "On-time drop-offs and full-service lines for 20 to 500. Invoicing that keeps your accounting team happy." },
-  { icon: "🏡", title: "Backyard", body: "Graduations, reunions, birthdays. Real smoked meat, real sides, zero stress on the host." },
+  { icon: "🏆", title: "Award-Winning BBQ", body: "First place, Cuban Sandwich Festival." },
+  { icon: "🪵", title: "Real Wood Smoke", body: "Every protein smoked low and slow over real wood — no shortcuts." },
+  { icon: "🚒", title: "Firefighter-Founded", body: "Founded and run by a Tampa firefighter. Fed a firehouse; can feed your event." },
+  { icon: "❤️", title: "Community-Driven", body: "A portion of every event feeds the homeless through our nonprofit, A Servant's Way." },
 ];
 
 const STEPS = [
@@ -35,8 +37,9 @@ export function CateringLanding() {
       <section className="pt-12 text-center">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-fire-light">Station House Catering · Tampa Bay</p>
         <h1 className="mx-auto mt-3 max-w-3xl text-4xl font-black uppercase leading-tight tracking-tight text-zinc-100 sm:text-6xl">
-          BBQ that shows up{" "}
-          <span className="bg-gradient-to-r from-fire to-fire-light bg-clip-text text-transparent">ready to win the room</span>
+          Catering that{" "}
+          <span className="bg-gradient-to-r from-fire to-fire-light bg-clip-text text-transparent">fires up</span>{" "}
+          every event
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-sm text-zinc-400">
           Oak-smoked overnight in Seminole Heights, delivered hot and on schedule.
@@ -49,7 +52,7 @@ export function CateringLanding() {
       </section>
 
       {/* Trust */}
-      <section className="mt-14 grid gap-3 sm:grid-cols-3" aria-label="Who we serve">
+      <section className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Why Station House">
         {TRUST.map(t => (
           <article key={t.title} className="rounded-2xl border border-ink-700 bg-ink-900 p-5">
             <p className="text-2xl" aria-hidden>{t.icon}</p>
@@ -92,6 +95,18 @@ export function CateringLanding() {
             </article>
           ))}
         </div>
+      </section>
+
+      {/* Express catering (honest placeholder — tray checkout arrives with payments) */}
+      <section className="mt-14 rounded-2xl border border-ink-700 bg-ink-900 p-6 text-center" aria-label="Express catering">
+        <h2 className="text-lg font-black uppercase text-zinc-100">⚡ Express Catering</h2>
+        <p className="mx-auto mt-1 max-w-md text-sm text-zinc-400">
+          Smaller order? Full express tray ordering comes online with payments.
+        </p>
+        <Link href="/catering-request"
+          className="mt-4 inline-flex min-h-[48px] items-center rounded-xl border border-fire/60 px-6 text-sm font-black uppercase tracking-wider text-fire-light hover:bg-ink-800">
+          Request trays the quick way
+        </Link>
       </section>
 
       {/* Final CTA */}
