@@ -75,6 +75,27 @@ export interface Dal {
   preorders: PreordersRepository;
   tempLog: TempLogRepository;
   fireDrop: FireDropRepository;
+  packing: PackingRepository;
+  supplies: SuppliesRepository;
+  deliveries: DeliveriesRepository;
+  leads: LeadsRepository;
+  quotes: QuotesRepository;
+  contacts: ContactsRepository;
+  venues: VenuesRepository;
+  companies: CompaniesRepository;
+  portalAdmin: PortalAdminRepository;
+  equipment: EquipmentRepository;
+  cockpit: CockpitRepository;
+  marketing: MarketingRepository;
+  menu: MenuRepository;
+  users: UsersRepository;
+  discounts: DiscountsRepository;
+  events: EventsRepository;
+  orderGuide: OrderGuideRepository;
+  prepTemplates: PrepTemplatesRepository;
+  samplers: SamplersRepository;
+  settings: SettingsRepository;
+  imports: ImportsRepository;
 }
 
 // ── Orders / tickets ──────────────────────────────────────────────────────
@@ -264,3 +285,196 @@ export interface FireDropRepository {
   removeSlot(slotId: string, actor: string): Promise<FireDrop>;
   orderingStatus(): { friday: boolean; saturday: boolean };
 }
+
+// ── Packing ───────────────────────────────────────────────────────────────
+export interface PackItem { id: string; label: string; done: boolean; }
+export interface PackJob {
+  id: string; orderId: string; orderRef: string; customer: string; serviceDate: string;
+  timeWindow: string; channel: OrderChannel; items: OrderItem[];
+  checklist: PackItem[]; packedAt: string | null; packedBy: string | null;
+}
+export interface PackingRepository {
+  queue(): Promise<PackJob[]>;                       // unpacked, today + upcoming
+  packedToday(): Promise<PackJob[]>;
+  toggleChecklistItem(jobId: string, itemId: string, actor: string): Promise<PackJob>;
+  confirmPacked(jobId: string, actor: string): Promise<PackJob>;
+}
+export interface SupplyItem { id: string; name: string; unit: string; onHand: number; parLevel: number; perOrderUsage: number; }
+export interface SuppliesRepository {
+  list(): Promise<SupplyItem[]>;
+  adjust(id: string, delta: number, actor: string): Promise<SupplyItem>;
+  upsert(item: Omit<SupplyItem, "id"> & { id?: string }, actor: string): Promise<SupplyItem>;
+  forecast(): Promise<Array<{ item: SupplyItem; weekNeed: number; gap: number }>>;
+}
+export type DeliveryStatus = "assigned" | "loaded" | "en_route" | "delivered";
+export interface Delivery {
+  id: string; orderId: string; orderRef: string; customer: string; address: string;
+  serviceDate: string; window: string; driver: string | null; status: DeliveryStatus; notes: string | null;
+}
+export interface DeliveriesRepository {
+  drivers(): string[];
+  list(): Promise<Delivery[]>;
+  assignDriver(id: string, driver: string, actor: string): Promise<Delivery>;
+  advance(id: string, actor: string): Promise<Delivery>;
+  updateNotes(id: string, notes: string, actor: string): Promise<Delivery>;
+}
+
+// ── Catering / Sales ──────────────────────────────────────────────────────
+export type LeadStage = "new" | "contacted" | "needs_quote" | "quote_sent" | "booked" | "follow_up" | "lost";
+export type LeadPriority = "low" | "normal" | "high" | "urgent";
+export interface Lead {
+  id: string; name: string; company: string | null; email: string; phone: string;
+  eventType: string; eventDate: string | null; guests: number | null; budgetCents: number | null;
+  stage: LeadStage; priority: LeadPriority; source: string;
+  utm: { source: string | null; medium: string | null; campaign: string | null; gclid: string | null; fbclid: string | null; referrer: string | null; landingPage: string | null };
+  notes: string | null; createdAt: string; updatedAt: string;
+  activity: Array<{ id: string; kind: string; body: string; actor: string; at: string }>;
+}
+export interface LeadsRepository {
+  list(): Promise<Lead[]>;
+  create(input: Omit<Lead, "id" | "stage" | "priority" | "createdAt" | "updatedAt" | "activity"> & { stage?: LeadStage }, actor: string): Promise<Lead>;
+  updateStage(id: string, stage: LeadStage, actor: string): Promise<Lead>;
+  updatePriority(id: string, priority: LeadPriority, actor: string): Promise<Lead>;
+  logActivity(id: string, kind: string, body: string, actor: string): Promise<Lead>;
+}
+export type QuoteStatus = "draft" | "sent" | "accepted" | "declined" | "invoiced" | "paid";
+export interface QuoteLine { id: string; name: string; qty: number; unitPriceCents: number; }
+export interface Quote {
+  id: string; quoteRef: string; kind: "quote" | "invoice"; leadId: string | null; customer: string;
+  eventDate: string | null; lines: QuoteLine[]; subtotalCents: number; taxCents: number; totalCents: number;
+  status: QuoteStatus; createdAt: string; updatedAt: string;
+}
+export interface QuotesRepository {
+  list(): Promise<Quote[]>;
+  create(input: { kind: "quote" | "invoice"; leadId: string | null; customer: string; eventDate: string | null; lines: Array<Omit<QuoteLine, "id">> }, actor: string): Promise<Quote>;
+  updateStatus(id: string, status: QuoteStatus, actor: string): Promise<Quote>;
+  convertToInvoice(id: string, actor: string): Promise<Quote>;
+}
+export interface Contact { id: string; name: string; company: string | null; email: string; phone: string; tags: string[]; notes: string | null; updatedAt: string; }
+export interface ContactsRepository {
+  list(): Promise<Contact[]>;
+  upsert(c: Omit<Contact, "updatedAt"> & { id?: string }, actor: string): Promise<Contact>;
+  remove(id: string, actor: string): Promise<void>;
+}
+export interface Venue { id: string; name: string; address: string; contactName: string; phone: string; capacity: number | null; loadInNotes: string | null; updatedAt: string; }
+export interface VenuesRepository {
+  list(): Promise<Venue[]>;
+  upsert(v: Omit<Venue, "updatedAt"> & { id?: string }, actor: string): Promise<Venue>;
+  remove(id: string, actor: string): Promise<void>;
+}
+export interface Company { id: string; name: string; industry: string | null; contactIds: string[]; portalEnabled: boolean; notes: string | null; updatedAt: string; }
+export interface CompaniesRepository {
+  list(): Promise<Company[]>;
+  upsert(c: Omit<Company, "updatedAt"> & { id?: string }, actor: string): Promise<Company>;
+}
+export type PortalOrderStatus = "pending_approval" | "approved" | "rejected" | "changes_requested" | "invoiced" | "paid";
+export interface PortalOrder {
+  id: string; ref: string; companyId: string; companyName: string; requestedBy: string;
+  eventDate: string; items: Array<{ id: string; name: string; qty: number; unitPriceCents: number }>;
+  subtotalCents: number; taxCents: number; totalCents: number;
+  status: PortalOrderStatus; adminNote: string | null; createdAt: string; updatedAt: string;
+}
+export interface PortalAdminRepository {
+  orders(filter?: { status?: PortalOrderStatus | "all" }): Promise<PortalOrder[]>;
+  pendingCount(): Promise<number>;
+  approve(id: string, actor: string): Promise<PortalOrder>;
+  reject(id: string, note: string, actor: string): Promise<PortalOrder>;
+  requestChanges(id: string, note: string, actor: string): Promise<PortalOrder>;
+  markPaid(id: string, actor: string): Promise<PortalOrder>;
+  toggleCompanyPortal(companyId: string, actor: string): Promise<Company>;
+}
+export interface EquipmentItem { id: string; name: string; category: string; qtyOwned: number; perGuestRatio: number | null; notes: string | null; }
+export interface EquipmentRepository { list(): Promise<EquipmentItem[]>; upsert(e: Omit<EquipmentItem, "id"> & { id?: string }, actor: string): Promise<EquipmentItem>; }
+export interface CockpitData {
+  kpis: { pipelineValueCents: number; openLeads: number; bookedThisMonth: number; pendingApprovals: number; unpaidInvoicesCents: number };
+  redZone: Array<{ leadOrQuoteId: string; label: string; eventDate: string; issues: string[] }>;
+  upcoming: Array<{ id: string; customer: string; eventDate: string; guests: number | null; status: string }>;
+  winsThisWeek: Array<{ id: string; label: string; at: string }>;
+}
+export interface CockpitRepository { data(): Promise<CockpitData>; }
+
+// ── Marketing ─────────────────────────────────────────────────────────────
+export interface LandingPage { id: string; slug: string; title: string; kind: string; status: "live" | "draft"; conversions: number; visits: number; }
+export type PostStatus = "idea" | "drafted" | "scheduled" | "posted";
+export interface ContentPost { id: string; date: string; platform: string; title: string; body: string; status: PostStatus; updatedAt: string; }
+export interface MediaAsset { id: string; name: string; kind: "photo" | "video" | "graphic"; tags: string[]; addedAt: string; }
+export interface OutreachTarget { id: string; business: string; contact: string; email: string; stage: "identified" | "contacted" | "responded" | "meeting" | "won" | "lost"; lastTouch: string | null; notes: string | null; }
+export interface PerfRow { id: string; platform: string; metric: string; value: number; period: string; }
+export interface AdCampaign { id: string; platform: string; name: string; status: "active" | "paused" | "ended"; spendCents: number; leads: number; costPerLeadCents: number; }
+export interface CreativeBrief { id: string; kind: "content" | "design" | "video" | "ads"; title: string; brief: string; status: "queued" | "in_review" | "approved" | "done"; createdAt: string; }
+export interface MarketingRepository {
+  landingPages(): Promise<LandingPage[]>;
+  attributionSummary(): Promise<Array<{ source: string; leads: number; bookedCents: number }>>;
+  posts(): Promise<ContentPost[]>;
+  upsertPost(p: Omit<ContentPost, "updatedAt"> & { id?: string }, actor: string): Promise<ContentPost>;
+  removePost(id: string, actor: string): Promise<void>;
+  media(): Promise<MediaAsset[]>;
+  addMedia(m: Omit<MediaAsset, "id" | "addedAt">, actor: string): Promise<MediaAsset>;
+  outreach(): Promise<OutreachTarget[]>;
+  upsertOutreach(t: Omit<OutreachTarget, "id"> & { id?: string }, actor: string): Promise<OutreachTarget>;
+  performance(): Promise<PerfRow[]>;
+  adCampaigns(): Promise<AdCampaign[]>;
+  updateCampaignStatus(id: string, status: AdCampaign["status"], actor: string): Promise<AdCampaign>;
+  briefs(kind: CreativeBrief["kind"]): Promise<CreativeBrief[]>;
+  upsertBrief(b: Omit<CreativeBrief, "createdAt"> & { id?: string }, actor: string): Promise<CreativeBrief>;
+}
+
+// ── Admin ─────────────────────────────────────────────────────────────────
+export interface MenuCategory { id: string; name: string; sortOrder: number; active: boolean; }
+export interface MenuItem {
+  id: string; categoryId: string; name: string; description: string; priceCents: number;
+  active: boolean; thursdayOnly: boolean; sortOrder: number; updatedAt: string;
+}
+export interface MenuRepository {
+  categories(): Promise<MenuCategory[]>;
+  items(): Promise<MenuItem[]>;
+  upsertItem(i: Omit<MenuItem, "updatedAt"> & { id?: string }, actor: string): Promise<MenuItem>;
+  toggleItemActive(id: string, actor: string): Promise<MenuItem>;
+  upsertCategory(c: MenuCategory & { id?: string }, actor: string): Promise<MenuCategory>;
+}
+export interface AppUser { id: string; name: string; email: string; role: RoleIdLike; active: boolean; invitedAt: string; }
+export type RoleIdLike = "owner_admin" | "catering_director" | "kitchen" | "counter_foh" | "packing";
+export interface UsersRepository {
+  list(): Promise<AppUser[]>;
+  upsert(u: Omit<AppUser, "invitedAt"> & { id?: string }, actor: string): Promise<AppUser>;
+  toggleActive(id: string, actor: string): Promise<AppUser>;
+}
+export interface DiscountCode { id: string; code: string; kind: "percent" | "fixed_cents"; value: number; active: boolean; usedCount: number; expiresAt: string | null; }
+export interface DiscountsRepository {
+  list(): Promise<DiscountCode[]>;
+  upsert(d: Omit<DiscountCode, "usedCount"> & { id?: string }, actor: string): Promise<DiscountCode>;
+  remove(id: string, actor: string): Promise<void>;
+}
+export interface SpecialEvent {
+  id: string; slug: string; name: string; landingEnabled: boolean; orderingEnabled: boolean;
+  eventDate: string | null; menuItemIds: string[]; notes: string | null; updatedAt: string;
+}
+export interface EventsRepository {
+  list(): Promise<SpecialEvent[]>;
+  upsert(e: Omit<SpecialEvent, "updatedAt"> & { id?: string }, actor: string): Promise<SpecialEvent>;
+}
+export interface OrderGuideRow { id: string; item: string; vendor: string; unit: string; parQty: number; onHand: number; orderQty: number; }
+export interface OrderGuideRepository {
+  rows(): Promise<OrderGuideRow[]>;
+  upsert(r: Omit<OrderGuideRow, "id"> & { id?: string }, actor: string): Promise<OrderGuideRow>;
+  setOnHand(id: string, onHand: number, actor: string): Promise<OrderGuideRow>;
+  remove(id: string, actor: string): Promise<void>;
+}
+export interface PrepTemplateRow { id: string; name: string; category: PrepCategory; unit: string; parQty: number; thursdayOnly: boolean; active: boolean; }
+export interface PrepTemplatesRepository {
+  list(): Promise<PrepTemplateRow[]>;
+  upsert(t: Omit<PrepTemplateRow, "id"> & { id?: string }, actor: string): Promise<PrepTemplateRow>;
+  toggleActive(id: string, actor: string): Promise<PrepTemplateRow>;
+}
+export interface SamplerConfig { id: string; name: string; priceCents: number; proteins: string[]; active: boolean; }
+export interface SamplersRepository {
+  list(): Promise<SamplerConfig[]>;
+  upsert(s: SamplerConfig & { id?: string }, actor: string): Promise<SamplerConfig>;
+  allowedProteins(): string[];   // pulled pork, brisket, sausage, ribs, chicken quarters ONLY
+}
+export interface SettingsRepository {
+  get<T>(key: string, fallback: T): Promise<T>;
+  set<T>(key: string, value: T, actor: string): Promise<void>;
+}
+export interface ImportJob { id: string; source: string; kind: string; status: "queued" | "needs_review" | "imported" | "failed"; rows: number; createdAt: string; }
+export interface ImportsRepository { list(): Promise<ImportJob[]>; }

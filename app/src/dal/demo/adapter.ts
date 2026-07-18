@@ -6,6 +6,10 @@ import { get, set } from "idb-keyval";
 import type { AuditRecord, AuditRepository, Dal, PrepCategory, PrepEntry, PrepRepository, PrepSession, PrepStatus } from "../types";
 import { DemoFireDrop, DemoPreorders, DemoRetailFireSheet, DemoTempLog } from "./retail";
 import { DemoCalendar, DemoChecklists, DemoKds, DemoMeatCosts, DemoOrders, DemoPitChecklist, DemoPitmaster, DemoPrepRecipes, DemoProteins, DemoSmokedInventory, DemoSmokerForecast } from "./domains";
+import { DemoDeliveries, DemoPacking, DemoSupplies } from "./packing";
+import { DemoCockpit, DemoCompanies, DemoContacts, DemoEquipment, DemoLeads, DemoPortalAdmin, DemoQuotes, DemoVenues } from "./catering";
+import { DemoMarketing } from "./marketing";
+import { DemoDiscounts, DemoEvents, DemoImports, DemoMenu, DemoOrderGuide, DemoPrepTemplates, DemoSamplers, DemoSettings, DemoUsers } from "./admin";
 import { seedPrepSession } from "./seed";
 import { etParts } from "../../lib/time";
 
@@ -92,11 +96,15 @@ class DemoPrep implements PrepRepository {
 export function createDemoDal(): Dal {
   const audit = new DemoAudit();
   const smokerForecast = new DemoSmokerForecast(audit);
+  const orders = new DemoOrders(audit);
+  const leads = new DemoLeads(audit);
+  const quotes = new DemoQuotes(audit);
+  const portalAdmin = new DemoPortalAdmin(audit);
   return {
     mode: "demo",
     prep: new DemoPrep(audit),
     audit,
-    orders: new DemoOrders(audit),
+    orders,
     kds: new DemoKds(audit),
     checklists: new DemoChecklists(audit),
     proteins: new DemoProteins(),
@@ -111,5 +119,26 @@ export function createDemoDal(): Dal {
     preorders: new DemoPreorders(audit),
     tempLog: new DemoTempLog(audit),
     fireDrop: new DemoFireDrop(audit),
+    packing: new DemoPacking(audit, orders),
+    supplies: new DemoSupplies(audit, orders),
+    deliveries: new DemoDeliveries(audit, orders),
+    leads,
+    quotes,
+    contacts: new DemoContacts(audit),
+    venues: new DemoVenues(audit),
+    companies: new DemoCompanies(audit),
+    portalAdmin,
+    equipment: new DemoEquipment(audit),
+    cockpit: new DemoCockpit(leads, quotes, portalAdmin),
+    marketing: new DemoMarketing(audit, leads),
+    menu: new DemoMenu(audit),
+    users: new DemoUsers(audit),
+    discounts: new DemoDiscounts(audit),
+    events: new DemoEvents(audit),
+    orderGuide: new DemoOrderGuide(audit),
+    prepTemplates: new DemoPrepTemplates(audit),
+    samplers: new DemoSamplers(audit),
+    settings: new DemoSettings(audit),
+    imports: new DemoImports(),
   };
 }
