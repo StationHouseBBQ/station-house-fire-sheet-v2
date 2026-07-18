@@ -29,3 +29,18 @@ describe("Fire Drop ordering windows (America/New_York)", () => {
     expect(isOrderingOpen("friday", est("2026-01-15T17:00:00"))).toBe(false);
   });
 });
+
+describe("activeDropWeekend advances only on Monday", () => {
+  const et = (iso: string) => new Date(iso + "-04:00");
+  it.each([
+    ["2026-07-13T09:00:00", "2026-07-17"],  // Monday → this week
+    ["2026-07-16T18:00:00", "2026-07-17"],  // Thursday
+    ["2026-07-17T21:00:00", "2026-07-17"],  // Friday night — still this weekend
+    ["2026-07-18T10:00:00", "2026-07-17"],  // Saturday morning — pickups today, no advance
+    ["2026-07-19T10:00:00", "2026-07-17"],  // Sunday — advance waits for Monday
+    ["2026-07-20T00:05:00", "2026-07-24"],  // Monday 00:05 — advanced
+  ])("%s → weekend of %s", async (now, friday) => {
+    const { activeDropWeekend } = await import("./time");
+    expect(activeDropWeekend(et(now)).friday).toBe(friday);
+  });
+});

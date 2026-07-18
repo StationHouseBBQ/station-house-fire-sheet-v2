@@ -46,13 +46,17 @@ export function isOrderingOpen(day: PickupDay, now: Date = new Date()): boolean 
   return m >= THU_5PM && m < FRI_3PM;
 }
 
-/** Next Friday and Saturday dates (ET) for a given moment — the active drop window. */
+/**
+ * The active drop weekend (ET). Dates advance ONLY on Monday (owner rule:
+ * "weekly dates auto-advance every Monday") — so all of Mon–Sat belongs to
+ * the current week's Fri/Sat, and Sunday still shows the weekend just past
+ * until the Monday advance runs.
+ */
 export function activeDropWeekend(now: Date = new Date()): { friday: string; saturday: string } {
   const p = etParts(now);
   const base = new Date(Date.UTC(p.year, p.month - 1, p.day, 12));
-  const dow = p.weekday; // 0=Sun
-  const daysUntilFriday = ((5 - dow) + 7) % 7 || (dow === 5 ? 0 : 7);
-  const fri = new Date(base); fri.setUTCDate(base.getUTCDate() + (dow === 6 ? 6 : daysUntilFriday));
+  const mondayOffset = p.weekday === 0 ? -6 : 1 - p.weekday; // Mon-based week; Sun belongs to prior week
+  const fri = new Date(base); fri.setUTCDate(base.getUTCDate() + mondayOffset + 4);
   const sat = new Date(fri); sat.setUTCDate(fri.getUTCDate() + 1);
   const iso = (d: Date) => d.toISOString().slice(0, 10);
   return { friday: iso(fri), saturday: iso(sat) };
