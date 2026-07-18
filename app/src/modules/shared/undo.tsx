@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
  * Universal action undo. Any view can register an undoable action:
  *   const undo = useUndo();
  *   undo.offer("Marked picked up", async () => revertIt());
- * A snackbar appears for 8 seconds with an Undo button that runs the
+ * A snackbar appears for 12 seconds with an Undo button that runs the
  * revert. New offers replace the previous one.
  */
 interface UndoCtx {
@@ -29,7 +29,7 @@ export function UndoProvider({ children }: { children: ReactNode }) {
     if (timer.current) clearTimeout(timer.current);
     setCurrent({ label, revert });
     setBusy(false);
-    timer.current = setTimeout(() => { setCurrent(null); timer.current = null; }, 8000);
+    timer.current = setTimeout(() => { setCurrent(null); timer.current = null; }, 12000);
   }, []);
 
   return (
