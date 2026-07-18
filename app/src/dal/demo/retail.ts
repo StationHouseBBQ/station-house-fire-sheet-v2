@@ -144,6 +144,28 @@ export class DemoPreorders implements PreordersRepository {
     await this.audit.log({ actor, action: "preorder.manual", entity: "preorder", entityId: p.orderRef, before: null, after: { total: p.totalCents } });
     return p;
   }
+
+  async updateItems(id: string, items: Array<{ name: string; qty: number; unitPriceCents: number }>, actor: string): Promise<Preorder> {
+    if (!items.length) throw new Error("Order must keep at least one item");
+    for (const i of items) {
+      if (!i.name.trim()) throw new Error("Item name required");
+      if (!Number.isInteger(i.qty) || i.qty < 1) throw new Error("Quantities must be whole numbers ≥ 1");
+      if (!Number.isInteger(i.unitPriceCents) || i.unitPriceCents < 0) throw new Error("Prices must be non-negative");
+    }
+    const rows = await loadCol(PREORDERS, preorderSeed);
+    const p = rows.find(r => r.id === id);
+    if (!p) throw new Error("Preorder not found");
+    const before = { items: p.items, totalCents: p.totalCents };
+    const t = orderTotals(items.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
+    p.items = items.map(i => ({ id: uid(), ...i }));
+    p.subtotalCents = t.subtotalCents;
+    p.taxCents = t.taxCents;
+    p.totalCents = t.totalCents;
+    p.updatedAt = nowIso();
+    await saveCol(PREORDERS, rows);
+    await this.audit.log({ actor, action: "preorder.items", entity: "preorder", entityId: p.orderRef, before, after: { items: p.items, totalCents: p.totalCents } });
+    return { ...p };
+  }
   async stats() {
     const rows = (await loadCol(PREORDERS, preorderSeed)).filter(r => !r.hidden && !["cancelled", "refunded", "picked_up"].includes(r.status));
     const { friday, saturday } = activeDropWeekend(new Date());

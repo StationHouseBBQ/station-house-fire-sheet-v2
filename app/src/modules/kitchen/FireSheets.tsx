@@ -113,8 +113,13 @@ export function FireSheets() {
         <SyncBadge sync={sync} />
       </header>
 
+      {/* Print-only sheet header (screen header + nav are hidden by the print CSS) */}
+      <p className="hidden text-lg font-black print:block">
+        Station House BBQ — Fire Sheet · {selected}
+      </p>
+
       {/* Date chips */}
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="no-print mt-4 flex flex-wrap gap-2">
         {weekDates.map(date => (
           <button key={date} onClick={() => setSelected(date)}
             className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-bold transition-colors ${
@@ -132,7 +137,7 @@ export function FireSheets() {
       {isLoading && <p className="py-20 text-center text-zinc-500">Loading fire sheets…</p>}
 
       {!isLoading && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_18rem]">
+        <div className="print-area mt-4 grid gap-4 lg:grid-cols-[1fr_18rem]">
           {/* Order tickets */}
           <div className="space-y-3">
             {orders.length === 0 && (
@@ -150,8 +155,17 @@ export function FireSheets() {
 
           {/* Daily totals */}
           <aside className="h-fit rounded-xl border border-ink-700 bg-ink-900 p-4">
-            <h2 className="text-xs font-black uppercase tracking-widest text-fire-light">Daily totals</h2>
-            <p className="text-xs text-zinc-500">All active orders · {selected}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h2 className="text-xs font-black uppercase tracking-widest text-fire-light">Daily totals</h2>
+                <p className="text-xs text-zinc-500">All active orders · {selected}</p>
+              </div>
+              <button onClick={() => window.print()}
+                className="no-print min-h-[44px] shrink-0 rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-xs font-bold text-zinc-200 hover:text-white"
+                aria-label={`Print fire sheet for ${selected}`}>
+                🖨 Print
+              </button>
+            </div>
             {dailyTotals.length === 0 ? (
               <p className="py-6 text-center text-xs text-zinc-600">Nothing to fire</p>
             ) : (
@@ -222,7 +236,7 @@ function Ticket({ order, onAdvance, onSaveNotes, busy }: {
           </div>
         ) : (
           <button onClick={() => { setDraft(order.notes ?? ""); setEditingNotes(true); }}
-            className="min-h-[44px] w-full rounded-lg border border-dashed border-ink-700 px-3 py-2 text-left text-xs text-zinc-400 hover:border-fire/40">
+            className={`min-h-[44px] w-full rounded-lg border border-dashed border-ink-700 px-3 py-2 text-left text-xs text-zinc-400 hover:border-fire/40 ${order.notes ? "" : "no-print"}`}>
             {order.notes ? <>📝 {order.notes} <span className="text-zinc-600">— tap to edit</span></> : "＋ Add notes"}
           </button>
         )}
@@ -230,7 +244,7 @@ function Ticket({ order, onAdvance, onSaveNotes, busy }: {
 
       {next && (
         <button onClick={() => onAdvance(next.to)} disabled={busy}
-          className="mt-3 min-h-[44px] w-full rounded-lg bg-fire px-4 py-2.5 text-sm font-black uppercase tracking-wide text-white disabled:opacity-50">
+          className="no-print mt-3 min-h-[44px] w-full rounded-lg bg-fire px-4 py-2.5 text-sm font-black uppercase tracking-wide text-white disabled:opacity-50">
           {next.label}
         </button>
       )}

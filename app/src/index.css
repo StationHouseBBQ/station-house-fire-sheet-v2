@@ -33,3 +33,13 @@ button, [role="button"] { min-height: 44px; }
 }
 /* Kanban/board rows: momentum scroll */
 .overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+/* ── Print stylesheet (fire sheets, pull sheets, pack lists) ─────────── */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  nav, header, .no-print, [role="status"] { display: none !important; }
+  .print-area { display: block !important; }
+  .rounded-2xl, .rounded-xl, .rounded-lg { border-radius: 0 !important; }
+  * { box-shadow: none !important; background: transparent !important; color: #000 !important; border-color: #999 !important; }
+  a { text-decoration: none; }
+}

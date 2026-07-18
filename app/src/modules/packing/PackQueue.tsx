@@ -65,6 +65,7 @@ export function PackQueue() {
   const [sync, setSync] = useState<Sync>("idle");
   const [packedOpen, setPackedOpen] = useState(false);
   const [confirmErr, setConfirmErr] = useState<Record<string, string>>({});
+  const [unpackTarget, setUnpackTarget] = useState<PackJob | null>(null);
   const today = etToday();
 
   const { data: queue, isLoading } = useQuery({
@@ -100,6 +101,14 @@ export function PackQueue() {
     },
     onError: (e, jobId) => {
       setConfirmErr(prev => ({ ...prev, [jobId]: e instanceof Error ? e.message : "Could not confirm packed" }));
+    },
+  });
+  const unpackMut = useMutation({
+    mutationFn: ({ jobId, reason }: { jobId: string; reason: string }) =>
+      withSync(dal.packing.unpack(jobId, reason, actor)),
+    onSuccess: () => {
+      setUnpackTarget(null);
+      invalidate();
     },
   });
 
@@ -154,15 +163,77 @@ export function PackQueue() {
                       <p className="truncate font-semibold text-zinc-300">{job.customer} <span className="font-normal text-zinc-500">· {job.orderRef}</span></p>
                       <p className="text-xs text-zinc-500">{fmtDate(job.serviceDate)} · {job.timeWindow}</p>
                     </div>
-                    <p className="text-xs font-semibold text-green-400">
-                      ✓ {job.packedBy ?? "unknown"}{job.packedAt ? ` · ${fmtTime(job.packedAt)}` : ""}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <p className="text-xs font-semibold text-green-400">
+                        ✓ {job.packedBy ?? "unknown"}{job.packedAt ? ` · ${fmtTime(job.packedAt)}` : ""}
+                      </p>
+                      <button onClick={() => { unpackMut.reset(); setUnpackTarget(job); }}
+                        className="min-h-[36px] rounded-lg border border-ink-700 px-3 py-1 text-xs font-bold text-zinc-400 hover:border-red-700/60 hover:text-red-400"
+                        aria-label={`Unpack ${job.orderRef}`}>
+                        Unpack
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             )
         )}
       </section>
+
+      {unpackTarget && (
+        <UnpackDialog job={unpackTarget} busy={unpackMut.isPending}
+          error={unpackMut.error instanceof Error ? unpackMut.error.message : unpackMut.error ? "Could not unpack order" : null}
+          onCancel={() => setUnpackTarget(null)}
+          onConfirm={reason => unpackMut.mutate({ jobId: unpackTarget.id, reason })} />
+      )}
+    </div>
+  );
+}
+
+function UnpackDialog({ job, busy, error, onCancel, onConfirm }: {
+  job: PackJob; busy: boolean; error: string | null;
+  onCancel: () => void; onConfirm: (reason: string) => void;
+}) {
+  const [reason, setReason] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  const submit = () => {
+    setFormError(null);
+    if (!reason.trim()) return setFormError("A reason is required to unpack an order.");
+    onConfirm(reason.trim());
+  };
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`Unpack ${job.orderRef}`}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+      <form className="w-full max-w-md rounded-2xl border border-ink-700 bg-ink-900 p-5"
+        onSubmit={e => { e.preventDefault(); submit(); }}>
+        <h3 className="text-lg font-bold text-zinc-100">Unpack order</h3>
+        <p className="mt-1 text-sm text-zinc-400">
+          {job.customer} <span className="font-mono text-zinc-500">· {job.orderRef}</span>
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          Packed by <span className="font-semibold text-zinc-300">{job.packedBy ?? "unknown"}</span>
+          {job.packedAt ? <> at <span className="font-semibold text-zinc-300">{fmtTime(job.packedAt)}</span> · {fmtDate(job.serviceDate)}</> : null}
+        </p>
+        <p className="mt-2 rounded-lg border border-amber-700/50 bg-amber-950/40 px-3 py-2 text-xs text-amber-300">
+          Unpacking puts this order back in the queue and clears its packed record. The reason is audited.
+        </p>
+        {(formError || error) && (
+          <p className="mt-2 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">{formError ?? error}</p>
+        )}
+        <label className="mt-3 block text-sm font-semibold text-zinc-400">Reason (required)
+          <textarea value={reason} onChange={e => setReason(e.target.value)} rows={3} autoFocus required
+            placeholder="e.g. wrong pan count — needs repack"
+            className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onCancel}
+            className="min-h-[44px] rounded-lg border border-ink-700 px-4 py-2 text-sm font-semibold text-zinc-300">Cancel</button>
+          <button type="submit" disabled={busy || !reason.trim()}
+            className="min-h-[44px] rounded-lg bg-red-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+            {busy ? "Unpacking…" : "Unpack order"}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

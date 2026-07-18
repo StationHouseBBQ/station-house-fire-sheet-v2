@@ -6,6 +6,7 @@ import { useRole } from "../../app/RoleContext";
 import { useUndo } from "../shared/undo";
 import { formatCents, orderTotals } from "../../lib/money";
 import { activeDropWeekend } from "../../lib/time";
+import { downloadCsv, toCsv } from "../../lib/csv";
 
 /**
  * Seminole · Preorders — V2 counterpart of the Manus RetailPreorders,
@@ -40,6 +41,27 @@ type Sync = "idle" | "saving" | "saved" | "error";
 
 const PICKUP_WINDOWS = ["11AM–12PM", "12–1PM", "1–2PM"];
 
+/** Builds the standard preorder CSV (shared with Fire Drop Admin's export). */
+export function preorderCsv(orders: Preorder[]): string {
+  const dollars = (cents: number) => (cents / 100).toFixed(2);
+  const headers = ["Ref", "Channel", "Customer", "Phone", "Email", "Pickup Date", "Window", "Items", "Subtotal", "Tax", "Total", "Status"];
+  const rows = orders.map(o => [
+    o.orderRef,
+    o.channel === "fire_drop" ? "Fire Drop" : "Cuban Thursday",
+    o.customer,
+    o.phone,
+    o.email,
+    o.pickupDate,
+    o.pickupWindow,
+    o.items.map(i => `${i.qty}× ${i.name}`).join("; "),
+    dollars(o.subtotalCents),
+    dollars(o.taxCents),
+    dollars(o.totalCents),
+    o.status,
+  ]);
+  return toCsv(headers, rows);
+}
+
 /** Active = still on the floor: not picked up, cancelled, or refunded. */
 function isActive(s: PreorderStatus): boolean {
   return s === "pending" || s === "paid" || s === "ready";
@@ -69,6 +91,7 @@ export function PreordersView() {
   const [search, setSearch] = useState("");
   const [showHidden, setShowHidden] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editItemsFor, setEditItemsFor] = useState<Preorder | null>(null);
 
   const weekend = useMemo(() => activeDropWeekend(new Date()), []);
 
@@ -119,6 +142,21 @@ export function PreordersView() {
     mutationFn: (input: Parameters<typeof dal.preorders.createManual>[0]) =>
       withSync(dal.preorders.createManual(input, actor)),
     onSuccess: () => { setAddOpen(false); invalidate(); },
+  });
+  const editItemsMut = useMutation({
+    mutationFn: ({ id, items }: {
+      id: string; customer: string;
+      items: Array<{ name: string; qty: number; unitPriceCents: number }>;
+      prevItems: Array<{ name: string; qty: number; unitPriceCents: number }>;
+    }) => withSync(dal.preorders.updateItems(id, items, actor)),
+    onSuccess: (_order, { id, customer, prevItems }) => {
+      setEditItemsFor(null);
+      invalidate();
+      undo.offer(`${customer} items updated — undo?`, async () => {
+        await withSync(dal.preorders.updateItems(id, prevItems, actor));
+        invalidate();
+      });
+    },
   });
 
   // Thursday (Cuban) = any pickup date that isn't the active weekend's Fri/Sat.
@@ -178,8 +216,14 @@ export function PreordersView() {
           <h1 className="text-2xl font-black uppercase text-zinc-100">Preorders</h1>
           <p className="text-sm text-zinc-500">Fire Drop + Cuban Thursday pickups</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="no-print flex items-center gap-2">
           <SyncBadge sync={sync} />
+          <button onClick={() => downloadCsv(`preorders-${new Date().toISOString().slice(0, 10)}.csv`, preorderCsv(filtered))}
+            disabled={filtered.length === 0}
+            title={filtered.length === 0 ? "No orders match the current filters" : `Export ${filtered.length} filtered orders`}
+            className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-bold text-zinc-200 disabled:opacity-40">
+            ⬇ Export CSV
+          </button>
           <button onClick={() => setAddOpen(true)}
             className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">+ Manual Order</button>
         </div>
@@ -258,7 +302,8 @@ export function PreordersView() {
                   <OrderCard key={o.id} order={o}
                     busy={statusMut.isPending}
                     onStatus={to => statusMut.mutate({ id: o.id, to, from: o.status, customer: o.customer })}
-                    onHide={hidden => hideMut.mutate({ id: o.id, hidden })} />
+                    onHide={hidden => hideMut.mutate({ id: o.id, hidden })}
+                    onEditItems={() => { editItemsMut.reset(); setEditItemsFor(o); }} />
                 ))}
               </ul>
             </section>
@@ -269,6 +314,17 @@ export function PreordersView() {
       {addOpen && (
         <ManualOrderDialog busy={createMut.isPending} error={createMut.error?.message ?? null}
           onCancel={() => setAddOpen(false)} onSubmit={i => createMut.mutate(i)} />
+      )}
+      {editItemsFor && (
+        <EditItemsDialog order={editItemsFor} busy={editItemsMut.isPending}
+          error={editItemsMut.error?.message ?? null}
+          onCancel={() => setEditItemsFor(null)}
+          onSave={items => editItemsMut.mutate({
+            id: editItemsFor.id,
+            customer: editItemsFor.customer,
+            items,
+            prevItems: editItemsFor.items.map(i => ({ name: i.name, qty: i.qty, unitPriceCents: i.unitPriceCents })),
+          })} />
       )}
     </div>
   );
@@ -283,9 +339,10 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   );
 }
 
-function OrderCard({ order, busy, onStatus, onHide }: {
+function OrderCard({ order, busy, onStatus, onHide, onEditItems }: {
   order: Preorder; busy: boolean;
   onStatus: (to: PreorderStatus) => void; onHide: (hidden: boolean) => void;
+  onEditItems: () => void;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -337,6 +394,10 @@ function OrderCard({ order, busy, onStatus, onHide }: {
             </button>
           ))}
           <span className="mx-1 h-5 w-px bg-ink-700" aria-hidden="true" />
+          <button onClick={onEditItems}
+            className="min-h-[36px] rounded-full border border-ink-700 px-3 py-1 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
+            ✏️ Edit items
+          </button>
           <button onClick={() => onHide(!order.hidden)}
             className="min-h-[36px] rounded-full border border-ink-700 px-3 py-1 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
             {order.hidden ? "Unhide" : "Hide"}
@@ -377,6 +438,106 @@ function dollarsToCents(s: string): number | null {
   const n = Number(s);
   if (!Number.isFinite(n) || n < 0) return null;
   return Math.round(n * 100);
+}
+
+function EditItemsDialog({ order, onSave, onCancel, busy, error }: {
+  order: Preorder;
+  onSave: (items: Array<{ name: string; qty: number; unitPriceCents: number }>) => void;
+  onCancel: () => void; busy: boolean; error: string | null;
+}) {
+  const [items, setItems] = useState<DraftItem[]>(
+    order.items.map(i => ({ name: i.name, qty: String(i.qty), price: (i.unitPriceCents / 100).toFixed(2) })));
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const setItem = (idx: number, patch: Partial<DraftItem>) =>
+    setItems(list => list.map((it, i) => (i === idx ? { ...it, ...patch } : it)));
+  const stepQty = (idx: number, delta: number) =>
+    setItems(list => list.map((it, i) => {
+      if (i !== idx) return it;
+      const q = Math.trunc(Number(it.qty));
+      const next = Math.max(1, (Number.isFinite(q) ? q : 1) + delta);
+      return { ...it, qty: String(next) };
+    }));
+
+  const validLines = items
+    .map(it => ({ name: it.name.trim(), qty: Math.trunc(Number(it.qty)), unitPriceCents: dollarsToCents(it.price) }))
+    .filter((l): l is { name: string; qty: number; unitPriceCents: number } =>
+      l.name !== "" && Number.isFinite(l.qty) && l.qty > 0 && l.unitPriceCents !== null);
+
+  // Client-side preview only — the DAL recomputes authoritative totals on save.
+  const preview = orderTotals(validLines.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
+
+  const submit = () => {
+    setFormError(null);
+    if (items.length === 0 || validLines.length === 0) return setFormError("At least one item with a name, qty, and price is required.");
+    if (validLines.length !== items.length) return setFormError("Every line needs a name, a whole-number qty of 1+, and a valid price.");
+    onSave(validLines);
+  };
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`Edit items for ${order.orderRef}`}
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-y-auto bg-black/60 p-4 sm:items-center">
+      <form className="my-auto w-full max-w-lg rounded-2xl border border-ink-700 bg-ink-900 p-5"
+        onSubmit={e => { e.preventDefault(); submit(); }}>
+        <h3 className="text-lg font-bold text-zinc-100">Edit items</h3>
+        <p className="mt-0.5 text-sm text-zinc-500">{order.customer} · <span className="font-mono">{order.orderRef}</span></p>
+        {(formError || error) && (
+          <p className="mt-2 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">{formError ?? error}</p>
+        )}
+
+        <div className="mt-4 space-y-2">
+          {items.map((it, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <input value={it.name} onChange={e => setItem(idx, { name: e.target.value })} placeholder="Item name"
+                className="min-w-0 flex-1 rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm text-zinc-100"
+                aria-label={`Line ${idx + 1} name`} />
+              <div className="flex items-center rounded-lg border border-ink-700 bg-ink-800">
+                <button type="button" onClick={() => stepQty(idx, -1)}
+                  className="min-h-[44px] px-2.5 text-lg font-bold text-zinc-400 hover:text-zinc-100"
+                  aria-label={`Decrease line ${idx + 1} qty`}>−</button>
+                <input value={it.qty} onChange={e => setItem(idx, { qty: e.target.value })} inputMode="numeric"
+                  className="w-10 bg-transparent py-2.5 text-center text-sm font-bold text-zinc-100"
+                  aria-label={`Line ${idx + 1} qty`} />
+                <button type="button" onClick={() => stepQty(idx, 1)}
+                  className="min-h-[44px] px-2.5 text-lg font-bold text-zinc-400 hover:text-zinc-100"
+                  aria-label={`Increase line ${idx + 1} qty`}>+</button>
+              </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-zinc-500">$</span>
+                <input value={it.price} onChange={e => setItem(idx, { price: e.target.value })} inputMode="decimal" placeholder="0.00"
+                  className="w-20 rounded-lg border border-ink-700 bg-ink-800 py-2.5 pl-6 pr-2 text-right text-sm text-zinc-100"
+                  aria-label={`Line ${idx + 1} price in dollars`} />
+              </div>
+              <button type="button" onClick={() => setItems(list => list.filter((_, i) => i !== idx))}
+                className="rounded-lg border border-ink-700 px-2.5 py-2.5 text-sm text-zinc-500 hover:text-red-400"
+                aria-label={`Remove line ${idx + 1}`}>✕</button>
+            </div>
+          ))}
+          {items.length === 0 && <p className="py-2 text-center text-sm text-zinc-600">No lines — add one below.</p>}
+        </div>
+        <button type="button" onClick={() => setItems(list => [...list, { name: "", qty: "1", price: "" }])}
+          className="mt-2 rounded-lg border border-dashed border-ink-700 px-3 py-2 text-sm font-semibold text-zinc-400 hover:text-zinc-200">
+          + Add line
+        </button>
+
+        <div className="mt-4 rounded-lg border border-ink-700 bg-ink-950/50 p-3 text-sm">
+          <div className="flex justify-between text-zinc-400"><span>Subtotal</span><span>{formatCents(preview.subtotalCents)}</span></div>
+          <div className="flex justify-between text-zinc-400"><span>Tax (7.5%)</span><span>{formatCents(preview.taxCents)}</span></div>
+          <div className="mt-1 flex justify-between border-t border-ink-700 pt-1 font-black text-zinc-100">
+            <span>Total</span><span className="text-fire-light">{formatCents(preview.totalCents)}</span>
+          </div>
+          <p className="mt-1 text-[11px] text-zinc-600">Preview only — final totals are recomputed on save.</p>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onCancel} className="rounded-lg border border-ink-700 px-4 py-2 text-sm font-semibold text-zinc-300">Cancel</button>
+          <button type="submit" disabled={busy} className="rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
+            {busy ? "Saving…" : "Save items"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 function ManualOrderDialog({ onSubmit, onCancel, busy, error }: {

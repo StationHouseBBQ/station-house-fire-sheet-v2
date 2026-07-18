@@ -92,8 +92,8 @@ export class DemoOrders implements OrdersRepository {
   updateNotes(id: string, notes: string, actor: string) {
     return this.mutate(id, actor, o => { o.notes = notes; }, "order.notes");
   }
-  async weekDates(): Promise<string[]> {
-    const monday = mondayOfWeek(todayEt());
+  async weekDates(offsetWeeks = 0): Promise<string[]> {
+    const monday = addDays(mondayOfWeek(todayEt()), offsetWeeks * 7);
     return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
   }
 }

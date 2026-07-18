@@ -41,11 +41,12 @@ function dayLabel(date: string): string {
 export function WeeklyBoard() {
   const dal = getDal();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [offset, setOffset] = useState(0);
   const today = todayEt();
 
   const { data: weekDates = [] } = useQuery({
-    queryKey: ["orders", "weekDates"],
-    queryFn: () => dal.orders.weekDates(),
+    queryKey: ["orders", "weekDates", offset],
+    queryFn: () => dal.orders.weekDates(offset),
   });
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", "all"],
@@ -78,8 +79,25 @@ export function WeeklyBoard() {
         <div>
           <h1 className="text-2xl font-black uppercase text-zinc-100">Weekly Master Board</h1>
           <p className="text-sm text-zinc-500">
-            {weekDates.length === 7 ? `${dayLabel(weekDates[0])} — ${dayLabel(weekDates[6])}` : "This week"} · all channels
+            {weekDates.length === 7 ? `${dayLabel(weekDates[0])} — ${dayLabel(weekDates[6])}` : "…"}
+            {offset === 0 ? " · this week" : ` · ${offset > 0 ? `${offset} week${offset === 1 ? "" : "s"} ahead` : `${-offset} week${offset === -1 ? "" : "s"} back`}`}
+            {" · all channels"}
           </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-xl border border-ink-700 bg-ink-900 p-1" role="group" aria-label="Week navigation">
+          <button onClick={() => setOffset(o => o - 1)}
+            className="min-h-[44px] rounded-lg px-3 py-2 text-sm font-bold text-zinc-300 hover:bg-ink-800 hover:text-zinc-100">
+            ← Prev week
+          </button>
+          <button onClick={() => setOffset(0)} disabled={offset === 0}
+            className={`min-h-[44px] rounded-lg px-3 py-2 text-sm font-bold ${
+              offset === 0 ? "bg-fire text-white" : "text-zinc-300 hover:bg-ink-800 hover:text-zinc-100"}`}>
+            This week
+          </button>
+          <button onClick={() => setOffset(o => o + 1)}
+            className="min-h-[44px] rounded-lg px-3 py-2 text-sm font-bold text-zinc-300 hover:bg-ink-800 hover:text-zinc-100">
+            Next week →
+          </button>
         </div>
         <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-500">
           {(Object.keys(CHANNEL_META) as OrderChannel[]).map(c => (

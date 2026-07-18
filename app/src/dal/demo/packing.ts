@@ -94,6 +94,20 @@ export class DemoPacking implements PackingRepository {
       j.packedBy = actor;
     }, "pack.confirm");
   }
+
+  async unpack(jobId: string, reason: string, actor: string): Promise<PackJob> {
+    if (!reason.trim()) throw new Error("A reason is required to unpack an order");
+    const jobs = await loadCol<PackJob>(PACK_JOBS, () => []);
+    const j = jobs.find(x => x.id === jobId);
+    if (!j) throw new Error("Pack job not found");
+    if (!j.packedAt) throw new Error("Order is not packed");
+    const before = { packedAt: j.packedAt, packedBy: j.packedBy };
+    j.packedAt = null;
+    j.packedBy = null;
+    await saveCol(PACK_JOBS, jobs);
+    await this.audit.log({ actor, action: "pack.unpack", entity: "pack_job", entityId: j.orderRef, before, after: { reason: reason.trim() } });
+    return { ...j };
+  }
 }
 
 // ── Supplies ──────────────────────────────────────────────────────────────

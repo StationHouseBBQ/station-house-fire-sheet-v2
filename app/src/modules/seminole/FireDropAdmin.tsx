@@ -4,6 +4,8 @@ import { getDal } from "../../dal";
 import type { FireDropProduct, FireDropSlot, Preorder, PreorderStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { formatCents } from "../../lib/money";
+import { downloadCsv } from "../../lib/csv";
+import { preorderCsv } from "./PreordersView";
 
 /**
  * Seminole · Fire Drop Admin — V2 counterpart of the Manus FireDropAdmin.
@@ -149,7 +151,15 @@ export function FireDropAdminView() {
       <section className="mt-6" aria-label="Pickups by day">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-black uppercase tracking-wider text-zinc-300">Pickups by day</h2>
-          <p className="text-xs text-zinc-500">Bump pickups from the Preorders tab or FOH board.</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-zinc-500">Bump pickups from the Preorders tab or FOH board.</p>
+            <button onClick={() => downloadCsv(`fire-drop-orders-${drop.fridayDate}.csv`, preorderCsv(dropPreorders))}
+              disabled={dropPreorders.length === 0}
+              title={dropPreorders.length === 0 ? "No Fire Drop orders yet" : `Export ${dropPreorders.length} Fire Drop orders`}
+              className="no-print min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-xs font-bold text-zinc-200 disabled:opacity-40">
+              ⬇ Export orders CSV
+            </button>
+          </div>
         </div>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <PickupDayColumn label="Friday" date={drop.fridayDate} orders={fridayPickups} />

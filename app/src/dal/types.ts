@@ -126,7 +126,7 @@ export interface OrdersRepository {
   get(id: string): Promise<OrderTicket | null>;
   updateStatus(id: string, status: OrderStatus, actor: string): Promise<OrderTicket>;
   updateNotes(id: string, notes: string, actor: string): Promise<OrderTicket>;
-  weekDates(): Promise<string[]>; // 7 service dates centered on current ET week (Mon–Sun)
+  weekDates(offsetWeeks?: number): Promise<string[]>; // 7 ET service dates (Mon–Sun), offset in whole weeks
 }
 
 // ── KDS ───────────────────────────────────────────────────────────────────
@@ -259,6 +259,8 @@ export interface PreordersRepository {
   updateStatus(id: string, status: PreorderStatus, actor: string): Promise<Preorder>;
   setHidden(id: string, hidden: boolean, actor: string): Promise<Preorder>;
   createManual(input: { channel: "fire_drop" | "cuban_thursday"; customer: string; phone: string; email: string; pickupDate: string; pickupWindow: string; items: Array<{ name: string; qty: number; unitPriceCents: number }> }, actor: string): Promise<Preorder>;
+  /** Replaces the item lines; totals are recomputed server-side style. */
+  updateItems(id: string, items: Array<{ name: string; qty: number; unitPriceCents: number }>, actor: string): Promise<Preorder>;
   stats(): Promise<{ activeCount: number; fridayCount: number; saturdayCount: number; activeRevenueCents: number }>;
 }
 
@@ -300,6 +302,8 @@ export interface PackingRepository {
   packedToday(): Promise<PackJob[]>;
   toggleChecklistItem(jobId: string, itemId: string, actor: string): Promise<PackJob>;
   confirmPacked(jobId: string, actor: string): Promise<PackJob>;
+  /** Reverses confirmPacked; requires a reason (audited operational event). */
+  unpack(jobId: string, reason: string, actor: string): Promise<PackJob>;
 }
 export interface SupplyItem { id: string; name: string; unit: string; onHand: number; parLevel: number; perOrderUsage: number; }
 export interface SuppliesRepository {
