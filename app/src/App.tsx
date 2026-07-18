@@ -3,7 +3,9 @@ import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router } from "wouter";
 import { RoleProvider } from "./app/RoleContext";
+import { ConnectionStatus } from "./app/ConnectionStatus";
 import { UndoProvider } from "./modules/shared/undo";
+import { DemoClockChip } from "./app/DemoControls";
 import { Hub, NotFound, WorkspacePage } from "./app/Shell";
 import { WORKSPACES } from "./config/nav";
 
@@ -37,6 +39,8 @@ export default function App() {
       <RoleProvider>
         <UndoProvider>
         <Router hook={useHashLocation}>
+          {/* Supabase-mode health banner; renders nothing in demo mode. */}
+          <ConnectionStatus />
           <Switch>
             <Route path="/" component={Hub} />
             {/* Public routes — never require employee login */}
@@ -70,6 +74,7 @@ export default function App() {
             ))}
             <Route component={NotFound} />
           </Switch>
+          <DemoClockChip />
         </Router>
         </UndoProvider>
       </RoleProvider>

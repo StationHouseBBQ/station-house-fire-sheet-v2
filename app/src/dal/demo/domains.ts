@@ -6,6 +6,7 @@
  */
 import { loadCol, saveCol, uid, nowIso } from "./store";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 import type {
   AuditRepository, CalendarEvent, CalendarRepository, ChecklistRepository, ChecklistRun,
   KdsRepository, KdsStage, KdsTicket, MeatCost, MeatCostsRepository, OrderChannel, OrderStatus,
@@ -16,7 +17,7 @@ import type {
 
 // ── date helpers ──────────────────────────────────────────────────────────
 export function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 function addDays(iso: string, n: number): string {

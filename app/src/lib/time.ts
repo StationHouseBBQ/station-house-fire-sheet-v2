@@ -5,6 +5,8 @@
  *  - Saturday ordering opens Thursday 5:00 PM ET, closes Friday 3:00 PM ET.
  * Server-side SQL enforces the same windows; this module powers UI state.
  */
+import { currentTime } from "./clock";
+
 export const BUSINESS_TZ = "America/New_York";
 
 export interface EtParts { year: number; month: number; day: number; hour: number; minute: number; second: number; weekday: number; }
@@ -36,7 +38,7 @@ const FRI_3PM = 4 * 1440 + 15 * 60;  // Fri 15:00
 
 export type PickupDay = "friday" | "saturday";
 
-export function isOrderingOpen(day: PickupDay, now: Date = new Date()): boolean {
+export function isOrderingOpen(day: PickupDay, now: Date = currentTime()): boolean {
   const m = weekMinute(etParts(now));
   if (day === "friday") {
     // Open from weekly advance (Mon 00:00) until Thu 17:00.
@@ -52,7 +54,7 @@ export function isOrderingOpen(day: PickupDay, now: Date = new Date()): boolean 
  * the current week's Fri/Sat, and Sunday still shows the weekend just past
  * until the Monday advance runs.
  */
-export function activeDropWeekend(now: Date = new Date()): { friday: string; saturday: string } {
+export function activeDropWeekend(now: Date = currentTime()): { friday: string; saturday: string } {
   const p = etParts(now);
   const base = new Date(Date.UTC(p.year, p.month - 1, p.day, 12));
   const mondayOffset = p.weekday === 0 ? -6 : 1 - p.weekday; // Mon-based week; Sun belongs to prior week

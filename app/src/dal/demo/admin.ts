@@ -25,6 +25,33 @@ function catId(sourceId: string): string {
 function seedMenuCategories(): MenuCategory[] {
   return CATALOG_CATEGORIES.map(c => ({ id: catId(c.id), name: c.name, sortOrder: c.sortOrder, active: c.active }));
 }
+/**
+ * Demo pricing estimates for items whose price is absent from the Manus DB
+ * snapshot. Category-typical numbers so the demo reads real; every one is
+ * flagged "Estimated" in the item description and listed in
+ * docs/PRICES_TO_CONFIRM.md for owner confirmation before go-live.
+ */
+function estimateCents(categoryId: string, name: string): number {
+  const n = name.toLowerCase();
+  if (/dozen/.test(n)) return 2400;
+  if (/6 ?oz|6oz/.test(n)) return 400;
+  if (/half pan/.test(n)) return 4500;
+  if (/full pan/.test(n)) return 8500;
+  if (/per lb|\blb\b/.test(n)) return 1899;
+  if (/rack/.test(n)) return 2999;
+  switch (categoryId) {
+    case "appetizer": return 995;
+    case "fs_side": return 4500;      // catering pan default
+    case "retail_side": return 4500;
+    case "fs_dessert": return 4800;
+    case "retail_dessert": return 1400;
+    case "fs_meat": return 1899;
+    case "retail_meat": return 1899;
+    case "salad_misc": return 1200;
+    default: return 1000;
+  }
+}
+
 function seedMenuItems(): MenuItem[] {
   const catSort = new Map(CATALOG_CATEGORIES.map(c => [c.id, c.sortOrder]));
   return CATALOG_ITEMS.map(r => {
@@ -33,9 +60,10 @@ function seedMenuItems(): MenuItem[] {
       id: uid(),
       categoryId: catId(r.categoryId),
       name: r.name,
-      // needsPrice convention: null snapshot price seeds as 0 cents with this description.
-      description: needsPrice ? "Price pending owner confirmation" : (r.unit ? `Sold by ${r.unit}.` : ""),
-      priceCents: r.priceCents ?? 0,
+      // Estimated-price convention: absent snapshot prices seed with a
+      // category-typical estimate, clearly flagged for owner confirmation.
+      description: needsPrice ? "⚠ Estimated price — owner to confirm" : (r.unit ? `Sold by ${r.unit}.` : ""),
+      priceCents: r.priceCents ?? estimateCents(r.categoryId, r.name),
       active: r.active,
       // Menu truth: Cubans & Smash Burgers are Thursday-only, no exceptions.
       thursdayOnly: r.thursdayOnly || /cuban|smash burger/i.test(r.name),

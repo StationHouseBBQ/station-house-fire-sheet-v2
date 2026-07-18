@@ -4,6 +4,7 @@ import { FIRE_DROP_PRODUCTS } from "./menuData";
 import { todayEt, mondayOfWeek } from "./domains";
 import { orderTotals } from "../../lib/money";
 import { activeDropWeekend, isOrderingOpen } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 import type {
   AuditRepository, FireDrop, FireDropProduct, FireDropRepository, FireDropSlot, Preorder,
   PreorderStatus, PreordersRepository, RetailFireItem, RetailFireSheetRepository,
@@ -75,7 +76,7 @@ export class DemoRetailFireSheet implements RetailFireSheetRepository {
 // ── Preorders ─────────────────────────────────────────────────────────────
 const PREORDERS = "preorders.v1";
 function preorderSeed(): Preorder[] {
-  const { friday, saturday } = activeDropWeekend(new Date());
+  const { friday, saturday } = activeDropWeekend(currentTime());
   const monday = mondayOfWeek(todayEt());
   const thursday = (() => { const d = new Date(monday + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 3); return d.toISOString().slice(0, 10); })();
   const mk = (channel: "fire_drop" | "cuban_thursday", customer: string, phone: string, email: string, pickupDate: string, window: string, items: Array<[string, number, number]>, status: PreorderStatus): Preorder => {
@@ -168,7 +169,7 @@ export class DemoPreorders implements PreordersRepository {
   }
   async stats() {
     const rows = (await loadCol(PREORDERS, preorderSeed)).filter(r => !r.hidden && !["cancelled", "refunded", "picked_up"].includes(r.status));
-    const { friday, saturday } = activeDropWeekend(new Date());
+    const { friday, saturday } = activeDropWeekend(currentTime());
     return {
       activeCount: rows.length,
       fridayCount: rows.filter(r => r.pickupDate === friday).length,
@@ -208,7 +209,7 @@ export class DemoTempLog implements TempLogRepository {
 // ── Fire Drop admin ───────────────────────────────────────────────────────
 const DROPS = "fireDrops.v1";
 function dropSeed(): FireDrop[] {
-  const { friday, saturday } = activeDropWeekend(new Date());
+  const { friday, saturday } = activeDropWeekend(currentTime());
   const windows = ["11AM–12PM", "12–1PM", "1–2PM"];
   return [{
     id: uid(), title: "Tampa Diamonds", fridayDate: friday, saturdayDate: saturday, soldOut: false,
@@ -225,12 +226,12 @@ export class DemoFireDrop implements FireDropRepository {
   constructor(private audit: AuditRepository) {}
   async currentDrop(): Promise<FireDrop> {
     const rows = await loadCol(DROPS, dropSeed);
-    const { friday } = activeDropWeekend(new Date());
+    const { friday } = activeDropWeekend(currentTime());
     let drop = rows.find(d => d.fridayDate === friday);
     if (!drop) {
       // weekly auto-advance behavior (Monday reset): new week window, slots reset
       const prev = rows[rows.length - 1];
-      const { friday: f, saturday: s } = activeDropWeekend(new Date());
+      const { friday: f, saturday: s } = activeDropWeekend(currentTime());
       drop = {
         ...prev, id: uid(), fridayDate: f, saturdayDate: s, soldOut: false,
         products: prev.products.map(p => ({ ...p, id: uid(), soldQty: 0, soldOut: false })),
@@ -243,7 +244,7 @@ export class DemoFireDrop implements FireDropRepository {
   }
   private async mutate(actor: string, action: string, fn: (d: FireDrop) => void): Promise<FireDrop> {
     const rows = await loadCol(DROPS, dropSeed);
-    const { friday } = activeDropWeekend(new Date());
+    const { friday } = activeDropWeekend(currentTime());
     const d = rows.find(x => x.fridayDate === friday) ?? rows[rows.length - 1];
     fn(d); await saveCol(DROPS, rows);
     await this.audit.log({ actor, action, entity: "fire_drop", entityId: d.fridayDate, before: null, after: null });

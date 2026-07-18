@@ -20,13 +20,23 @@ export function taxCents(subtotalCents: number): number {
 export interface OrderTotals {
   subtotalCents: number;
   taxCents: number;
+  tipCents: number;
   totalCents: number;
 }
 
-export function orderTotals(lines: Array<{ unitPriceCents: number; qty: number }>): OrderTotals {
+/**
+ * Totals in integer cents. `tipCents` is optional (default 0) so existing
+ * callers are unaffected; when provided it must be a non-negative integer
+ * and is added after tax: total = subtotal + tax + tip.
+ */
+export function orderTotals(
+  lines: Array<{ unitPriceCents: number; qty: number }>,
+  tipCents = 0,
+): OrderTotals {
+  if (!Number.isInteger(tipCents) || tipCents < 0) throw new Error("tipCents must be a non-negative integer");
   const subtotalCents = lines.reduce((s, l) => s + lineTotalCents(l.unitPriceCents, l.qty), 0);
   const tax = taxCents(subtotalCents);
-  return { subtotalCents, taxCents: tax, totalCents: subtotalCents + tax };
+  return { subtotalCents, taxCents: tax, tipCents, totalCents: subtotalCents + tax + tipCents };
 }
 
 export function formatCents(cents: number): string {

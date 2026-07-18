@@ -8,6 +8,7 @@ import { loadCol, saveCol, uid, nowIso } from "./store";
 import { todayEt, mondayOfWeek } from "./domains";
 import { orderTotals } from "../../lib/money";
 import { isOrderingOpen, etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 import type {
   AuditRepository, Company, MenuRepository, PortalAdminRepository, PortalOrder, PortalRepository,
   Preorder, PublicCheckoutInput, PublicCheckoutRepository, PublicCheckoutResult,
@@ -89,7 +90,7 @@ export class DemoPublicCheckout implements PublicCheckoutRepository {
     // Cubans & Smash Burgers are Thursday-only: pickup is always the coming Thursday.
     const monday = mondayOfWeek(todayEt());
     const thursday = (() => { const d = new Date(monday + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + 3); return d.toISOString().slice(0, 10); })();
-    const p = etParts(new Date());
+    const p = etParts(currentTime());
     const todayIso = todayEt();
     if (todayIso > thursday || (todayIso === thursday && p.hour >= 14)) {
       throw new Error("Cuban Thursday ordering for this week has closed (Thu 2:00 PM ET). Check back Monday.");
