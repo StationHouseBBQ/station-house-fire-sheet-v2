@@ -129,7 +129,7 @@ export function FireDropLanding() {
           ))}
         </h1>
         <p className="mt-3 text-sm text-zinc-400">
-          Friday {fmtDate(drop.fridayDate)} · Saturday {fmtDate(drop.saturdayDate)} · Seminole Heights pickup only
+          {fmtDate(drop.fridayDate)} · {fmtDate(drop.saturdayDate)} · Seminole Heights pickup only
         </p>
 
         <div className="mx-auto mt-6 max-w-md rounded-2xl border border-ink-700 bg-ink-900 p-4">

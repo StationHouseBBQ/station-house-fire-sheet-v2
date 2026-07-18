@@ -5,7 +5,7 @@ import { Router } from "wouter";
 import { RoleProvider } from "./app/RoleContext";
 import { Hub, NotFound, WorkspacePage } from "./app/Shell";
 import { WORKSPACES } from "./config/nav";
-import { PublicLayout } from "./modules/public/PublicLayout";
+
 import { FireDropLanding } from "./modules/public/FireDropLanding";
 import { OrderConfirmation } from "./modules/public/OrderConfirmation";
 import { CubanThursdayLanding } from "./modules/public/CubanThursdayLanding";
@@ -17,7 +17,7 @@ import { PortalApp } from "./modules/portal/PortalApp";
 
 const qc = new QueryClient();
 
-const pub = (C: () => JSX.Element) => () => <PublicLayout><C /></PublicLayout>;
+const pub = (C: () => JSX.Element) => C; // public components self-wrap in PublicLayout
 
 /** Hash routing keeps deep links working on GitHub Pages previews. */
 export default function App() {
