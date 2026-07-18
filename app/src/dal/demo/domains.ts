@@ -212,7 +212,37 @@ const PROTEINS: ProteinConversion[] = [
   { id: "pc6", protein: "Turkey Breast", rawUnit: "lbs", cookedYieldLbsPerUnit: 0.65, portionsPerCookedLb: 3.5, notes: "" },
   { id: "pc7", protein: "Oxtail (Tampa Diamonds)", rawUnit: "lbs", cookedYieldLbsPerUnit: 0.45, portionsPerCookedLb: 2.5, notes: "Fire Drop special" },
 ];
-export class DemoProteins implements ProteinRepository { async list() { return PROTEINS; } }
+const PROTEIN_COL = "proteinConversions.v1";
+export class DemoProteins implements ProteinRepository {
+  constructor(private audit: AuditRepository) {}
+  async list() { return loadCol(PROTEIN_COL, () => PROTEINS.map(p => ({ ...p }))); }
+  async upsert(pc: Omit<ProteinConversion, "id"> & { id?: string }, actor: string): Promise<ProteinConversion> {
+    if (!pc.protein.trim()) throw new Error("Protein name required");
+    if (!(pc.cookedYieldLbsPerUnit > 0)) throw new Error("Yield must be > 0");
+    if (!(pc.portionsPerCookedLb > 0)) throw new Error("Portions per cooked lb must be > 0");
+    const rows = await loadCol(PROTEIN_COL, () => PROTEINS.map(p => ({ ...p })));
+    if (pc.id) {
+      const ex = rows.find(r => r.id === pc.id);
+      if (!ex) throw new Error("Conversion not found");
+      const before = { ...ex };
+      Object.assign(ex, pc);
+      await saveCol(PROTEIN_COL, rows);
+      await this.audit.log({ actor, action: "protein.update", entity: "protein_conversion", entityId: ex.protein, before, after: { ...ex } });
+      return { ...ex };
+    }
+    const full: ProteinConversion = { ...pc, id: uid() };
+    rows.push(full);
+    await saveCol(PROTEIN_COL, rows);
+    await this.audit.log({ actor, action: "protein.create", entity: "protein_conversion", entityId: full.protein, before: null, after: full });
+    return full;
+  }
+  async remove(id: string, actor: string): Promise<void> {
+    const rows = await loadCol(PROTEIN_COL, () => PROTEINS.map(p => ({ ...p })));
+    const ex = rows.find(r => r.id === id);
+    await saveCol(PROTEIN_COL, rows.filter(r => r.id !== id));
+    await this.audit.log({ actor, action: "protein.remove", entity: "protein_conversion", entityId: ex?.protein ?? id, before: ex ?? null, after: null });
+  }
+}
 
 // ── Prep recipes ──────────────────────────────────────────────────────────
 const RECIPES = "prepRecipes.v1";

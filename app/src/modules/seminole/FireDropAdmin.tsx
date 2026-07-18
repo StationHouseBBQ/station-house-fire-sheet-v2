@@ -82,6 +82,13 @@ export function FireDropAdminView() {
     onSuccess: () => { setConfirmRemove(null); invalidate(); },
   });
 
+  /** Inline product save — full product upsert with id preserved. */
+  const saveProduct = (p: FireDropProduct, patch: Partial<Pick<FireDropProduct, "priceCents" | "capQty">>) =>
+    upsertProductMut.mutate({
+      id: p.id, name: p.name, priceCents: p.priceCents, capQty: p.capQty,
+      soldOut: p.soldOut, sortOrder: p.sortOrder, ...patch,
+    });
+
   if (isLoading || !drop) return <p className="py-20 text-center text-zinc-500">Loading drop…</p>;
 
   const activePickups = dropPreorders.filter(
@@ -192,8 +199,12 @@ export function FireDropAdminView() {
                   <td className="px-3 py-2.5 font-semibold text-zinc-100">
                     {p.name} {p.soldOut && <span className="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-[10px] font-black text-white">86'D</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-right font-mono text-zinc-200">{formatCents(p.priceCents)}</td>
-                  <td className="px-3 py-2.5 text-right text-zinc-400">{p.capQty ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-right">
+                    <ProductPriceCell product={p} onSave={cents => saveProduct(p, { priceCents: cents })} />
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <ProductCapCell product={p} onSave={capQty => saveProduct(p, { capQty })} />
+                  </td>
                   <td className="px-3 py-2.5 text-right text-zinc-400">{p.soldQty}</td>
                   <td className="px-3 py-2.5">
                     <button onClick={() => toggle86Mut.mutate(p.id)} role="switch" aria-checked={p.soldOut}
@@ -360,6 +371,65 @@ function WindowBadge({ label, open }: { label: string; open: boolean }) {
       open ? "border-green-700/50 bg-green-950/40 text-green-400" : "border-red-700/50 bg-red-950/40 text-red-400"}`}>
       {label}: {open ? "OPEN" : "CLOSED"}
     </span>
+  );
+}
+
+/** Tap-to-edit price cell — dollars input, Enter/blur saves, Escape cancels. */
+function ProductPriceCell({ product, onSave }: { product: FireDropProduct; onSave: (priceCents: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  if (!editing) {
+    return (
+      <button onClick={() => { setVal((product.priceCents / 100).toFixed(2)); setEditing(true); }}
+        title="Tap to edit price" aria-label={`Edit price for ${product.name}`}
+        className="min-h-[36px] rounded-lg border border-transparent px-2.5 py-1 font-mono text-sm text-zinc-200 hover:border-ink-700 hover:bg-ink-800">
+        {formatCents(product.priceCents)}
+      </button>
+    );
+  }
+  const commit = () => {
+    const n = parseFloat(val);
+    if (Number.isFinite(n) && n >= 0) {
+      const cents = Math.round(n * 100);
+      if (cents !== product.priceCents) onSave(cents);
+    }
+    setEditing(false);
+  };
+  return (
+    <input autoFocus inputMode="decimal" value={val} onChange={e => setVal(e.target.value)}
+      onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+      className="w-24 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1 text-right font-mono text-sm text-zinc-100"
+      aria-label={`Price in dollars for ${product.name}`} />
+  );
+}
+
+/** Tap-to-edit cap cell — non-negative whole number, blank = no cap. */
+function ProductCapCell({ product, onSave }: { product: FireDropProduct; onSave: (capQty: number | null) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  if (!editing) {
+    return (
+      <button onClick={() => { setVal(product.capQty != null ? String(product.capQty) : ""); setEditing(true); }}
+        title="Tap to edit cap (blank = no cap)" aria-label={`Edit cap for ${product.name}`}
+        className="min-h-[36px] rounded-lg border border-transparent px-2.5 py-1 text-sm text-zinc-400 hover:border-ink-700 hover:bg-ink-800">
+        {product.capQty ?? "—"}
+      </button>
+    );
+  }
+  const commit = () => {
+    if (val.trim() === "") {
+      if (product.capQty !== null) onSave(null);
+    } else {
+      const c = Number(val);
+      if (Number.isInteger(c) && c >= 0 && c !== product.capQty) onSave(c);
+    }
+    setEditing(false);
+  };
+  return (
+    <input autoFocus inputMode="numeric" value={val} onChange={e => setVal(e.target.value)} placeholder="none"
+      onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+      className="w-20 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1 text-right font-mono text-sm text-zinc-100"
+      aria-label={`Cap for ${product.name} (blank for no cap)`} />
   );
 }
 

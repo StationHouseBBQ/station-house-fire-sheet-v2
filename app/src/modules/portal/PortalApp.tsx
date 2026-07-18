@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { Company, PortalOrder, PortalOrderStatus } from "../../dal/types";
 import { formatCents, orderTotals } from "../../lib/money";
+import { PORTAL_MENU_DEFAULTS, PORTAL_MENU_KEY, type PortalMenuItem } from "../../lib/portalMenu";
 import { PublicLayout, DemoPaymentNotice } from "../public/PublicLayout";
 
 /**
@@ -11,14 +12,8 @@ import { PublicLayout, DemoPaymentNotice } from "../public/PublicLayout";
  * pending_approval for the catering team to review in Portal Admin.
  */
 
-const CATERING_MENU: Array<{ name: string; unitPriceCents: number; unit: string }> = [
-  { name: "Pulled Pork tray", unitPriceCents: 9500, unit: "tray" },
-  { name: "Brisket tray", unitPriceCents: 14000, unit: "tray" },
-  { name: "Ribs rack", unitPriceCents: 2800, unit: "rack" },
-  { name: "Mac & Cheese pan", unitPriceCents: 4500, unit: "pan" },
-  { name: "Collards pan", unitPriceCents: 4000, unit: "pan" },
-  { name: "Banana Pudding dozen", unitPriceCents: 3600, unit: "dozen" },
-];
+// Menu + pricing come from settings ("portalMenu"), editable in Portal Admin;
+// the shared defaults keep the original six items until the owner edits them.
 
 const STATUS_META: Record<PortalOrderStatus, { label: string; cls: string }> = {
   pending_approval: { label: "Pending approval", cls: "bg-amber-600 text-white" },
@@ -134,8 +129,15 @@ function NewRequest({ session, onSubmitted }: { session: Session; onSubmitted: (
   const [error, setError] = useState<string | null>(null);
   const [placed, setPlaced] = useState<PortalOrder | null>(null);
 
-  const lines = CATERING_MENU.filter(m => (qty[m.name] ?? 0) > 0)
-    .map(m => ({ name: m.name, qty: qty[m.name] ?? 0, unitPriceCents: m.unitPriceCents }));
+  // Current portal menu & pricing — owner-editable in Portal Admin.
+  const { data: menu = PORTAL_MENU_DEFAULTS } = useQuery({
+    queryKey: ["settings", PORTAL_MENU_KEY],
+    queryFn: () => dal.settings.get<PortalMenuItem[]>(PORTAL_MENU_KEY, PORTAL_MENU_DEFAULTS),
+    refetchInterval: 30_000,
+  });
+
+  const lines = menu.filter(m => (qty[m.id] ?? 0) > 0)
+    .map(m => ({ name: m.name, qty: qty[m.id] ?? 0, unitPriceCents: m.priceCents }));
   const totals = orderTotals(lines.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
 
   const submitMut = useMutation({
@@ -174,19 +176,19 @@ function NewRequest({ session, onSubmitted }: { session: Session; onSubmitted: (
       </label>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {CATERING_MENU.map(m => {
-          const n = qty[m.name] ?? 0;
+        {menu.map(m => {
+          const n = qty[m.id] ?? 0;
           return (
-            <article key={m.name} className="flex items-center justify-between rounded-2xl border border-ink-700 bg-ink-900 p-4">
+            <article key={m.id} className="flex items-center justify-between rounded-2xl border border-ink-700 bg-ink-900 p-4">
               <div>
                 <h3 className="text-sm font-black uppercase text-zinc-100">{m.name}</h3>
-                <p className="text-xs text-zinc-500">{formatCents(m.unitPriceCents)} / {m.unit}</p>
+                <p className="text-xs text-zinc-500">{formatCents(m.priceCents)} each</p>
               </div>
               <div className="flex items-center gap-2">
-                <button aria-label={`Remove one ${m.name}`} onClick={() => setQty(q => ({ ...q, [m.name]: Math.max(0, n - 1) }))} disabled={n === 0}
+                <button aria-label={`Remove one ${m.name}`} onClick={() => setQty(q => ({ ...q, [m.id]: Math.max(0, n - 1) }))} disabled={n === 0}
                   className="h-11 w-11 rounded-lg border border-ink-700 bg-ink-800 text-lg font-black text-zinc-200 disabled:opacity-40">−</button>
                 <span className="w-7 text-center text-lg font-black tabular-nums text-zinc-100">{n}</span>
-                <button aria-label={`Add one ${m.name}`} onClick={() => setQty(q => ({ ...q, [m.name]: n + 1 }))}
+                <button aria-label={`Add one ${m.name}`} onClick={() => setQty(q => ({ ...q, [m.id]: n + 1 }))}
                   className="h-11 w-11 rounded-lg bg-fire text-lg font-black text-white">+</button>
               </div>
             </article>

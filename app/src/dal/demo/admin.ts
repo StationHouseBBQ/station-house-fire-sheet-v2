@@ -96,7 +96,13 @@ export class DemoMenu implements MenuRepository {
     const existing = i.id ? rows.find(r => r.id === i.id) : undefined;
     if (existing) {
       const before = { ...existing };
-      Object.assign(existing, i, { name: i.name.trim(), thursdayOnly, updatedAt: nowIso() });
+      // Owner-confirmed pricing: manually setting a price clears the
+      // "estimated" flag so confirmed items read clean.
+      const wasEstimated = (existing.description ?? "").startsWith("⚠ Estimated");
+      const descIn = i.description ?? existing.description;
+      const description = wasEstimated && i.priceCents !== existing.priceCents && (descIn ?? "").startsWith("⚠ Estimated")
+        ? "" : descIn;
+      Object.assign(existing, i, { name: i.name.trim(), description, thursdayOnly, updatedAt: nowIso() });
       await saveCol(MENU_ITEMS, rows);
       await this.audit.log({ actor, action: "menu.item.update", entity: "menu_item", entityId: existing.name, before, after: { ...existing } });
       return { ...existing };

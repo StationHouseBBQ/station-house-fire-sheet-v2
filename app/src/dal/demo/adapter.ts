@@ -111,7 +111,7 @@ export function createDemoDal(): Dal {
     orders,
     kds: new DemoKds(audit),
     checklists: new DemoChecklists(audit),
-    proteins: new DemoProteins(),
+    proteins: new DemoProteins(audit),
     prepRecipes: new DemoPrepRecipes(audit),
     calendar: new DemoCalendar(),
     smokerForecast,

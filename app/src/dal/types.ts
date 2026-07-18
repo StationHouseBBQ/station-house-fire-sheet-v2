@@ -174,7 +174,11 @@ export interface ChecklistRepository {
 
 // ── Protein conversions / meat calc ───────────────────────────────────────
 export interface ProteinConversion { id: string; protein: string; rawUnit: string; cookedYieldLbsPerUnit: number; portionsPerCookedLb: number; notes: string | null; }
-export interface ProteinRepository { list(): Promise<ProteinConversion[]>; }
+export interface ProteinRepository {
+  list(): Promise<ProteinConversion[]>;
+  upsert(pc: Omit<ProteinConversion, "id"> & { id?: string }, actor: string): Promise<ProteinConversion>;
+  remove(id: string, actor: string): Promise<void>;
+}
 
 // ── Prep recipes ──────────────────────────────────────────────────────────
 export interface PrepRecipe {

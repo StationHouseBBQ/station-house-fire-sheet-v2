@@ -16,6 +16,11 @@ const THURSDAY_ONLY_CATEGORY = "Thursday Only";
 
 type Sync = "idle" | "saving" | "saved" | "error";
 
+/** Estimated-price convention: flagged items carry a "⚠ Estimated" description. */
+function isEstimated(i: MenuItem): boolean {
+  return (i.description ?? "").startsWith("⚠ Estimated");
+}
+
 function dollarsToCents(s: string): number | null {
   if (s.trim() === "") return null;
   const n = Number(s);
@@ -30,6 +35,7 @@ export function MenuEditor() {
   const [sync, setSync] = useState<Sync>("idle");
   const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item: MenuItem | null }>({ open: false, item: null });
+  const [reviewMode, setReviewMode] = useState(false);
 
   const { data: categories } = useQuery({ queryKey: ["menu", "categories"], queryFn: () => dal.menu.categories() });
   const { data: items } = useQuery({ queryKey: ["menu", "items"], queryFn: () => dal.menu.items() });
@@ -62,6 +68,21 @@ export function MenuEditor() {
     () => (items ?? []).filter(i => i.categoryId === activeCat?.id),
     [items, activeCat],
   );
+
+  // "Needs review" — flagged estimated-price items across ALL categories,
+  // already in category walk order (sortOrder encodes category × 1000).
+  const flagged = useMemo(() => (items ?? []).filter(isEstimated), [items]);
+  const catNameById = useMemo(() => new Map((categories ?? []).map(c => [c.id, c.name])), [categories]);
+  const tableRows = reviewMode ? flagged : catItems;
+
+  /** Inline price save — full item upsert; description cleared when it was
+   *  estimated (the DAL also auto-clears — belt and braces). */
+  const savePrice = (i: MenuItem, priceCents: number) =>
+    upsertItemMut.mutate({
+      id: i.id, categoryId: i.categoryId, name: i.name,
+      description: isEstimated(i) ? "" : i.description,
+      priceCents, active: i.active, thursdayOnly: i.thursdayOnly, sortOrder: i.sortOrder,
+    });
 
   if (!categories || !items) return <p className="py-20 text-center text-zinc-500">Loading menu…</p>;
 
@@ -106,30 +127,48 @@ export function MenuEditor() {
 
         {/* Items table */}
         <section aria-label="Menu items">
-          <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400">
-            {activeCat?.name ?? "Items"} ({catItems.length})
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-xs font-black uppercase tracking-wider text-zinc-400">
+              {reviewMode ? `⚠ Needs review — all categories (${flagged.length})` : `${activeCat?.name ?? "Items"} (${catItems.length})`}
+            </h2>
+            {flagged.length > 0 ? (
+              <button onClick={() => setReviewMode(r => !r)} aria-pressed={reviewMode}
+                title="Show every item still on an estimated price, across all categories"
+                className={`min-h-[36px] rounded-full border px-3 py-1 text-xs font-bold ${
+                  reviewMode
+                    ? "border-amber-500 bg-amber-600 text-white"
+                    : "border-amber-700/60 bg-amber-950/40 text-amber-400 hover:bg-amber-950/70"}`}>
+                ⚠ Needs review ({flagged.length})
+              </button>
+            ) : (
+              <span className="text-xs font-semibold text-green-400">All prices confirmed ✓</span>
+            )}
+          </div>
           <div className="mt-2 overflow-x-auto rounded-xl border border-ink-700">
             <table className="w-full text-left text-sm">
               <thead className="bg-ink-800 text-xs font-bold uppercase tracking-wider text-zinc-400">
                 <tr>
                   <th className="px-3 py-2.5">Item</th>
+                  {reviewMode && <th className="px-3 py-2.5">Category</th>}
                   <th className="px-3 py-2.5 text-right">Price</th>
                   <th className="px-3 py-2.5">Active</th>
                   <th className="px-3 py-2.5 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-ink-800 bg-ink-900">
-                {catItems.map(i => (
+                {tableRows.map(i => (
                   <tr key={i.id} className={i.active ? "" : "opacity-60"}>
                     <td className="px-3 py-2.5">
                       <p className="font-semibold text-zinc-100">
                         {i.name}
                         {i.thursdayOnly && <span className="ml-1.5 rounded bg-amber-600 px-1.5 py-0.5 text-[10px] font-black text-white">THURSDAY ONLY</span>}
                       </p>
-                      {i.description && <p className="text-xs text-zinc-500">{i.description}</p>}
+                      {i.description && <p className={`text-xs ${isEstimated(i) ? "text-amber-500" : "text-zinc-500"}`}>{i.description}</p>}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-zinc-200">{formatCents(i.priceCents)}</td>
+                    {reviewMode && <td className="px-3 py-2.5 text-xs text-zinc-400">{catNameById.get(i.categoryId) ?? "—"}</td>}
+                    <td className="px-3 py-2.5 text-right">
+                      <PriceCell item={i} estimated={isEstimated(i)} onSave={cents => savePrice(i, cents)} />
+                    </td>
                     <td className="px-3 py-2.5">
                       <button role="switch" aria-checked={i.active} aria-label={`${i.name} active`}
                         onClick={() => toggleItemMut.mutate(i.id)}
@@ -146,8 +185,10 @@ export function MenuEditor() {
                     </td>
                   </tr>
                 ))}
-                {catItems.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-8 text-center text-zinc-500">No items in this category.</td></tr>
+                {tableRows.length === 0 && (
+                  <tr><td colSpan={reviewMode ? 5 : 4} className="px-3 py-8 text-center text-zinc-500">
+                    {reviewMode ? "All prices confirmed ✓" : "No items in this category."}
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -163,6 +204,43 @@ export function MenuEditor() {
           onSubmit={i => upsertItemMut.mutate(i)} />
       )}
     </div>
+  );
+}
+
+/** Tap-to-edit price — shows formatted price (amber when estimated); tap for
+ *  an autofocused dollars input. Enter/blur saves, Escape cancels. */
+function PriceCell({ item, estimated, onSave }: {
+  item: MenuItem; estimated: boolean; onSave: (priceCents: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  if (!editing) {
+    return (
+      <button onClick={() => { setVal((item.priceCents / 100).toFixed(2)); setEditing(true); }}
+        title={estimated ? "Estimated price — tap to confirm" : "Tap to edit price"}
+        aria-label={`Edit price for ${item.name}`}
+        className={`min-h-[36px] rounded-lg border px-2.5 py-1 font-mono text-sm ${
+          estimated
+            ? "border-amber-700/60 bg-amber-950/30 text-amber-400"
+            : "border-transparent text-zinc-200 hover:border-ink-700 hover:bg-ink-800"}`}>
+        {formatCents(item.priceCents)}
+      </button>
+    );
+  }
+  const commit = () => {
+    const n = parseFloat(val);
+    if (Number.isFinite(n) && n >= 0) {
+      const cents = Math.round(n * 100);
+      // Saving an unchanged price still confirms an estimated one.
+      if (cents !== item.priceCents || estimated) onSave(cents);
+    }
+    setEditing(false);
+  };
+  return (
+    <input autoFocus inputMode="decimal" value={val} onChange={e => setVal(e.target.value)}
+      onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+      className="w-24 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1 text-right font-mono text-sm text-zinc-100"
+      aria-label={`Price in dollars for ${item.name}`} />
   );
 }
 
