@@ -49,13 +49,13 @@ export const WORKSPACES: WorkspaceDef[] = [
   {
     id: "seminole", label: "Seminole Heights", base: "/seminole", roles: R.foh,
     tabs: [
-      { id: "dashboard", label: "Dashboard", parityRow: 10, sourceComponent: "RetailDashboard", sourceFile: "client/src/pages/RetailDashboard.tsx" },
-      { id: "fire-sheet", label: "Fire Sheet", parityRow: 11, sourceComponent: "RetailFireSheet", sourceFile: "client/src/pages/RetailFireSheet.tsx" },
-      { id: "kds", label: "KDS", parityRow: 12, sourceComponent: "SeminoleKDS", sourceFile: "client/src/pages/SeminoleKDS.tsx" },
-      { id: "preorders", label: "Preorders", parityRow: 13, sourceComponent: "RetailPreorders", sourceFile: "client/src/pages/RetailPreorders.tsx" },
-      { id: "checklist", label: "FOH Checklist", parityRow: 14, sourceComponent: "RetailChecklist", sourceFile: "client/src/pages/RetailChecklist.tsx" },
-      { id: "temp-log", label: "Temp Log", parityRow: 15, sourceComponent: "FoodTempLog", sourceFile: "client/src/pages/FoodTempLog.tsx" },
-      { id: "fire-drop", label: "Fire Drop", parityRow: 16, sourceComponent: "FireDropAdmin", sourceFile: "client/src/pages/FireDropAdmin.tsx" },
+      { implemented: true, id: "dashboard", label: "Dashboard", parityRow: 10, sourceComponent: "RetailDashboard", sourceFile: "client/src/pages/RetailDashboard.tsx" },
+      { implemented: true, id: "fire-sheet", label: "Fire Sheet", parityRow: 11, sourceComponent: "RetailFireSheet", sourceFile: "client/src/pages/RetailFireSheet.tsx" },
+      { implemented: true, id: "kds", label: "KDS", parityRow: 12, sourceComponent: "SeminoleKDS", sourceFile: "client/src/pages/SeminoleKDS.tsx" },
+      { implemented: true, id: "preorders", label: "Preorders", parityRow: 13, sourceComponent: "RetailPreorders", sourceFile: "client/src/pages/RetailPreorders.tsx" },
+      { implemented: true, id: "checklist", label: "FOH Checklist", parityRow: 14, sourceComponent: "RetailChecklist", sourceFile: "client/src/pages/RetailChecklist.tsx" },
+      { implemented: true, id: "temp-log", label: "Temp Log", parityRow: 15, sourceComponent: "FoodTempLog", sourceFile: "client/src/pages/FoodTempLog.tsx" },
+      { implemented: true, id: "fire-drop", label: "Fire Drop", parityRow: 16, sourceComponent: "FireDropAdmin", sourceFile: "client/src/pages/FireDropAdmin.tsx" },
     ],
   },
   {

@@ -17,6 +17,13 @@ import { SmokedInventoryView } from "../modules/pit/SmokedInventoryView";
 import { SmokerForecastView } from "../modules/pit/SmokerForecastView";
 import { PitmasterGuideView } from "../modules/pit/PitmasterGuideView";
 import { MeatCostGuide } from "../modules/pit/MeatCostGuide";
+import { RetailDashboard } from "../modules/seminole/RetailDashboard";
+import { RetailFireSheetView } from "../modules/seminole/RetailFireSheetView";
+import { SeminoleKds } from "../modules/seminole/SeminoleKds";
+import { PreordersView } from "../modules/seminole/PreordersView";
+import { FohChecklist } from "../modules/seminole/FohChecklist";
+import { TempLogView } from "../modules/seminole/TempLogView";
+import { FireDropAdminView } from "../modules/seminole/FireDropAdmin";
 import type { ComponentType } from "react";
 
 /** Registry of implemented tab views. Grows as parity rows land. */
@@ -35,6 +42,13 @@ const IMPLEMENTED: Record<string, ComponentType> = {
   "pit/forecast": SmokerForecastView,
   "pit/guide": PitmasterGuideView,
   "pit/cost": MeatCostGuide,
+  "seminole/dashboard": RetailDashboard,
+  "seminole/fire-sheet": RetailFireSheetView,
+  "seminole/kds": SeminoleKds,
+  "seminole/preorders": PreordersView,
+  "seminole/checklist": FohChecklist,
+  "seminole/temp-log": TempLogView,
+  "seminole/fire-drop": FireDropAdminView,
 };
 
 function TabView({ ws, tab }: { ws: WorkspaceDef; tab: TabDef }) {
