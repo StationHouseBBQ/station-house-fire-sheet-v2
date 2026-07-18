@@ -496,6 +496,13 @@ Definition-of-done columns per row: source component/route · expected behaviors
 
 </details>
 
+## QA evidence log
+
+- Row 13 (Seminole · Preorders): live-preview interaction verified 2026-07-18 — one-tap "Picked Up ✓" bump removes order from Active, stats/day-tab counts/revenue update, sync badge confirms persistence. Day grouping (Fri Jul 17 / Sat Jul 18 / Thursday Cuban) correct after weekend-advance fix.
+- Row 6 (Kitchen · Prep): render + persistence verified on live preview (2026-07-17).
+- Rows 2, 16, 30, 52: rendered with correct seeded data on live preview (Fire Sheets daily totals; Fire Drop admin; Leads Pipeline; Menu Editor 12 categories / 112 items).
+- Automated: 123 vitest tests incl. route smoke across all 82 routes, checkout enforcement, ET cutoffs incl. DST, Monday-only weekend advance, 7.5% tax tables.
+
 ## Implementation notes (checkpoint 4)
 
 - All 72 workspace tabs implemented against the demo DAL. AI-integration tabs (Content/Design/Video/Ads agents, AI Import) implement the real workflow data with explicit "AI connects in integrations phase" notices — no simulated AI output.
