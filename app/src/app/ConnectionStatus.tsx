@@ -2,14 +2,20 @@
  * ConnectionStatus — supabase-mode health banner. NO SILENT FALLBACK.
  *
  * demo mode: renders nothing.
- * supabase mode: pings checkConnection() on mount and every 60s.
- *   green  → "Supabase connected (staging)" — auto-hides after 5s.
- *   red    → persistent failure banner with the exact error + Retry button.
- *            Data operations are unavailable; the app does NOT fall back to
- *            demo data in supabase mode.
+ * supabase mode, by auth state:
+ *   loading    → nothing (avoid a red flash before the session resolves).
+ *   signed_out → persistent AMBER banner: "Supabase mode: sign in required".
+ *                This is an expected state, not an error.
+ *   signed_in  → pings checkConnection() on mount and every 60s.
+ *     green → "Supabase connected · signed in as {fullName} ({staffRole})"
+ *             — auto-hides after 5s.
+ *     red   → persistent failure banner with the exact error + Retry button.
+ *             Data operations are unavailable; the app does NOT fall back
+ *             to demo data in supabase mode.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { checkConnection, type ConnectionCheck } from "../dal/supabase/client";
+import { useRole } from "./RoleContext";
 
 const POLL_MS = 60_000;
 const GREEN_HIDE_MS = 5_000;
@@ -26,6 +32,7 @@ export function ConnectionStatus() {
 }
 
 function SupabaseConnectionBanner() {
+  const { authState, fullName, staffRole } = useRole();
   const [state, setState] = useState<BannerState>({ kind: "idle" });
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,13 +53,33 @@ function SupabaseConnectionBanner() {
   }, []);
 
   useEffect(() => {
+    // Only ping while a staff session exists — an unauthenticated ping just
+    // reports the deny-by-default RLS wall, which the amber banner covers.
+    if (authState !== "signed_in") {
+      setState({ kind: "idle" });
+      if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; }
+      return;
+    }
     void runCheck();
     const interval = setInterval(() => void runCheck(), POLL_MS);
     return () => {
       clearInterval(interval);
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
-  }, [runCheck]);
+  }, [runCheck, authState]);
+
+  if (authState === "loading" || authState === "demo") return null;
+
+  if (authState === "signed_out") {
+    return (
+      <div
+        role="status"
+        className="fixed inset-x-0 top-0 z-[100] bg-amber-600 px-4 py-1.5 text-center text-sm font-medium text-white shadow"
+      >
+        Supabase mode: sign in required
+      </div>
+    );
+  }
 
   if (state.kind === "idle") return null;
 
@@ -63,7 +90,7 @@ function SupabaseConnectionBanner() {
         role="status"
         className="fixed inset-x-0 top-0 z-[100] bg-green-700 px-4 py-1.5 text-center text-sm font-medium text-white shadow"
       >
-        Supabase connected (staging)
+        Supabase connected · signed in as {fullName || "Staff"} ({staffRole ?? "unknown"})
       </div>
     );
   }
