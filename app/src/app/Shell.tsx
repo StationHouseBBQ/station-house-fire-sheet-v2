@@ -86,7 +86,15 @@ export function Hub() {
           );
         })}
       </div>
-      <p className="mt-10 text-center text-xs text-zinc-600">
+      <div className="mt-10 rounded-2xl border border-ink-700 bg-ink-900 p-5">
+        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Public pages (no login)</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {[["/fire-drop","🔥 Fire Drop"],["/cuban-thursday","🥪 Cuban Thursday"],["/catering","🎉 Catering"],["/catering-request","📋 Catering Request"],["/track","📦 Order Tracker"],["/portal","🏢 Client Portal"]].map(([href,label]) => (
+            <Link key={href} href={href} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 hover:border-fire/50">{label}</Link>
+          ))}
+        </div>
+      </div>
+      <p className="mt-6 text-center text-xs text-zinc-600">
         Fire Sheet V2 foundation · demo data only · parity tracked in docs/PARITY_MATRIX.md
       </p>
     </div>

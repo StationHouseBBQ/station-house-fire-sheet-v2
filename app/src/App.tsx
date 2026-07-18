@@ -5,14 +5,21 @@ import { Router } from "wouter";
 import { RoleProvider } from "./app/RoleContext";
 import { Hub, NotFound, WorkspacePage } from "./app/Shell";
 import { WORKSPACES } from "./config/nav";
+import { PublicLayout } from "./modules/public/PublicLayout";
+import { FireDropLanding } from "./modules/public/FireDropLanding";
+import { OrderConfirmation } from "./modules/public/OrderConfirmation";
+import { CubanThursdayLanding } from "./modules/public/CubanThursdayLanding";
+import { CateringLanding } from "./modules/public/CateringLanding";
+import { CateringRequest } from "./modules/public/CateringRequest";
+import { OrderTrackerView } from "./modules/public/OrderTracker";
+import { EventLanding } from "./modules/public/EventLanding";
+import { PortalApp } from "./modules/portal/PortalApp";
 
 const qc = new QueryClient();
 
-/**
- * Hash routing keeps deep links working on GitHub Pages previews without
- * server rewrites; the Supabase-hosted production build switches to browser
- * history routing behind the same route table.
- */
+const pub = (C: () => JSX.Element) => () => <PublicLayout><C /></PublicLayout>;
+
+/** Hash routing keeps deep links working on GitHub Pages previews. */
 export default function App() {
   return (
     <QueryClientProvider client={qc}>
@@ -20,6 +27,19 @@ export default function App() {
         <Router hook={useHashLocation}>
           <Switch>
             <Route path="/" component={Hub} />
+            {/* Public routes — never require employee login */}
+            <Route path="/fire-drop" component={pub(FireDropLanding)} />
+            <Route path="/fire-drop/confirmation" component={pub(OrderConfirmation)} />
+            <Route path="/cuban-thursday" component={pub(CubanThursdayLanding)} />
+            <Route path="/cuban-thursday/confirmation" component={pub(OrderConfirmation)} />
+            <Route path="/catering" component={pub(CateringLanding)} />
+            <Route path="/catering-request" component={pub(CateringRequest)} />
+            <Route path="/track" component={pub(OrderTrackerView)} />
+            <Route path="/fathers-day" component={pub(() => <EventLanding slug="fathers-day" fallbackTitle="Father's Day" />)} />
+            <Route path="/july4" component={pub(() => <EventLanding slug="july4" fallbackTitle="4th of July" />)} />
+            <Route path="/football-sunday" component={pub(() => <EventLanding slug="football-sunday" fallbackTitle="Football Sunday" />)} />
+            <Route path="/portal" component={pub(PortalApp)} />
+            {/* Workspaces */}
             {WORKSPACES.map(ws => (
               <Route key={ws.id} path={`${ws.base}/:tabId`}>
                 {params => <WorkspacePage wsId={ws.id} tabId={params.tabId} />}
