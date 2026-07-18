@@ -6,6 +6,7 @@ import { get, set } from "idb-keyval";
 import type { AuditRecord, AuditRepository, Dal, PrepCategory, PrepEntry, PrepRepository, PrepSession, PrepStatus } from "../types";
 import { DemoFireDrop, DemoPreorders, DemoRetailFireSheet, DemoTempLog } from "./retail";
 import { DemoPortal, DemoPublicCheckout } from "./publicFlows";
+import { DemoCateringLifecycle } from "./cateringLifecycle";
 import { DemoCalendar, DemoChecklists, DemoKds, DemoMeatCosts, DemoOrders, DemoPitChecklist, DemoPitmaster, DemoPrepRecipes, DemoProteins, DemoSmokedInventory, DemoSmokerForecast } from "./domains";
 import { DemoDeliveries, DemoPacking, DemoSupplies } from "./packing";
 import { DemoCockpit, DemoCompanies, DemoContacts, DemoEquipment, DemoLeads, DemoPortalAdmin, DemoQuotes, DemoVenues } from "./catering";
@@ -136,6 +137,7 @@ export function createDemoDal(): Dal {
     portalAdmin,
     equipment: new DemoEquipment(audit),
     cockpit: new DemoCockpit(leads, quotes, portalAdmin),
+    cateringLifecycle: new DemoCateringLifecycle(audit, orders),
     marketing: new DemoMarketing(audit, leads),
     menu,
     users: new DemoUsers(audit),

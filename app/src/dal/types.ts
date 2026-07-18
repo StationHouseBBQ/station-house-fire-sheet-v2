@@ -94,6 +94,7 @@ export interface Dal {
   portalAdmin: PortalAdminRepository;
   equipment: EquipmentRepository;
   cockpit: CockpitRepository;
+  cateringLifecycle: CateringLifecycleRepository;
   marketing: MarketingRepository;
   menu: MenuRepository;
   users: UsersRepository;
@@ -131,6 +132,7 @@ export interface OrderTicket {
 
 export interface OrdersRepository {
   list(filter?: { date?: string; status?: OrderStatus | "all"; channel?: OrderChannel | "all" }): Promise<OrderTicket[]>;
+  create(input: { orderRef: string; channel: OrderChannel; customer: string; serviceDate: string; timeWindow: string; guests: number | null; items: Array<{ name: string; qty: number; unit: string; notes?: string | null }>; notes: string | null }, actor: string): Promise<OrderTicket>;
   get(id: string): Promise<OrderTicket | null>;
   updateStatus(id: string, status: OrderStatus, actor: string): Promise<OrderTicket>;
   updateNotes(id: string, notes: string, actor: string): Promise<OrderTicket>;
@@ -427,6 +429,100 @@ export interface CockpitData {
   winsThisWeek: Array<{ id: string; label: string; at: string }>;
 }
 export interface CockpitRepository { data(): Promise<CockpitData>; }
+
+// ── Catering lifecycle (unified lead → quote → invoice → kitchen) ──────────
+export type CateringStage =
+  | "inquiry"        // lead came in
+  | "quoting"        // building the quote
+  | "quote_sent"     // waiting on customer
+  | "accepted"       // customer said yes
+  | "invoiced"       // invoice issued
+  | "paid"           // deposit/full paid
+  | "in_kitchen"     // handed to kitchen (BEO + pull sheet + ticket)
+  | "ready"          // packed / ready for pickup or dispatch
+  | "completed"      // event served
+  | "lost"           // dead
+  | "cancelled";
+
+export interface CateringTimelineEntry {
+  id: string;
+  at: string;
+  actor: string;
+  kind: "stage" | "note" | "email" | "call" | "text" | "system";
+  /** For stage entries: the stage moved to. */
+  toStage?: CateringStage;
+  body: string;
+}
+
+export interface CateringEventDetails {
+  eventDate: string | null;      // ISO date
+  eventTime: string | null;      // e.g. "5:00 PM"
+  guests: number | null;
+  serviceType: string | null;    // Drop-off / Buffet / Full Service / Food Truck
+  venueId: string | null;
+  address: string | null;
+  contactName: string;
+  phone: string;
+  email: string;
+}
+
+/** One catering order that carries the whole lifecycle in a single record. */
+export interface CateringOrder {
+  id: string;
+  ref: string;                   // human ref, e.g. CAT-20260725-1042
+  stage: CateringStage;
+  priority: LeadPriority;
+  customer: string;
+  companyName: string | null;
+  source: string;
+  event: CateringEventDetails;
+  lines: QuoteLine[];
+  subtotalCents: number;
+  taxCents: number;
+  depositCents: number;          // requested deposit (0 = none)
+  paidCents: number;
+  totalCents: number;
+  quotePublicToken: string;      // customer-facing accept link
+  quoteSentAt: string | null;
+  acceptedAt: string | null;
+  invoicedAt: string | null;
+  paidAt: string | null;
+  kitchen: {
+    handedOffAt: string | null;
+    prepNotes: string | null;
+    pullSheetConfirmed: boolean;
+    ticketStatus: "none" | "queued" | "in_production" | "ready" | "picked_up";
+  };
+  timeline: CateringTimelineEntry[];
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CateringLifecycleRepository {
+  list(filter?: { stage?: CateringStage | "all" }): Promise<CateringOrder[]>;
+  get(id: string): Promise<CateringOrder | null>;
+  byToken(token: string): Promise<CateringOrder | null>;
+  createFromLead(leadId: string | null, input: {
+    customer: string; companyName: string | null; source: string;
+    event: Partial<CateringEventDetails>; lines: Array<Omit<QuoteLine, "id">>;
+  }, actor: string): Promise<CateringOrder>;
+  updateEvent(id: string, event: Partial<CateringEventDetails>, actor: string): Promise<CateringOrder>;
+  updateLines(id: string, lines: Array<Omit<QuoteLine, "id"> & { id?: string }>, actor: string): Promise<CateringOrder>;
+  setDeposit(id: string, depositCents: number, actor: string): Promise<CateringOrder>;
+  setStage(id: string, stage: CateringStage, actor: string): Promise<CateringOrder>;
+  setPriority(id: string, priority: LeadPriority, actor: string): Promise<CateringOrder>;
+  /** Communication + notes on the shared timeline. */
+  logComm(id: string, kind: "note" | "email" | "call" | "text", body: string, actor: string): Promise<CateringOrder>;
+  /** One-click transitions with all side effects + timeline entries. */
+  sendQuote(id: string, actor: string): Promise<CateringOrder>;
+  respondByToken(token: string, response: "accepted" | "declined", byName: string): Promise<CateringOrder>;
+  issueInvoice(id: string, actor: string): Promise<CateringOrder>;
+  recordPayment(id: string, amountCents: number, actor: string): Promise<CateringOrder>;
+  handToKitchen(id: string, prepNotes: string | null, actor: string): Promise<CateringOrder>;
+  advanceKitchen(id: string, status: CateringOrder["kitchen"]["ticketStatus"], actor: string): Promise<CateringOrder>;
+  markCompleted(id: string, actor: string): Promise<CateringOrder>;
+}
 
 // ── Marketing ─────────────────────────────────────────────────────────────
 export interface LandingPage { id: string; slug: string; title: string; kind: string; status: "live" | "draft"; conversions: number; visits: number; }

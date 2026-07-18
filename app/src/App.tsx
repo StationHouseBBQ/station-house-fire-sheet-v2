@@ -22,6 +22,7 @@ const OrderTrackerView = lazy(() => import("./modules/public/OrderTracker").then
 const EventLanding = lazy(() => import("./modules/public/EventLanding").then(m => ({ default: m.EventLanding })));
 const PortalApp = lazy(() => import("./modules/portal/PortalApp").then(m => ({ default: m.PortalApp })));
 const QuoteAccept = lazy(() => import("./modules/public/QuoteAccept").then(m => ({ default: m.QuoteAccept })));
+const CateringQuoteReview = lazy(() => import("./modules/public/CateringQuoteReview").then(m => ({ default: m.CateringQuoteReview })));
 
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="/football-sunday" component={pub(() => <EventLanding slug="football-sunday" fallbackTitle="Football Sunday" />)} />
             <Route path="/portal" component={pub(PortalApp)} />
             <Route path="/quote/:token" component={pub(QuoteAccept)} />
+            <Route path="/catering-quote/:token" component={pub(CateringQuoteReview)} />
             <Route path="/sales-quote/:token" component={pub(QuoteAccept)} />
             {/* Manus route parity: legacy paths resolve to their V2 homes */}
             {Object.entries(ROUTE_ALIASES).filter(([from, to]) => from !== to).map(([from, to]) => (

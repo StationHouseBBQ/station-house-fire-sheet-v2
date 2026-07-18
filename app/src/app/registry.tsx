@@ -29,7 +29,7 @@ const DeliveriesView = lazy(() => import("../modules/packing/DeliveriesView").th
 const PackingDashboard = lazy(() => import("../modules/packing/PackingDashboard").then(m => ({ default: m.PackingDashboard })));
 const PackingInventoryView = lazy(() => import("../modules/packing/PackingInventoryView").then(m => ({ default: m.PackingInventoryView })));
 const SupplyForecastView = lazy(() => import("../modules/packing/SupplyForecastView").then(m => ({ default: m.SupplyForecastView })));
-const DirectorCockpit = lazy(() => import("../modules/catering/DirectorCockpit").then(m => ({ default: m.DirectorCockpit })));
+const CockpitHome = lazy(() => import("../modules/catering/CockpitHome").then(m => ({ default: m.CockpitHome })));
 const LeadsPipeline = lazy(() => import("../modules/catering/LeadsPipeline").then(m => ({ default: m.LeadsPipeline })));
 const LeadIntake = lazy(() => import("../modules/catering/LeadIntake").then(m => ({ default: m.LeadIntake })));
 const SalesCalendarView = lazy(() => import("../modules/catering/SalesCalendarView").then(m => ({ default: m.SalesCalendarView })));
@@ -107,7 +107,7 @@ export const IMPLEMENTED: Record<string, ComponentType> = {
   "packing/dashboard": PackingDashboard,
   "packing/inventory": PackingInventoryView,
   "packing/forecast": SupplyForecastView,
-  "catering/cockpit": DirectorCockpit,
+  "catering/cockpit": CockpitHome,
   "catering/pipeline": LeadsPipeline,
   "catering/intake": LeadIntake,
   "catering/calendar": SalesCalendarView,
