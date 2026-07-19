@@ -11,9 +11,18 @@ import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
  */
 
 export function refFromHash(hash: string = window.location.hash): string | null {
-  const q = hash.indexOf("?");
-  if (q === -1) return null;
-  return new URLSearchParams(hash.slice(q + 1)).get("ref");
+  // Read ?ref= from the hash-route query first, then fall back to the real
+  // query string. Depending on how navigation composes the URL, the ref can
+  // land either after the hash (#/…?ref=) or before it (?ref=#/…), so we
+  // check both and never leave a just-placed order stranded.
+  const fromHash = () => {
+    const q = hash.indexOf("?");
+    return q === -1 ? null : new URLSearchParams(hash.slice(q + 1)).get("ref");
+  };
+  const fromSearch = () => {
+    try { return new URLSearchParams(window.location.search).get("ref"); } catch { return null; }
+  };
+  return fromHash() ?? fromSearch();
 }
 
 const STATUS_CLS: Record<string, string> = {
