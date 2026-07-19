@@ -4,6 +4,7 @@ import type { KdsStage, KdsTicket, Preorder, PreorderStatus } from "../../dal/ty
 import { useRole } from "../../app/RoleContext";
 import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Seminole · FOH KDS — V2 counterpart of the Manus SeminoleKDS. Read-focused
@@ -20,7 +21,7 @@ const STAGES: Array<{ stage: KdsStage; label: string; cls: string }> = [
 ];
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 

@@ -4,6 +4,7 @@ import { getDal } from "../../dal";
 import type { OrderChannel, PackJob } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Packing · Pack Queue — V2 implementation of the Manus PackingQueue.
@@ -20,7 +21,7 @@ const CHANNEL_META: Record<OrderChannel, { label: string; cls: string }> = {
 };
 
 function etToday(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 

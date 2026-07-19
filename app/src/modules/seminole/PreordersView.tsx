@@ -7,6 +7,7 @@ import { useUndo } from "../shared/undo";
 import { formatCents, orderTotals } from "../../lib/money";
 import { activeDropWeekend } from "../../lib/time";
 import { downloadCsv, toCsv } from "../../lib/csv";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Seminole · Preorders — V2 counterpart of the Manus RetailPreorders,
@@ -94,7 +95,7 @@ export function PreordersView() {
   const [addOpen, setAddOpen] = useState(false);
   const [editItemsFor, setEditItemsFor] = useState<Preorder | null>(null);
 
-  const weekend = useMemo(() => activeDropWeekend(new Date()), []);
+  const weekend = useMemo(() => activeDropWeekend(currentTime()), []);
 
   const { data: stats } = useQuery({
     queryKey: ["preorders", "stats"],

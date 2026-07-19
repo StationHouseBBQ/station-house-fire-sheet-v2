@@ -5,6 +5,7 @@ import type { KdsStage, KdsTicket } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Kitchen · Expo KDS — V2 implementation of the Manus ExpoKDS.
@@ -36,7 +37,7 @@ const STAGE_LABEL: Record<KdsStage, string> = {
 };
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 

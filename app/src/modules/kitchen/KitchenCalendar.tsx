@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { CalendarEvent } from "../../dal/types";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Kitchen · Calendar — V2 implementation of the Manus MasterCalendarPage.
@@ -21,7 +22,7 @@ const KIND_META: Record<CalendarEvent["kind"], { label: string; cls: string; dot
 const WEEKDAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 
@@ -29,7 +30,7 @@ export function KitchenCalendar() {
   const dal = getDal();
   const today = todayEt();
   const [cursor, setCursor] = useState<{ year: number; month: number }>(() => {
-    const p = etParts(new Date());
+    const p = etParts(currentTime());
     return { year: p.year, month: p.month };
   });
 

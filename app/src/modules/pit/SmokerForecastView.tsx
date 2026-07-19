@@ -4,6 +4,7 @@ import { getDal } from "../../dal";
 import type { SmokerEntry } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Pit · Smoker Forecast — V2 of the Manus SmokerForecast page.
@@ -13,7 +14,7 @@ import { etParts } from "../../lib/time";
  */
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 function addDays(date: string, n: number): string {

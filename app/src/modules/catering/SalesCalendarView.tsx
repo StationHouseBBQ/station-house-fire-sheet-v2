@@ -4,6 +4,7 @@ import { getDal } from "../../dal";
 import type { CateringOrder, CateringStage, Lead } from "../../dal/types";
 import { etParts } from "../../lib/time";
 import { formatCents } from "../../lib/money";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Catering · Sales Calendar — V2 counterpart of the Manus SalesCalendar.
@@ -14,7 +15,7 @@ import { formatCents } from "../../lib/money";
 const WEEKDAY_HEADERS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 function fmtDate(iso: string | null): string {
@@ -45,7 +46,7 @@ export function SalesCalendarView() {
   const dal = getDal();
   const today = todayEt();
   const [cursor, setCursor] = useState<{ year: number; month: number }>(() => {
-    const p = etParts(new Date());
+    const p = etParts(currentTime());
     return { year: p.year, month: p.month };
   });
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);

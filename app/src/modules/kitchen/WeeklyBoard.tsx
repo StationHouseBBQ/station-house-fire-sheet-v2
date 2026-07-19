@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { OrderChannel, OrderStatus, OrderTicket } from "../../dal/types";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Kitchen · Weekly Board — V2 implementation of the Manus WeeklyMasterBoard.
@@ -29,7 +30,7 @@ const STATUS_CLS: Record<OrderStatus, string> = {
 };
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 

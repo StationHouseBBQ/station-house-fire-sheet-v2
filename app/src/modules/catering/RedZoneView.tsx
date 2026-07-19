@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import { etParts } from "../../lib/time";
 import type { CateringOrder } from "../../dal/types";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Catering · Red Zone — V2 counterpart of the Manus sales RedZone page.
@@ -11,7 +12,7 @@ import type { CateringOrder } from "../../dal/types";
  */
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 function daysUntil(iso: string, today: string): number {

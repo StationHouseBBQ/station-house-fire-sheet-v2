@@ -5,6 +5,7 @@ import type { OrderChannel, OrderStatus, OrderTicket } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 
 /**
  * Kitchen · Fire Sheets — V2 implementation of the Manus ProductionBoard
@@ -39,7 +40,7 @@ const NEXT_STATUS: Partial<Record<OrderStatus, { to: OrderStatus; label: string 
 type Sync = "idle" | "saving" | "saved" | "error";
 
 function todayEt(): string {
-  const p = etParts(new Date());
+  const p = etParts(currentTime());
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 
