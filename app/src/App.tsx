@@ -1,5 +1,8 @@
 import React from "react";
 import { Route, Switch } from "wouter";
+import { useEffect as useEffectRoot } from "react";
+import { ErrorBoundary } from "./app/ErrorBoundary";
+import { clearChunkReloadGuards } from "./app/lazyWithRetry";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router } from "wouter";
@@ -11,18 +14,19 @@ import { Hub, NotFound, WorkspacePage } from "./app/Shell";
 import { WORKSPACES } from "./config/nav";
 
 import { ROUTE_ALIASES } from "./config/aliases";
-import { lazy, Suspense } from "react";
-const FireDropLanding = lazy(() => import("./modules/public/FireDropLanding").then(m => ({ default: m.FireDropLanding })));
-const OrderConfirmation = lazy(() => import("./modules/public/OrderConfirmation").then(m => ({ default: m.OrderConfirmation })));
-const CubanThursdayLanding = lazy(() => import("./modules/public/CubanThursdayLanding").then(m => ({ default: m.CubanThursdayLanding })));
-const CateringLanding = lazy(() => import("./modules/public/CateringLanding").then(m => ({ default: m.CateringLanding })));
-const ExpressCatering = lazy(() => import("./modules/public/ExpressCatering").then(m => ({ default: m.ExpressCatering })));
-const CateringRequest = lazy(() => import("./modules/public/CateringRequest").then(m => ({ default: m.CateringRequest })));
-const OrderTrackerView = lazy(() => import("./modules/public/OrderTracker").then(m => ({ default: m.OrderTrackerView })));
-const EventLanding = lazy(() => import("./modules/public/EventLanding").then(m => ({ default: m.EventLanding })));
-const PortalApp = lazy(() => import("./modules/portal/PortalApp").then(m => ({ default: m.PortalApp })));
-const QuoteAccept = lazy(() => import("./modules/public/QuoteAccept").then(m => ({ default: m.QuoteAccept })));
-const CateringQuoteReview = lazy(() => import("./modules/public/CateringQuoteReview").then(m => ({ default: m.CateringQuoteReview })));
+import { Suspense } from "react";
+import { lazyWithRetry } from "./app/lazyWithRetry";
+const FireDropLanding = lazyWithRetry(() => import("./modules/public/FireDropLanding").then(m => ({ default: m.FireDropLanding })), "FireDropLanding");
+const OrderConfirmation = lazyWithRetry(() => import("./modules/public/OrderConfirmation").then(m => ({ default: m.OrderConfirmation })), "OrderConfirmation");
+const CubanThursdayLanding = lazyWithRetry(() => import("./modules/public/CubanThursdayLanding").then(m => ({ default: m.CubanThursdayLanding })), "CubanThursdayLanding");
+const CateringLanding = lazyWithRetry(() => import("./modules/public/CateringLanding").then(m => ({ default: m.CateringLanding })), "CateringLanding");
+const ExpressCatering = lazyWithRetry(() => import("./modules/public/ExpressCatering").then(m => ({ default: m.ExpressCatering })), "ExpressCatering");
+const CateringRequest = lazyWithRetry(() => import("./modules/public/CateringRequest").then(m => ({ default: m.CateringRequest })), "CateringRequest");
+const OrderTrackerView = lazyWithRetry(() => import("./modules/public/OrderTracker").then(m => ({ default: m.OrderTrackerView })), "OrderTrackerView");
+const EventLanding = lazyWithRetry(() => import("./modules/public/EventLanding").then(m => ({ default: m.EventLanding })), "EventLanding");
+const PortalApp = lazyWithRetry(() => import("./modules/portal/PortalApp").then(m => ({ default: m.PortalApp })), "PortalApp");
+const QuoteAccept = lazyWithRetry(() => import("./modules/public/QuoteAccept").then(m => ({ default: m.QuoteAccept })), "QuoteAccept");
+const CateringQuoteReview = lazyWithRetry(() => import("./modules/public/CateringQuoteReview").then(m => ({ default: m.CateringQuoteReview })), "CateringQuoteReview");
 
 import { useEffect } from "react";
 import { useLocation } from "wouter";
@@ -43,7 +47,9 @@ const pub = (C: React.ComponentType) => () => (
 
 /** Hash routing keeps deep links working on GitHub Pages previews. */
 export default function App() {
+  useEffectRoot(() => { clearChunkReloadGuards(); }, []);
   return (
+    <ErrorBoundary>
     <QueryClientProvider client={qc}>
       <RoleProvider>
         <UndoProvider>
@@ -91,5 +97,6 @@ export default function App() {
         </UndoProvider>
       </RoleProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
