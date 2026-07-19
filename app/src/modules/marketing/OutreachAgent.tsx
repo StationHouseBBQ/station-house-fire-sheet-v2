@@ -24,6 +24,14 @@ const STAGE_META: Record<Stage, { label: string; cls: string }> = {
   lost: { label: "Lost", cls: "bg-red-900 text-red-200" },
 };
 
+// Forward pipeline advance (won/lost are terminal outcomes -> no auto-advance).
+const NEXT_STAGE: Partial<Record<Stage, Stage>> = {
+  identified: "contacted",
+  contacted: "responded",
+  responded: "meeting",
+  meeting: "won",
+};
+
 export function OutreachAgentView() {
   const { actor } = useRole();
   const dal = getDal();
@@ -48,6 +56,20 @@ export function OutreachAgentView() {
       qc.invalidateQueries({ queryKey: ["marketing", "outreach"] });
       setDialog(null);
     },
+  });
+
+  const advanceMut = useMutation({
+    mutationFn: (t: OutreachTarget) => {
+      const next = NEXT_STAGE[t.stage];
+      if (!next) return Promise.resolve(t);
+      setSync("saving");
+      const today = new Date().toISOString().slice(0, 10);
+      return dal.marketing.upsertOutreach({ ...t, stage: next, lastTouch: today }, actor).then(
+        r => { setSync("saved"); return r; },
+        e => { setSync("error"); throw e; },
+      );
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["marketing", "outreach"] }),
   });
 
   const byStage = useMemo(() => {
@@ -98,6 +120,13 @@ export function OutreachAgentView() {
                         {t.lastTouch ? `Last touch ${t.lastTouch}` : "No touches yet"}
                       </p>
                     </button>
+                    {NEXT_STAGE[t.stage] && (
+                      <button onClick={() => advanceMut.mutate(t)}
+                        className="mt-1.5 min-h-[36px] w-full rounded-md border border-ink-600 bg-ink-900 px-2 py-1 text-xs font-bold text-fire-light"
+                        aria-label={`Advance ${t.business} to ${STAGE_META[NEXT_STAGE[t.stage]!].label}`}>
+                        → {STAGE_META[NEXT_STAGE[t.stage]!].label}
+                      </button>
+                    )}
                   </li>
                 ))}
                 {cards.length === 0 && (

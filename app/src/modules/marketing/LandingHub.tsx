@@ -3,10 +3,24 @@ import { getDal } from "../../dal";
 import type { LandingPage } from "../../dal/types";
 
 /**
- * Marketing · Landing Hub — V2 take on the Manus MarketingHub landing-page
- * grid. Read-only status + conversion tracking per page; the public-facing
- * routes themselves ship in the public-routes phase.
+ * Marketing · Landing Hub — landing-page traffic + conversion tracking from
+ * dal.marketing.landingPages(). Each page shows visits, conversions and a
+ * computed conversion rate; pages whose slug maps to a live public route link
+ * straight to it (/fire-drop, /cuban-thursday, /catering, /express,
+ * /catering-request).
  */
+
+const PUBLIC_ROUTES = ["/fire-drop", "/cuban-thursday", "/catering", "/express", "/catering-request"];
+
+/** Resolve a landing page to a live public route, or null when none exists. */
+function publicRoute(page: LandingPage): string | null {
+  const slug = page.slug.startsWith("/") ? page.slug : `/${page.slug}`;
+  if (PUBLIC_ROUTES.includes(slug)) return slug;
+  if (page.kind === "fire_drop") return "/fire-drop";
+  if (slug.includes("cuban")) return "/cuban-thursday";
+  if (page.kind === "catering") return slug.includes("request") ? "/catering-request" : "/catering";
+  return null;
+}
 
 export function LandingHub() {
   const dal = getDal();
@@ -15,21 +29,22 @@ export function LandingHub() {
     queryFn: () => dal.marketing.landingPages(),
   });
 
-  if (isLoading) return <p className="py-20 text-center text-zinc-500">Loading landing pages…</p>;
+  if (isLoading) return <p className="py-20 text-center text-zinc-500">Loading landing pages&hellip;</p>;
   const list = pages ?? [];
   const live = list.filter(p => p.status === "live").length;
+  const totalVisits = list.reduce((s, p) => s + p.visits, 0);
+  const totalConversions = list.reduce((s, p) => s + p.conversions, 0);
 
   return (
     <div className="mx-auto max-w-5xl pt-6">
       <header>
         <h1 className="text-2xl font-black uppercase text-zinc-100">Landing Pages</h1>
-        <p className="text-sm text-zinc-500">{live} live · {list.length - live} draft</p>
+        <p className="text-sm text-zinc-500">
+          {live} live · {list.length - live} draft ·{" "}
+          {totalVisits.toLocaleString("en-US")} visits ·{" "}
+          {totalVisits > 0 ? ((totalConversions / totalVisits) * 100).toFixed(1) : "0.0"}% overall conversion
+        </p>
       </header>
-
-      <p role="note" className="mt-3 rounded-xl border border-ink-700 bg-ink-900 px-4 py-3 text-sm text-zinc-400">
-        Public landing-page routes ship in the public-routes phase. This hub tracks each page's
-        status and conversion numbers in the meantime.
-      </p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {list.map(p => <PageCard key={p.id} page={p} />)}
@@ -45,12 +60,13 @@ export function LandingHub() {
 
 function PageCard({ page }: { page: LandingPage }) {
   const rate = page.visits > 0 ? (page.conversions / page.visits) * 100 : 0;
+  const route = publicRoute(page);
   return (
     <div className="rounded-xl border border-ink-700 bg-ink-900 p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate font-semibold text-zinc-100">{page.title}</p>
-          <p className="truncate text-xs text-zinc-500">/{page.slug} · {page.kind}</p>
+          <p className="truncate text-xs text-zinc-500">{page.slug} · {page.kind}</p>
         </div>
         <span className={`rounded-lg px-2.5 py-1 text-xs font-bold uppercase ${
           page.status === "live" ? "bg-green-600 text-white" : "bg-ink-700 text-zinc-300"}`}>
@@ -71,6 +87,14 @@ function PageCard({ page }: { page: LandingPage }) {
           <dd className="text-lg font-bold text-fire-light">{rate.toFixed(1)}%</dd>
         </div>
       </dl>
+      {route ? (
+        <a href={route} target="_blank" rel="noopener noreferrer"
+          className="mt-3 block min-h-[44px] rounded-lg border border-fire/40 bg-fire/10 px-3 py-2.5 text-center text-sm font-bold text-fire-light hover:bg-fire/20">
+          Open {route} ↗
+        </a>
+      ) : (
+        <p className="mt-3 text-center text-xs text-zinc-600">No public route yet</p>
+      )}
     </div>
   );
 }

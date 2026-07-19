@@ -565,6 +565,18 @@ export interface MarketingRepository {
   updateCampaignStatus(id: string, status: AdCampaign["status"], actor: string): Promise<AdCampaign>;
   briefs(kind: CreativeBrief["kind"]): Promise<CreativeBrief[]>;
   upsertBrief(b: Omit<CreativeBrief, "createdAt"> & { id?: string }, actor: string): Promise<CreativeBrief>;
+  /** Live business analytics computed from real orders, preorders, and leads. */
+  analytics(): Promise<MarketingAnalytics>;
+}
+
+export interface MarketingAnalytics {
+  channelRevenue: Array<{ channel: string; label: string; orders: number; revenueCents: number }>;
+  totalRevenueCents: number;
+  leadFunnel: Array<{ stage: string; label: string; count: number }>;
+  leadSources: Array<{ source: string; leads: number; booked: number; bookedCents: number; conversionPct: number }>;
+  weekendPreorders: { count: number; revenueCents: number; friday: number; saturday: number };
+  cateringPipelineCents: number;
+  topDays: Array<{ date: string; orders: number; revenueCents: number }>;
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────

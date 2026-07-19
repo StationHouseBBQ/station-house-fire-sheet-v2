@@ -6,11 +6,12 @@ import { useRole } from "../../app/RoleContext";
 import { formatCents } from "../../lib/money";
 
 /**
- * Marketing · Ads Center — V2 take on the Manus AdsCommandCenter.
- * Campaign table with real spend/lead/CPL numbers and an active↔paused
- * toggle (ended campaigns are immutable), plus the ad-creative brief queue.
- * Manus generates ad copy with external AI; V2 says plainly that AI
- * generation connects in the integrations phase.
+ * Marketing · Ads Center — a real campaign manager.
+ * Live campaign table with spend / leads / cost-per-lead, inline active↔paused
+ * status (ended campaigns are immutable) and a totals row. Below sits the
+ * ad-brief queue: "New campaign" upserts an "ads" brief into a queued/in
+ * review/approved/done board. Live ad-account sync is a connector phase; the
+ * planning + brief workflow is fully real today.
  */
 
 type Sync = "idle" | "saving" | "saved" | "error";
@@ -25,7 +26,7 @@ const CAMPAIGN_STATUS_CLS: Record<AdCampaign["status"], string> = {
 const BRIEF_STATUSES: BriefStatus[] = ["queued", "in_review", "approved", "done"];
 const BRIEF_META: Record<BriefStatus, { label: string; cls: string }> = {
   queued: { label: "Queued", cls: "bg-ink-700 text-zinc-300" },
-  in_review: { label: "In Review", cls: "bg-amber-600 text-white" },
+  in_review: { label: "In review", cls: "bg-amber-600 text-white" },
   approved: { label: "Approved", cls: "bg-blue-600 text-white" },
   done: { label: "Done", cls: "bg-green-600 text-white" },
 };
@@ -60,7 +61,7 @@ export function AdsCenterView() {
   });
 
   if (campaignsQ.isLoading || briefsQ.isLoading) {
-    return <p className="py-20 text-center text-zinc-500">Loading ads center…</p>;
+    return <p className="py-20 text-center text-zinc-500">Loading ads center&hellip;</p>;
   }
 
   const campaigns = campaignsQ.data ?? [];
@@ -80,6 +81,10 @@ export function AdsCenterView() {
         </div>
         <SyncBadge sync={sync} />
       </header>
+
+      <p role="note" className="mt-4 rounded-xl border border-amber-700/50 bg-amber-950/40 px-4 py-2.5 text-sm text-amber-300">
+        Live ad-account sync (Meta, Google, TikTok) arrives in a connector phase. The campaign board and brief workflow below are fully real today.
+      </p>
 
       <section className="mt-4 overflow-x-auto rounded-xl border border-ink-700 bg-ink-900 p-4">
         <table className="w-full text-sm">
@@ -125,19 +130,29 @@ export function AdsCenterView() {
               <tr><td colSpan={7} className="py-8 text-center text-zinc-500">No campaigns yet.</td></tr>
             )}
           </tbody>
+          {campaigns.length > 0 && (
+            <tfoot>
+              <tr className="border-t border-ink-700 font-bold text-zinc-100">
+                <td className="pt-2.5" colSpan={3}>Total</td>
+                <td className="pt-2.5 text-right">{formatCents(totalSpend)}</td>
+                <td className="pt-2.5 text-right">{totalLeads}</td>
+                <td className="pt-2.5 text-right">{totalLeads > 0 ? formatCents(Math.round(totalSpend / totalLeads)) : "—"}</td>
+                <td className="pt-2.5" />
+              </tr>
+            </tfoot>
+          )}
         </table>
       </section>
 
       <section className="mt-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-zinc-100">Ad creative briefs</h2>
+          <div>
+            <h2 className="text-lg font-bold text-zinc-100">Ad briefs</h2>
+            <p className="text-sm text-zinc-500">Plan the next campaign — queued to done.</p>
+          </div>
           <button onClick={() => setAddOpen(true)}
-            className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">+ New brief</button>
+            className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">+ New campaign</button>
         </div>
-        <p role="note" className="mt-3 rounded-xl border border-amber-700/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-300">
-          AI generation connects in the integrations phase (owner approval required). This queue
-          tracks the real ad-creative brief workflow in the meantime.
-        </p>
         <ul className="mt-3 space-y-3">
           {briefs.map(b => (
             <li key={b.id} className="rounded-xl border border-ink-700 bg-ink-900 p-4">
@@ -161,7 +176,7 @@ export function AdsCenterView() {
           ))}
           {briefs.length === 0 && (
             <li className="rounded-xl border border-dashed border-ink-700 py-10 text-center text-sm text-zinc-500">
-              No ad briefs yet — add the first one.
+              No ad briefs yet — plan the first campaign.
             </li>
           )}
         </ul>
@@ -190,13 +205,13 @@ function BriefDialog({ onSubmit, onCancel, busy, error }: {
   const [title, setTitle] = useState("");
   const [brief, setBrief] = useState("");
   return (
-    <div role="dialog" aria-modal="true" aria-label="New ad brief"
+    <div role="dialog" aria-modal="true" aria-label="New campaign brief"
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
       <form className="w-full max-w-md rounded-2xl border border-ink-700 bg-ink-900 p-5"
         onSubmit={e => { e.preventDefault(); onSubmit(title, brief); }}>
-        <h3 className="text-lg font-bold text-zinc-100">New ad brief</h3>
+        <h3 className="text-lg font-bold text-zinc-100">New campaign brief</h3>
         {error && <p className="mt-2 rounded-lg bg-red-950/60 px-3 py-2 text-sm text-red-400">{error}</p>}
-        <label className="mt-4 block text-sm font-semibold text-zinc-400">Title
+        <label className="mt-4 block text-sm font-semibold text-zinc-400">Campaign / title
           <input value={title} onChange={e => setTitle(e.target.value)} required
             className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
         </label>

@@ -138,7 +138,7 @@ export function createDemoDal(): Dal {
     equipment: new DemoEquipment(audit),
     cockpit: new DemoCockpit(leads, quotes, portalAdmin),
     cateringLifecycle: new DemoCateringLifecycle(audit, orders, leads),
-    marketing: new DemoMarketing(audit, leads),
+    marketing: new DemoMarketing(audit, leads, preorders),
     menu,
     users: new DemoUsers(audit),
     discounts,

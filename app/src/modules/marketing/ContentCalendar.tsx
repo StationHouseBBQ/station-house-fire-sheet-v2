@@ -5,12 +5,13 @@ import type { ContentPost, PostStatus } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 
 /**
- * Marketing · Content Calendar — V2 take on the Manus ContentCalendar.
- * Month grid with platform color dots, per-day post list, full post CRUD
- * via upsertPost/removePost, and a two-tap delete guard.
+ * Marketing · Content Calendar — month grid + a "This week" list view, full
+ * post CRUD (upsertPost/removePost), a platform filter, and a status workflow
+ * (idea -> drafted -> scheduled -> posted) with one-tap advance on each post.
  */
 
 type Sync = "idle" | "saving" | "saved" | "error";
+type View = "month" | "week";
 
 const PLATFORMS = ["instagram", "facebook", "tiktok"];
 const PLATFORM_DOT: Record<string, string> = {
@@ -27,6 +28,9 @@ const STATUS_META: Record<PostStatus, { label: string; cls: string }> = {
   scheduled: { label: "Scheduled", cls: "bg-blue-600 text-white" },
   posted: { label: "Posted", cls: "bg-green-600 text-white" },
 };
+const NEXT_STATUS: Record<PostStatus, PostStatus> = {
+  idea: "drafted", drafted: "scheduled", scheduled: "posted", posted: "idea",
+};
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -42,6 +46,8 @@ export function ContentCalendarView() {
   }, []);
   const [ym, setYm] = useState(() => today.slice(0, 7));
   const [selected, setSelected] = useState(today);
+  const [view, setView] = useState<View>("month");
+  const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [sync, setSync] = useState<Sync>("idle");
   const [dialog, setDialog] = useState<{ post: ContentPost | null } | null>(null);
   const [armedDelete, setArmedDelete] = useState<string | null>(null);
@@ -62,10 +68,20 @@ export function ContentCalendarView() {
       withSync(dal.marketing.upsertPost(p, actor)),
     onSuccess: () => { invalidate(); setDialog(null); },
   });
+  const advanceMut = useMutation({
+    mutationFn: (p: ContentPost) =>
+      withSync(dal.marketing.upsertPost({ id: p.id, date: p.date, platform: p.platform, title: p.title, body: p.body, status: NEXT_STATUS[p.status] }, actor)),
+    onSuccess: invalidate,
+  });
   const deleteMut = useMutation({
     mutationFn: (id: string) => withSync(dal.marketing.removePost(id, actor)),
     onSuccess: () => { invalidate(); setArmedDelete(null); },
   });
+
+  const visiblePosts = useMemo(
+    () => (posts ?? []).filter(p => platformFilter === "all" || p.platform === platformFilter),
+    [posts, platformFilter],
+  );
 
   const [y, m] = ym.split("-").map(Number); // m is 1-based
   const cells = useMemo(() => {
@@ -80,13 +96,27 @@ export function ContentCalendarView() {
 
   const byDate = useMemo(() => {
     const g = new Map<string, ContentPost[]>();
-    for (const p of posts ?? []) {
+    for (const p of visiblePosts) {
       const l = g.get(p.date) ?? [];
       l.push(p);
       g.set(p.date, l);
     }
     return g;
-  }, [posts]);
+  }, [visiblePosts]);
+
+  // This-week window: Sunday..Saturday around `today`.
+  const weekDates = useMemo(() => {
+    const base = new Date(`${today}T12:00:00Z`);
+    const sun = new Date(base); sun.setUTCDate(base.getUTCDate() - base.getUTCDay());
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(sun); d.setUTCDate(sun.getUTCDate() + i);
+      return d.toISOString().slice(0, 10);
+    });
+  }, [today]);
+  const weekPosts = useMemo(
+    () => visiblePosts.filter(p => weekDates.includes(p.date)).sort((a, b) => a.date.localeCompare(b.date)),
+    [visiblePosts, weekDates],
+  );
 
   const shiftMonth = (delta: number) => {
     const d = new Date(y, m - 1 + delta, 1);
@@ -95,7 +125,7 @@ export function ContentCalendarView() {
   const monthLabel = new Date(y, m - 1, 1).toLocaleString("en-US", { month: "long", year: "numeric" });
   const dayPosts = byDate.get(selected) ?? [];
 
-  if (isLoading) return <p className="py-20 text-center text-zinc-500">Loading content calendar…</p>;
+  if (isLoading) return <p className="py-20 text-center text-zinc-500">Loading content calendar&hellip;</p>;
 
   return (
     <div className="mx-auto max-w-4xl pt-6">
@@ -117,76 +147,132 @@ export function ContentCalendarView() {
         </div>
       </header>
 
-      <div className="mt-4 flex items-center justify-between rounded-t-xl border border-ink-700 bg-ink-900 px-3 py-2">
-        <button onClick={() => shiftMonth(-1)} aria-label="Previous month"
-          className="min-h-[44px] min-w-[44px] rounded-lg text-lg font-bold text-zinc-300 hover:bg-ink-800">‹</button>
-        <p className="font-bold text-zinc-100">{monthLabel}</p>
-        <button onClick={() => shiftMonth(1)} aria-label="Next month"
-          className="min-h-[44px] min-w-[44px] rounded-lg text-lg font-bold text-zinc-300 hover:bg-ink-800">›</button>
-      </div>
-
-      <div className="grid grid-cols-7 border-x border-ink-700 bg-ink-900 text-center text-[11px] font-bold uppercase text-zinc-500">
-        {DOW.map(d => <div key={d} className="py-1.5">{d}</div>)}
-      </div>
-      <div className="grid grid-cols-7 rounded-b-xl border border-ink-700 bg-ink-900 p-1">
-        {cells.map((date, i) => date === null ? <div key={i} /> : (
-          <button key={date} onClick={() => setSelected(date)}
-            aria-label={`${date}: ${(byDate.get(date) ?? []).length} posts`}
-            className={`min-h-[52px] rounded-lg p-1 text-left align-top ${
-              selected === date ? "bg-fire/20 ring-1 ring-fire" : "hover:bg-ink-800"}`}>
-            <span className={`text-xs font-semibold ${date === today ? "text-fire-light" : "text-zinc-400"}`}>
-              {Number(date.slice(8))}
-            </span>
-            <span className="mt-1 flex flex-wrap gap-0.5">
-              {(byDate.get(date) ?? []).slice(0, 4).map(p => (
-                <span key={p.id} className={`h-1.5 w-1.5 rounded-full ${dotCls(p.platform)}`} />
-              ))}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <section className="mt-5">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Posts on {selected}</h2>
-        <ul className="mt-2 space-y-2">
-          {dayPosts.map(p => (
-            <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 p-3">
-              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotCls(p.platform)}`} aria-label={p.platform} />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-zinc-100">{p.title}</p>
-                <p className="truncate text-xs text-zinc-500">{p.platform} · {p.body}</p>
-              </div>
-              <span className={`rounded-lg px-2.5 py-1 text-xs font-bold uppercase ${STATUS_META[p.status].cls}`}>
-                {STATUS_META[p.status].label}
-              </span>
-              <button onClick={() => setDialog({ post: p })}
-                className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300">
-                Edit
-              </button>
-              <button
-                onClick={() => armedDelete === p.id ? deleteMut.mutate(p.id) : setArmedDelete(p.id)}
-                className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold ${
-                  armedDelete === p.id
-                    ? "border-red-700/50 bg-red-950/60 text-red-400"
-                    : "border-ink-700 bg-ink-800 text-zinc-400"}`}
-                aria-label={armedDelete === p.id ? `Confirm delete ${p.title}` : `Delete ${p.title}`}>
-                {armedDelete === p.id ? "Confirm?" : "Delete"}
-              </button>
-            </li>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div role="tablist" aria-label="Calendar view" className="flex gap-1 rounded-lg border border-ink-700 bg-ink-800 p-1">
+          {(["month", "week"] as View[]).map(v => (
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)}
+              className={`min-h-[40px] rounded-md px-3 py-1.5 text-sm font-semibold ${
+                view === v ? "bg-fire/20 text-fire-light" : "text-zinc-400"}`}>
+              {v === "month" ? "Month" : "This week"}
+            </button>
           ))}
-          {dayPosts.length === 0 && (
-            <li className="rounded-xl border border-dashed border-ink-700 py-8 text-center text-sm text-zinc-500">
-              Nothing planned this day.
-            </li>
-          )}
-        </ul>
-      </section>
+        </div>
+        <label className="text-sm text-zinc-400">
+          Platform
+          <select value={platformFilter} onChange={e => setPlatformFilter(e.target.value)}
+            aria-label="Filter posts by platform"
+            className="ml-2 min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-2 py-2 text-sm text-zinc-100">
+            <option value="all">All platforms</option>
+            {PLATFORMS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </label>
+      </div>
+
+      {view === "month" ? (
+        <>
+          <div className="mt-4 flex items-center justify-between rounded-t-xl border border-ink-700 bg-ink-900 px-3 py-2">
+            <button onClick={() => shiftMonth(-1)} aria-label="Previous month"
+              className="min-h-[44px] min-w-[44px] rounded-lg text-lg font-bold text-zinc-300 hover:bg-ink-800">‹</button>
+            <p className="font-bold text-zinc-100">{monthLabel}</p>
+            <button onClick={() => shiftMonth(1)} aria-label="Next month"
+              className="min-h-[44px] min-w-[44px] rounded-lg text-lg font-bold text-zinc-300 hover:bg-ink-800">›</button>
+          </div>
+
+          <div className="grid grid-cols-7 border-x border-ink-700 bg-ink-900 text-center text-[11px] font-bold uppercase text-zinc-500">
+            {DOW.map(d => <div key={d} className="py-1.5">{d}</div>)}
+          </div>
+          <div className="grid grid-cols-7 rounded-b-xl border border-ink-700 bg-ink-900 p-1">
+            {cells.map((date, i) => date === null ? <div key={i} /> : (
+              <button key={date} onClick={() => setSelected(date)}
+                aria-label={`${date}: ${(byDate.get(date) ?? []).length} posts`}
+                className={`min-h-[52px] rounded-lg p-1 text-left align-top ${
+                  selected === date ? "bg-fire/20 ring-1 ring-fire" : "hover:bg-ink-800"}`}>
+                <span className={`text-xs font-semibold ${date === today ? "text-fire-light" : "text-zinc-400"}`}>
+                  {Number(date.slice(8))}
+                </span>
+                <span className="mt-1 flex flex-wrap gap-0.5">
+                  {(byDate.get(date) ?? []).slice(0, 4).map(p => (
+                    <span key={p.id} className={`h-1.5 w-1.5 rounded-full ${dotCls(p.platform)}`} />
+                  ))}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <section className="mt-5">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Posts on {selected}</h2>
+            <PostList posts={dayPosts} armedDelete={armedDelete}
+              onEdit={p => setDialog({ post: p })}
+              onAdvance={p => advanceMut.mutate(p)}
+              onDelete={id => armedDelete === id ? deleteMut.mutate(id) : setArmedDelete(id)}
+              emptyLabel="Nothing planned this day." />
+          </section>
+        </>
+      ) : (
+        <section className="mt-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
+            This week · {weekDates[0]} → {weekDates[6]}
+          </h2>
+          <PostList posts={weekPosts} armedDelete={armedDelete} showDate
+            onEdit={p => setDialog({ post: p })}
+            onAdvance={p => advanceMut.mutate(p)}
+            onDelete={id => armedDelete === id ? deleteMut.mutate(id) : setArmedDelete(id)}
+            emptyLabel="Nothing planned this week." />
+        </section>
+      )}
 
       {dialog && <PostDialog post={dialog.post} defaultDate={selected}
         busy={saveMut.isPending} error={saveMut.error?.message ?? null}
         onCancel={() => setDialog(null)}
         onSubmit={p => saveMut.mutate(p)} />}
     </div>
+  );
+}
+
+function PostList({ posts, armedDelete, showDate, onEdit, onAdvance, onDelete, emptyLabel }: {
+  posts: ContentPost[]; armedDelete: string | null; showDate?: boolean;
+  onEdit: (p: ContentPost) => void; onAdvance: (p: ContentPost) => void;
+  onDelete: (id: string) => void; emptyLabel: string;
+}) {
+  return (
+    <ul className="mt-2 space-y-2">
+      {posts.map(p => (
+        <li key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-ink-700 bg-ink-900 p-3">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotCls(p.platform)}`} aria-label={p.platform} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold text-zinc-100">
+              {showDate && <span className="mr-2 text-xs font-normal text-zinc-500">{p.date.slice(5)}</span>}
+              {p.title}
+            </p>
+            <p className="truncate text-xs text-zinc-500">{p.platform} · {p.body}</p>
+          </div>
+          <button onClick={() => onAdvance(p)}
+            className={`min-h-[36px] rounded-lg px-2.5 py-1 text-xs font-bold uppercase ${STATUS_META[p.status].cls}`}
+            aria-label={`Advance ${p.title} to ${STATUS_META[NEXT_STATUS[p.status]].label}`}
+            title={`Tap to advance to ${STATUS_META[NEXT_STATUS[p.status]].label}`}>
+            {STATUS_META[p.status].label}
+          </button>
+          <button onClick={() => onEdit(p)}
+            className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300">
+            Edit
+          </button>
+          <button
+            onClick={() => onDelete(p.id)}
+            className={`min-h-[44px] rounded-lg border px-3 py-2 text-sm font-semibold ${
+              armedDelete === p.id
+                ? "border-red-700/50 bg-red-950/60 text-red-400"
+                : "border-ink-700 bg-ink-800 text-zinc-400"}`}
+            aria-label={armedDelete === p.id ? `Confirm delete ${p.title}` : `Delete ${p.title}`}>
+            {armedDelete === p.id ? "Confirm?" : "Delete"}
+          </button>
+        </li>
+      ))}
+      {posts.length === 0 && (
+        <li className="rounded-xl border border-dashed border-ink-700 py-8 text-center text-sm text-zinc-500">
+          {emptyLabel}
+        </li>
+      )}
+    </ul>
   );
 }
 

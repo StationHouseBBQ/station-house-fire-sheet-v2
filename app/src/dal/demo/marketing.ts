@@ -112,7 +112,47 @@ function seedBriefs(): CreativeBrief[] {
 }
 
 export class DemoMarketing implements MarketingRepository {
-  constructor(private audit: AuditRepository, private leads: LeadsRepository) {}
+  constructor(private audit: AuditRepository, private leads: LeadsRepository, private preorders: import("../types").PreordersRepository) {}
+
+  async analytics() {
+    const leads = await this.leads.list();
+    const pre = await this.preorders.list({ includeHidden: false });
+    const money = (n: number) => n;
+    // Channel revenue from operational order tickets (catering etc.) + preorders.
+    const chMap = new Map<string, { channel: string; label: string; orders: number; revenueCents: number }>();
+    const labels: Record<string, string> = { fire_drop: "Weekend Pre-Order", cuban_thursday: "Cuban Thursday", catering: "Catering", retail: "Retail", walk_in: "Walk-in" };
+    for (const p of pre) {
+      const key = p.channel;
+      const e = chMap.get(key) ?? { channel: key, label: labels[key] ?? key, orders: 0, revenueCents: 0 };
+      e.orders += 1; e.revenueCents += p.totalCents; chMap.set(key, e);
+    }
+    // Catering pipeline value (open catering lifecycle proxy via leads budget for booked)
+    const cateringPipelineCents = leads.filter(l => !["lost"].includes(l.stage) && l.budgetCents).reduce((s, l) => s + (l.budgetCents ?? 0), 0);
+    const channelRevenue = [...chMap.values()].sort((a, b) => b.revenueCents - a.revenueCents);
+    const totalRevenueCents = channelRevenue.reduce((s, c) => s + c.revenueCents, 0);
+    // Lead funnel
+    const funnelOrder: Array<[string, string]> = [["new", "New"], ["contacted", "Contacted"], ["needs_quote", "Needs quote"], ["quote_sent", "Quote sent"], ["booked", "Booked"]];
+    const leadFunnel = funnelOrder.map(([stage, label]) => ({ stage, label, count: leads.filter(l => l.stage === stage).length }));
+    // Lead sources with conversion
+    const srcMap = new Map<string, { source: string; leads: number; booked: number; bookedCents: number }>();
+    for (const l of leads) {
+      const e = srcMap.get(l.source) ?? { source: l.source, leads: 0, booked: 0, bookedCents: 0 };
+      e.leads += 1;
+      if (l.stage === "booked") { e.booked += 1; e.bookedCents += l.budgetCents ?? 0; }
+      srcMap.set(l.source, e);
+    }
+    const leadSources = [...srcMap.values()].map(e => ({ ...e, conversionPct: e.leads ? Math.round((e.booked / e.leads) * 100) : 0 })).sort((a, b) => b.leads - a.leads);
+    // Weekend preorders split
+    const wp = pre.filter(p => p.channel === "fire_drop");
+    const dayCount = (d: string) => wp.filter(p => { const dow = new Date(p.pickupDate + "T12:00:00Z").getUTCDay(); return d === "fri" ? dow === 5 : dow === 6; }).length;
+    const weekendPreorders = { count: wp.length, revenueCents: wp.reduce((s, p) => s + p.totalCents, 0), friday: dayCount("fri"), saturday: dayCount("sat") };
+    // Top days by revenue
+    const dayMap = new Map<string, { date: string; orders: number; revenueCents: number }>();
+    for (const p of pre) { const e = dayMap.get(p.pickupDate) ?? { date: p.pickupDate, orders: 0, revenueCents: 0 }; e.orders += 1; e.revenueCents += p.totalCents; dayMap.set(p.pickupDate, e); }
+    const topDays = [...dayMap.values()].sort((a, b) => b.revenueCents - a.revenueCents).slice(0, 5);
+    void money;
+    return { channelRevenue, totalRevenueCents, leadFunnel, leadSources, weekendPreorders, cateringPipelineCents, topDays };
+  }
 
   async landingPages(): Promise<LandingPage[]> {
     return (await loadCol(PAGES, seedPages)).sort((a, b) => b.visits - a.visits);
