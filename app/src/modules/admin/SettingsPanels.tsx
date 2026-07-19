@@ -4,6 +4,7 @@ import { getDal } from "../../dal";
 import type { ImportJob, SpecialEvent } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { formatCents } from "../../lib/money";
+import { ADDRESS_LINE, PHONE } from "../../config/brand";
 import {
   EXPRESS_DEFAULTS, EXPRESS_SETTINGS_KEY,
   type ExpressAlaCarteItem, type ExpressCategory, type ExpressCateringSettings, type ExpressPackage,
@@ -45,8 +46,8 @@ interface BrandSettings {
 }
 const DEFAULT_BRAND: BrandSettings = {
   businessName: "Station House BBQ", tagline: "Tampa's fire-kissed BBQ",
-  primaryColor: "#EA580C", phone: "(813) 555-0140",
-  email: "admin@stationhousebbq.com", address: "6811 N Central Ave, Tampa, FL 33604",
+  primaryColor: "#EA580C", phone: PHONE,
+  email: "admin@stationhousebbq.com", address: ADDRESS_LINE,
 };
 
 export function BrandSetup() {
