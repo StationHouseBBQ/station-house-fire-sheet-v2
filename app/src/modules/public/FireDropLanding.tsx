@@ -1,3 +1,4 @@
+import { currentTime } from "../../lib/clock";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -65,9 +66,9 @@ export function FireDropLanding() {
     refetchInterval: 30_000,
   });
 
-  const [countdown, setCountdown] = useState<CountdownState>(() => computeCountdown(new Date()));
+  const [countdown, setCountdown] = useState<CountdownState>(() => computeCountdown(currentTime()));
   useEffect(() => {
-    const t = setInterval(() => setCountdown(computeCountdown(new Date())), 1000);
+    const t = setInterval(() => setCountdown(computeCountdown(currentTime())), 1000);
     return () => clearInterval(t);
   }, []);
 

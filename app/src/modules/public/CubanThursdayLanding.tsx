@@ -5,6 +5,7 @@ import { getDal } from "../../dal";
 import type { MenuItem, PublicCheckoutInput } from "../../dal/types";
 import { formatCents, orderTotals } from "../../lib/money";
 import { etParts } from "../../lib/time";
+import { currentTime } from "../../lib/clock";
 import { captureAttribution, getAttribution } from "../../lib/attribution";
 import { ADDRESS_LINE, INSTAGRAM, NONPROFIT, PHONE } from "../../config/brand";
 import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
@@ -19,7 +20,7 @@ import { PublicLayout, DemoPaymentNotice } from "./PublicLayout";
  */
 
 /** Closed Thu 9:00 AM ET through Saturday night; reopens Sunday 00:00 ET. */
-function orderingClosedNow(now: Date = new Date()): boolean {
+function orderingClosedNow(now: Date = currentTime()): boolean {
   const p = etParts(now);
   if (p.weekday === 4 && p.hour >= 9) return true;    // Thu 9AM+
   return p.weekday === 5 || p.weekday === 6;          // Fri/Sat
