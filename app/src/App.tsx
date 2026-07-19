@@ -1,8 +1,6 @@
 import React from "react";
 import { Route, Switch } from "wouter";
-import { useEffect as useEffectRoot } from "react";
 import { ErrorBoundary } from "./app/ErrorBoundary";
-import { clearChunkReloadGuards } from "./app/lazyWithRetry";
 import { useHashLocation } from "wouter/use-hash-location";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router } from "wouter";
@@ -47,7 +45,6 @@ const pub = (C: React.ComponentType) => () => (
 
 /** Hash routing keeps deep links working on GitHub Pages previews. */
 export default function App() {
-  useEffectRoot(() => { clearChunkReloadGuards(); }, []);
   return (
     <ErrorBoundary>
     <QueryClientProvider client={qc}>
