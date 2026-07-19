@@ -254,7 +254,7 @@ export class DemoFireDrop implements FireDropRepository {
   updateDrop(patch: { title?: string; soldOut?: boolean }, actor: string) {
     return this.mutate(actor, "drop.update", d => Object.assign(d, patch));
   }
-  upsertProduct(p: Omit<FireDropProduct, "soldQty"> & { id?: string }, actor: string) {
+  upsertProduct(p: Omit<FireDropProduct, "soldQty" | "id"> & { id?: string }, actor: string) {
     if (!Number.isInteger(p.priceCents) || p.priceCents < 0) throw new Error("Price must be non-negative integer cents");
     return this.mutate(actor, "drop.product", d => {
       if (p.id) {
@@ -275,7 +275,7 @@ export class DemoFireDrop implements FireDropRepository {
       p.soldOut = !p.soldOut;
     });
   }
-  upsertSlot(s: Omit<FireDropSlot, "booked"> & { id?: string }, actor: string) {
+  upsertSlot(s: Omit<FireDropSlot, "booked" | "id"> & { id?: string }, actor: string) {
     if (s.capacity < 0) throw new Error("Capacity must be ≥ 0");
     return this.mutate(actor, "drop.slot", d => {
       if (s.id) {

@@ -57,8 +57,28 @@ export function EventAdmin({ slug, title }: { slug: string; title: string }) {
           <h1 className="text-2xl font-black uppercase text-zinc-100">{title}</h1>
           <p className="text-sm text-zinc-500">{event.name} · /{event.slug}</p>
         </div>
-        <SyncBadge sync={sync} />
+        <div className="flex items-center gap-2">
+          <a href={`#${publicRoute(event.slug)}`} target="_blank" rel="noreferrer"
+            className="min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300 hover:text-zinc-100">
+            View public landing ↗
+          </a>
+          <SyncBadge sync={sync} />
+        </div>
       </header>
+
+      {/* Live status strip */}
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatusPill label="Landing" on={event.landingEnabled} />
+        <StatusPill label="Ordering" on={event.orderingEnabled} />
+        <div className="rounded-xl border border-ink-700 bg-ink-900 px-3 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Event date</p>
+          <p className="mt-0.5 text-sm font-bold text-zinc-200">{event.eventDate || "Not set"}</p>
+        </div>
+        <div className="rounded-xl border border-ink-700 bg-ink-900 px-3 py-2.5">
+          <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">Menu items</p>
+          <p className="mt-0.5 text-sm font-bold text-zinc-200">{event.menuItemIds.length} selected</p>
+        </div>
+      </div>
 
       {/* Toggles */}
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -172,6 +192,19 @@ function EventDetailForm({ event, menuItems, slug, onSave, busy, error }: {
         </button>
       </div>
     </form>
+  );
+}
+
+function publicRoute(slug: string): string {
+  return slug === "cuban-thursday" ? "/cuban-thursday" : `/${slug}`;
+}
+
+function StatusPill({ label, on }: { label: string; on: boolean }) {
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${on ? "border-green-700/50 bg-green-950/30" : "border-ink-700 bg-ink-900"}`}>
+      <p className="text-[10px] font-black uppercase tracking-wider text-zinc-500">{label}</p>
+      <p className={`mt-0.5 text-sm font-bold ${on ? "text-green-400" : "text-zinc-500"}`}>{on ? "Live" : "Off"}</p>
+    </div>
   );
 }
 

@@ -91,6 +91,18 @@ export function MediaLibraryView() {
           className="min-h-[44px] flex-1 rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm text-zinc-100 sm:max-w-xs" />
       </div>
 
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {KINDS.map(k => {
+          const n = (assets ?? []).filter(a => a.kind === k).length;
+          return (
+            <div key={k} className="rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-center">
+              <p className="text-lg font-bold text-zinc-100">{n}</p>
+              <p className="text-[11px] uppercase tracking-wide text-zinc-500">{KIND_META[k].icon} {KIND_META[k].label}</p>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {filtered.map(a => (
           <div key={a.id} className="rounded-xl border border-ink-700 bg-ink-900 p-4">
@@ -103,7 +115,11 @@ export function MediaLibraryView() {
                 <p className="text-xs text-zinc-500">{a.kind} · added {a.addedAt.slice(0, 10)}</p>
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex items-center justify-between gap-2">
+              <span className="text-[11px] uppercase tracking-wide text-zinc-600">{a.kind}</span>
+              <CopyAssetBtn asset={a} />
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
               {a.tags.map(t => (
                 <span key={t} className="rounded-full bg-ink-800 px-2.5 py-1 text-xs text-zinc-400">#{t}</span>
               ))}
@@ -122,6 +138,19 @@ export function MediaLibraryView() {
         onCancel={() => setAddOpen(false)}
         onSubmit={m => addMut.mutate(m)} />}
     </div>
+  );
+}
+
+function CopyAssetBtn({ asset }: { asset: MediaAsset }) {
+  const [copied, setCopied] = useState(false);
+  const text = `${asset.name}${asset.tags.length ? ` — ${asset.tags.map(t => `#${t}`).join(" ")}` : ""}`;
+  return (
+    <button type="button"
+      onClick={() => { navigator.clipboard?.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1600); }}
+      aria-label={`Copy reference for ${asset.name}`}
+      className="rounded-md border border-ink-600 bg-ink-800 px-2 py-1 text-[11px] font-semibold text-zinc-300 hover:border-fire/50">
+      {copied ? "Copied ✓" : "Copy ref"}
+    </button>
   );
 }
 

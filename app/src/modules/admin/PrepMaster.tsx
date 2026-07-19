@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { PrepCategory, PrepTemplateRow } from "../../dal/types";
@@ -21,6 +21,8 @@ const CATEGORIES: Array<{ id: PrepCategory; label: string }> = [
   { id: "misc", label: "Misc" },
   { id: "desserts", label: "Desserts" },
 ];
+
+const CATEGORY_ORDER: PrepCategory[] = ["meats", "sauces", "sides", "retail_prep", "misc", "desserts"];
 
 export function PrepMaster() {
   const { actor } = useRole();
@@ -45,6 +47,21 @@ export function PrepMaster() {
     mutationFn: (id: string) => withSync(dal.prepTemplates.toggleActive(id, actor)),
     onSuccess: invalidate,
   });
+  const parMut = useMutation({
+    mutationFn: ({ row, parQty }: { row: PrepTemplateRow; parQty: number }) =>
+      withSync(dal.prepTemplates.upsert({ id: row.id, name: row.name, category: row.category, unit: row.unit, parQty, thursdayOnly: row.thursdayOnly, active: row.active }, actor)),
+    onSuccess: invalidate,
+  });
+
+  const grouped = useMemo(() => {
+    const map = new Map<PrepCategory, PrepTemplateRow[]>();
+    for (const cat of CATEGORY_ORDER) map.set(cat, []);
+    for (const r of (rows ?? [])) {
+      if (!map.has(r.category)) map.set(r.category, []);
+      map.get(r.category)!.push(r);
+    }
+    return [...map.entries()].filter(([, list]) => list.length > 0);
+  }, [rows]);
 
   if (isLoading || !rows) return <p className="py-20 text-center text-zinc-500">Loading prep master…</p>;
 
@@ -69,49 +86,65 @@ export function PrepMaster() {
         Thursday-only rows are added on Thursdays automatically.
       </p>
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-ink-700">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-ink-800 text-xs font-bold uppercase tracking-wider text-zinc-400">
-            <tr>
-              <th className="px-3 py-2.5">Name</th>
-              <th className="px-3 py-2.5">Category</th>
-              <th className="px-3 py-2.5">Unit</th>
-              <th className="px-3 py-2.5 text-right">PAR</th>
-              <th className="px-3 py-2.5">Thursday</th>
-              <th className="px-3 py-2.5">Active</th>
-              <th className="px-3 py-2.5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ink-800 bg-ink-900">
-            {rows.map(r => (
-              <tr key={r.id} className={r.active ? "" : "opacity-60"}>
-                <td className="px-3 py-2.5 font-semibold text-zinc-100">{r.name}</td>
-                <td className="px-3 py-2.5 text-zinc-400">{CATEGORIES.find(c => c.id === r.category)?.label ?? r.category}</td>
-                <td className="px-3 py-2.5 text-zinc-400">{r.unit}</td>
-                <td className="px-3 py-2.5 text-right font-mono text-zinc-200">{r.parQty}</td>
-                <td className="px-3 py-2.5">
-                  {r.thursdayOnly && <span className="rounded bg-amber-600 px-1.5 py-0.5 text-[10px] font-black text-white">THU ONLY</span>}
-                </td>
-                <td className="px-3 py-2.5">
-                  <button role="switch" aria-checked={r.active} aria-label={`${r.name} active`}
-                    onClick={() => toggleMut.mutate(r.id)}
-                    className={`min-h-[36px] rounded-full px-3 py-1 text-xs font-bold ${
-                      r.active ? "bg-green-600 text-white" : "border border-ink-700 text-zinc-500"}`}>
-                    {r.active ? "Active" : "Off"}
-                  </button>
-                </td>
-                <td className="px-3 py-2.5 text-right">
-                  <button onClick={() => setDialog({ open: true, row: r })}
-                    className="min-h-[36px] rounded-lg border border-ink-700 px-2.5 py-1 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-zinc-500">No template rows yet.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+      {rows.length === 0 && (
+        <p className="mt-4 rounded-xl border border-ink-700 bg-ink-900 px-3 py-8 text-center text-zinc-500">No template rows yet.</p>
+      )}
+
+      {grouped.map(([cat, catRows]) => {
+        const label = CATEGORIES.find(c => c.id === cat)?.label ?? cat;
+        const catActive = catRows.filter(r => r.active).length;
+        return (
+          <section key={cat} className="mt-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-black uppercase tracking-wider text-fire-light">{label}</h2>
+              <span className="text-xs text-zinc-600">{catActive}/{catRows.length} active</span>
+            </div>
+            <div className="mt-2 overflow-x-auto rounded-xl border border-ink-700">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-ink-800 text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  <tr>
+                    <th className="px-3 py-2.5">Name</th>
+                    <th className="px-3 py-2.5">Unit</th>
+                    <th className="px-3 py-2.5 text-right">PAR</th>
+                    <th className="px-3 py-2.5">Thursday</th>
+                    <th className="px-3 py-2.5">Active</th>
+                    <th className="px-3 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-ink-800 bg-ink-900">
+                  {catRows.map(r => (
+                    <tr key={r.id} className={r.active ? "" : "opacity-60"}>
+                      <td className="px-3 py-2.5 font-semibold text-zinc-100">{r.name}</td>
+                      <td className="px-3 py-2.5 text-zinc-400">{r.unit}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <InlinePar value={r.parQty} ariaLabel={`PAR for ${r.name}`}
+                          onSave={parQty => parMut.mutate({ row: r, parQty })} />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {r.thursdayOnly && <span className="rounded bg-amber-600 px-1.5 py-0.5 text-[10px] font-black text-white">THU ONLY</span>}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <button role="switch" aria-checked={r.active} aria-label={`${r.name} active`}
+                          onClick={() => toggleMut.mutate(r.id)}
+                          className={`min-h-[36px] rounded-full px-3 py-1 text-xs font-bold ${
+                            r.active ? "bg-green-600 text-white" : "border border-ink-700 text-zinc-500"}`}>
+                          {r.active ? "Active" : "Off"}
+                        </button>
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <button onClick={() => setDialog({ open: true, row: r })}
+                          className="min-h-[36px] rounded-lg border border-ink-700 px-2.5 py-1 text-xs font-semibold text-zinc-400 hover:text-zinc-200">
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })}
 
       {dialog.open && (
         <RowDialog row={dialog.row} busy={upsertMut.isPending} error={upsertMut.error?.message ?? null}
@@ -119,6 +152,29 @@ export function PrepMaster() {
           onSubmit={t => upsertMut.mutate(t)} />
       )}
     </div>
+  );
+}
+
+function InlinePar({ value, onSave, ariaLabel }: { value: number; onSave: (v: number) => void; ariaLabel: string }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  if (!editing) {
+    return (
+      <button onClick={() => { setVal(String(value)); setEditing(true); }} aria-label={ariaLabel} title="Tap to edit PAR"
+        className="min-h-[36px] rounded-lg border border-transparent px-2 py-1 text-right font-mono text-sm text-zinc-200 hover:border-ink-700 hover:bg-ink-800">
+        {value}
+      </button>
+    );
+  }
+  const commit = () => {
+    const n = Number(val);
+    if (Number.isFinite(n) && n >= 0 && n !== value) onSave(n);
+    setEditing(false);
+  };
+  return (
+    <input autoFocus inputMode="decimal" value={val} onChange={e => setVal(e.target.value)}
+      onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+      className="w-20 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1.5 text-right font-mono text-sm text-zinc-100" aria-label={ariaLabel} />
   );
 }
 

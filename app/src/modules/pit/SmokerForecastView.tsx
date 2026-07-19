@@ -5,6 +5,8 @@ import type { SmokerEntry } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { etParts } from "../../lib/time";
 import { currentTime } from "../../lib/clock";
+import { formatCents } from "../../lib/money";
+import { unitConfigFor, lbsToUnits, formatUnits, cookHoursFor } from "./_data/pitReference";
 
 /**
  * Pit · Smoker Forecast — V2 of the Manus SmokerForecast page.
@@ -108,14 +110,66 @@ export function SmokerForecastView() {
 
   const weekLabel = `${fmtDay(weekStart)} – ${fmtDay(addDays(weekStart, 6))}`;
 
+  // Demand-driven purchase plan: aggregate confirmed order demand for the week
+  // and net it against what is already scheduled (raw lbs) → what to buy.
+  const ordersQ = useQuery({
+    queryKey: ["pit", "forecast", "orders", weekStart],
+    queryFn: async () => {
+      const all = await dal.orders.list();
+      const end = addDays(weekStart, 7);
+      return all.filter(o => o.serviceDate >= weekStart && o.serviceDate < end && o.status !== "cancelled");
+    },
+  });
+
+  const costsQ = useQuery({ queryKey: ["pit", "meatCosts"], queryFn: () => dal.meatCosts.list() });
+
+  const DEMAND_CONV: Record<string, [string, number]> = {
+    "Pulled Pork": ["Pork Butt", 1 / 0.55],
+    "Brisket (sliced)": ["Brisket (whole packer)", 1 / 0.5],
+    "St. Louis Ribs": ["St. Louis Ribs", 2.5],
+    "Chicken Quarters": ["Chicken Quarters", 1],
+  };
+
+  const purchasePlan = useMemo(() => {
+    const demand = new Map<string, number>();
+    for (const o of ordersQ.data ?? [])
+      for (const it of o.items) {
+        const c = DEMAND_CONV[it.name]; if (!c) continue;
+        demand.set(c[0], (demand.get(c[0]) ?? 0) + Math.ceil(it.qty * c[1]));
+      }
+    const scheduled = new Map<string, number>();
+    for (const e of weekQ.data ?? []) scheduled.set(e.protein, (scheduled.get(e.protein) ?? 0) + e.rawLbs);
+    // union of proteins seen in demand or schedule
+    const names = new Set<string>([...demand.keys(), ...scheduled.keys()]);
+    const costCents = new Map<string, number>();
+    for (const c of costsQ.data ?? []) costCents.set(c.protein, c.costPerLbCents);
+    return [...names].map(protein => {
+      const need = Math.round(demand.get(protein) ?? 0);
+      const have = Math.round(scheduled.get(protein) ?? 0);
+      const shortfall = Math.max(0, need - have);
+      const cfg = unitConfigFor(protein);
+      return {
+        protein, need, have, shortfall, cfg,
+        buyUnits: lbsToUnits(shortfall, cfg.lbsPerUnit),
+        buyCostCents: (costCents.get(protein) ?? 0) * shortfall,
+      };
+    }).filter(p => p.need > 0 || p.have > 0).sort((a, b) => b.shortfall - a.shortfall);
+  }, [ordersQ.data, weekQ.data, costsQ.data]);
+
+  const urgentCount = purchasePlan.filter(p => p.shortfall > 0).length;
+  const weekRawLbs = (weekQ.data ?? []).reduce((s, e) => s + e.rawLbs, 0);
+
   return (
     <div className="mx-auto max-w-4xl pt-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-black uppercase text-zinc-100">Smoker Forecast</h1>
-          <p className="text-sm text-zinc-500">Week of {weekLabel}</p>
+          <p className="text-sm text-zinc-500">Week of {weekLabel} · {Math.round(weekRawLbs)} raw lbs scheduled</p>
         </div>
         <div className="flex items-center gap-2">
+          {urgentCount > 0 && (
+            <span className="rounded-full border border-red-800/60 bg-red-950/30 px-3 py-1.5 text-xs font-bold text-red-400">⚠ {urgentCount} to buy</span>
+          )}
           <SyncBadge sync={sync} />
           <button
             onClick={() => { setFeedback(null); autoFillMut.mutate(); }}
@@ -130,6 +184,35 @@ export function SmokerForecastView() {
         <p role="status" className="mt-3 rounded-lg border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-zinc-300">
           {feedback}
         </p>
+      )}
+
+      {/* ── What to buy this week ─────────────────────────────────────── */}
+      {purchasePlan.length > 0 && (
+        <section className="mt-4 rounded-2xl border border-ink-700 bg-ink-900/60 p-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-300">📦 What to buy this week</h2>
+            <span className="text-xs text-zinc-500">demand vs scheduled (raw lbs)</span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {purchasePlan.map(p => (
+              <div key={p.protein} className={`rounded-xl border p-3 ${p.shortfall > 0 ? "border-red-800/50 bg-red-950/15" : "border-green-900/40 bg-green-950/10"}`}>
+                <p className="truncate text-sm font-bold text-zinc-100" title={p.protein}>{p.protein}</p>
+                <p className="mt-1 text-xs text-zinc-500">need {p.need} · have {p.have} lbs</p>
+                {p.shortfall > 0 ? (
+                  <p className="mt-1 text-sm font-bold text-red-400">
+                    Buy {formatUnits(p.buyUnits, p.cfg, p.protein)} <span className="font-normal text-zinc-500">({p.shortfall} lbs)</span>
+                    {p.buyCostCents > 0 && <span className="ml-1 text-zinc-400">≈ {formatCents(p.buyCostCents)}</span>}
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm font-bold text-green-400">✓ Covered</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-zinc-600">
+            Demand pulled from confirmed orders this service week; converts menu items to raw lbs, nets against scheduled cooks, then rounds up to purchase units.
+          </p>
+        </section>
       )}
 
       {/* ── Week navigation ───────────────────────────────────────────── */}
@@ -202,8 +285,11 @@ export function SmokerForecastView() {
                       {e.locked && <span className="ml-2 rounded bg-ink-700 px-1.5 py-0.5 text-[10px] font-bold text-zinc-400">🔒 Locked</span>}
                     </span>
                     <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs font-bold text-zinc-300">{e.rawLbs} lbs</span>
+                    <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs font-semibold text-zinc-400" title="raw → purchase units">
+                      {(() => { const c = unitConfigFor(e.protein); return formatUnits(lbsToUnits(e.rawLbs, c.lbsPerUnit), c, e.protein); })()}
+                    </span>
                     <span className="text-xs text-zinc-500">{e.smoker}</span>
-                    <span className="text-xs font-semibold text-fire-light">🔥 {fmtTime(e.loadTime)} → {fmtTime(e.targetDone)}</span>
+                    <span className="text-xs font-semibold text-fire-light">🔥 {fmtTime(e.loadTime)} → {fmtTime(e.targetDone)} · {cookHoursFor(e.protein)}h</span>
                     <span className="flex gap-1">
                       <button
                         onClick={() => { upsertMut.reset(); setDialog({ date: e.date, entry: e }); }}

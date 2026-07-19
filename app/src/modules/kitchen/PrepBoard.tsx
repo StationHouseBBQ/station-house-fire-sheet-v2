@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
-import type { PrepCategory, PrepEntry, PrepStatus } from "../../dal/types";
+import type { PrepCategory, PrepEntry, PrepStatus, PrepTemplateRow } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 
 /**
@@ -55,11 +55,18 @@ export function PrepBoard() {
   const [hideDone, setHideDone] = useState(false);
   const [sync, setSync] = useState<Sync>("idle");
   const [addOpen, setAddOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<PrepCategory>>(new Set());
+  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const { data: session, isLoading } = useQuery({
     queryKey: ["prep", "activeSession"],
     queryFn: () => dal.prep.getActiveSession(),
     refetchInterval: 30_000,
+  });
+  const { data: templates = [] } = useQuery({
+    queryKey: ["prepTemplates"],
+    queryFn: () => dal.prepTemplates.list(),
+    staleTime: 5 * 60_000,
   });
 
   const withSync = <T,>(p: Promise<T>): Promise<T> => {
@@ -83,6 +90,15 @@ export function PrepBoard() {
       withSync(dal.prep.addEntry(input, actor)),
     onSuccess: () => { invalidate(); setAddOpen(false); },
   });
+  const bulkCompleteMut = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) await dal.prep.updateEntryStatus(id, "complete", actor);
+    },
+    onSuccess: invalidate,
+  });
+
+  const toggleCategory = (cat: PrepCategory) =>
+    setCollapsed(prev => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
 
   const entries = session?.entries ?? [];
   const visible = hideDone ? entries.filter(e => e.status !== "complete") : entries;
@@ -118,6 +134,10 @@ export function PrepBoard() {
         </div>
         <div className="flex items-center gap-2">
           <SyncBadge sync={sync} />
+          <button onClick={() => setTemplatesOpen(true)}
+            className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300">
+            📋 Templates
+          </button>
           <button onClick={() => setHideDone(h => !h)}
             className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-2 text-sm font-semibold text-zinc-300">
             {hideDone ? "Show done" : "Hide done"}
@@ -131,13 +151,32 @@ export function PrepBoard() {
         <div className="h-full bg-gradient-to-r from-fire to-fire-light transition-all" style={{ width: `${pct}%` }} />
       </div>
 
-      {(Object.keys(grouped) as PrepCategory[]).map(cat => (
+      {(Object.keys(grouped) as PrepCategory[]).map(cat => {
+        const items = grouped[cat]!;
+        const secDone = items.filter(e => e.status === "complete").length;
+        const isCollapsed = collapsed.has(cat);
+        const pendingIds = items.filter(e => e.status !== "complete").map(e => e.id);
+        return (
         <section key={cat} className="mt-6">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
-            {CATEGORY_META[cat].icon} {CATEGORY_META[cat].label}
-          </h2>
+          <div className="flex items-center justify-between gap-2">
+            <button onClick={() => toggleCategory(cat)} className="flex items-center gap-2 text-left" aria-expanded={!isCollapsed}>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">
+                {CATEGORY_META[cat].icon} {CATEGORY_META[cat].label}
+              </h2>
+              <span className="text-xs text-zinc-600">{secDone}/{items.length} · {isCollapsed ? "▾" : "▴"}</span>
+            </button>
+            {pendingIds.length > 0 && (
+              <button onClick={() => bulkCompleteMut.mutate(pendingIds)} disabled={bulkCompleteMut.isPending}
+                className="rounded-lg border border-ink-700 bg-ink-800 px-2.5 py-1.5 text-xs font-bold text-zinc-300 disabled:opacity-50">
+                ✓ Complete all
+              </button>
+            )}
+          </div>
+          {!isCollapsed && (
           <ul className="mt-2 space-y-2">
-            {grouped[cat]!.map(e => (
+            {items.map(e => {
+              const need = e.onHandQty != null ? Math.max(0, e.parQty - e.onHandQty) : null;
+              return (
               <li key={e.id} className="flex items-center gap-3 rounded-xl border border-ink-700 bg-ink-900 p-3">
                 <button
                   onClick={() => statusMut.mutate({ id: e.id, status: STATUS_FLOW[e.status] })}
@@ -147,18 +186,72 @@ export function PrepBoard() {
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className={`truncate font-semibold ${e.status === "complete" ? "text-zinc-500 line-through" : "text-zinc-100"}`}>{e.name}</p>
-                  <p className="text-xs text-zinc-500">PAR {formatQty(e.parQty)} {e.unit}</p>
+                  <p className="text-xs text-zinc-500">
+                    PAR {formatQty(e.parQty)} {e.unit}
+                    {e.onHandQty != null && <> · on hand {formatQty(e.onHandQty)}</>}
+                    {need != null && need > 0 && <span className="text-amber-400"> · need {formatQty(need)}</span>}
+                  </p>
+                  {e.notes && <p className="truncate text-xs text-zinc-600">📝 {e.notes}</p>}
                 </div>
                 <QtyEditor entry={e} onChange={qty => qtyMut.mutate({ id: e.id, qty })} />
               </li>
-            ))}
+              );
+            })}
           </ul>
+          )}
         </section>
-      ))}
+        );
+      })}
 
       {addOpen && <AddEntryForm busy={addMut.isPending} error={addMut.error?.message ?? null}
         onCancel={() => setAddOpen(false)}
         onSubmit={i => addMut.mutate(i)} />}
+
+      {templatesOpen && <TemplatesPanel templates={templates} onClose={() => setTemplatesOpen(false)}
+        onAdd={(t) => addMut.mutate({ name: t.name, category: t.category, unit: t.unit, parQty: t.parQty })} />}
+    </div>
+  );
+}
+
+function TemplatesPanel({ templates, onClose, onAdd }: {
+  templates: PrepTemplateRow[]; onClose: () => void; onAdd: (t: PrepTemplateRow) => void;
+}) {
+  const active = templates.filter(t => t.active);
+  const grouped: Partial<Record<PrepCategory, PrepTemplateRow[]>> = {};
+  for (const t of active) (grouped[t.category] ??= []).push(t);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Prep templates"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={onClose}>
+      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-ink-700 bg-ink-900 p-5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-zinc-100">📋 Prep templates</h3>
+            <p className="text-xs text-zinc-500">{active.length} active PAR items · tap ＋ to add to today's list</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="min-h-[44px] min-w-[44px] rounded-lg border border-ink-700 text-zinc-400">✕</button>
+        </div>
+        {active.length === 0 ? (
+          <p className="py-10 text-center text-sm text-zinc-600">No active templates configured</p>
+        ) : (
+          (Object.keys(grouped) as PrepCategory[]).map(cat => (
+            <section key={cat} className="mt-4">
+              <h4 className="text-xs font-black uppercase tracking-wider text-fire-light">{CATEGORY_META[cat].icon} {CATEGORY_META[cat].label}</h4>
+              <ul className="mt-1.5 divide-y divide-ink-800">
+                {grouped[cat]!.map(t => (
+                  <li key={t.id} className="flex items-center justify-between gap-2 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-200">{t.name}{t.thursdayOnly && <span className="ml-1 text-[10px] font-bold uppercase text-green-400">Thu</span>}</p>
+                      <p className="text-xs text-zinc-500">PAR {formatQty(t.parQty)} {t.unit}</p>
+                    </div>
+                    <button onClick={() => onAdd(t)} aria-label={`Add ${t.name}`}
+                      className="min-h-[40px] shrink-0 rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-sm font-bold text-zinc-200 hover:text-white">＋</button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        )}
+      </div>
     </div>
   );
 }

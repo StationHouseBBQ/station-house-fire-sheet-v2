@@ -61,11 +61,18 @@ export function PrepRecipesView() {
   const [detail, setDetail] = useState<PrepRecipe | null>(null);
   const [form, setForm] = useState<RecipeDraft | null>(null);
   const [armedDelete, setArmedDelete] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [catFilter, setCatFilter] = useState<PrepCategory | "all">("all");
 
   const { data: recipes = [], isLoading } = useQuery({
     queryKey: ["prepRecipes"],
     queryFn: () => dal.prepRecipes.list(),
   });
+
+  const q = search.trim().toLowerCase();
+  const filtered = recipes
+    .filter(r => catFilter === "all" || r.category === catFilter)
+    .filter(r => !q || r.name.toLowerCase().includes(q) || r.ingredients.some(i => i.name.toLowerCase().includes(q)));
 
   const withSync = <T,>(p: Promise<T>): Promise<T> => {
     setSync("saving");
@@ -122,8 +129,21 @@ export function PrepRecipesView() {
         </div>
       </header>
 
+      {/* Search + category filter */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search recipe or ingredient…"
+          aria-label="Search recipes"
+          className="min-h-[44px] flex-1 basis-56 rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600" />
+        <select value={catFilter} onChange={e => setCatFilter(e.target.value as PrepCategory | "all")}
+          aria-label="Filter by category"
+          className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100">
+          <option value="all">All categories</option>
+          {(Object.keys(CATEGORY_META) as PrepCategory[]).map(c => <option key={c} value={c}>{CATEGORY_META[c].label}</option>)}
+        </select>
+      </div>
+
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        {recipes.map(r => (
+        {filtered.map(r => (
           <article key={r.id} className="rounded-xl border border-ink-700 bg-ink-900 p-4">
             <button onClick={() => setDetail(r)} className="min-h-[44px] w-full text-left" aria-label={`Open ${r.name}`}>
               <div className="flex items-start gap-3">
@@ -153,64 +173,88 @@ export function PrepRecipesView() {
             </div>
           </article>
         ))}
-        {recipes.length === 0 && (
+        {filtered.length === 0 && (
           <p className="col-span-full rounded-xl border border-ink-700 bg-ink-900 py-14 text-center text-sm text-zinc-500">
-            No recipes yet — add your first one
+            {recipes.length === 0 ? "No recipes yet — add your first one" : "No recipes match this filter"}
           </p>
         )}
       </div>
 
       {detail && !form && (
-        <div role="dialog" aria-modal="true" aria-label={detail.name}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center"
-          onClick={() => setDetail(null)}>
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-ink-700 bg-ink-900 p-5"
-            onClick={e => e.stopPropagation()}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-zinc-100">{CATEGORY_META[detail.category].icon} {detail.name}</h3>
-                <p className="text-xs text-zinc-500">{CATEGORY_META[detail.category].label} · yields {detail.yieldQty} {detail.yieldUnit}</p>
-              </div>
-              <button onClick={() => setDetail(null)} aria-label="Close"
-                className="min-h-[44px] min-w-[44px] rounded-lg border border-ink-700 text-zinc-400">✕</button>
-            </div>
-
-            <h4 className="mt-4 text-xs font-black uppercase tracking-wider text-fire-light">Ingredients</h4>
-            <table className="mt-1.5 w-full text-sm">
-              <tbody>
-                {detail.ingredients.map(i => (
-                  <tr key={i.id} className="border-b border-ink-800">
-                    <td className="py-1.5 text-zinc-200">{i.name}</td>
-                    <td className="py-1.5 text-right font-mono font-bold text-amber-300">{i.qty}</td>
-                    <td className="w-20 py-1.5 pl-2 text-zinc-500">{i.unit}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <h4 className="mt-4 text-xs font-black uppercase tracking-wider text-fire-light">Steps</h4>
-            <ol className="mt-1.5 space-y-1.5">
-              {detail.steps.map((s, i) => (
-                <li key={i} className="flex gap-2 text-sm text-zinc-300">
-                  <span className="w-5 shrink-0 font-mono text-xs font-bold text-zinc-500">{i + 1}.</span>{s}
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button onClick={() => setForm(draftFrom(detail))}
-                className="min-h-[44px] rounded-lg border border-ink-700 px-4 py-2 text-sm font-semibold text-zinc-300">Edit</button>
-              <button onClick={() => setDetail(null)}
-                className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Done</button>
-            </div>
-          </div>
-        </div>
+        <RecipeDetail recipe={detail} onEdit={() => setForm(draftFrom(detail))} onClose={() => setDetail(null)} />
       )}
 
       {form && (
         <RecipeForm draft={form} busy={upsertMut.isPending} error={upsertMut.error?.message ?? null}
           onChange={setForm} onCancel={() => setForm(null)} onSubmit={() => submitForm(form)} />
       )}
+    </div>
+  );
+}
+
+function RecipeDetail({ recipe, onEdit, onClose }: { recipe: PrepRecipe; onEdit: () => void; onClose: () => void }) {
+  const [scale, setScale] = useState(1);
+  const SCALES = [0.5, 1, 2, 3, 4];
+  const fmt = (n: number) => {
+    const v = n * scale;
+    return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, "");
+  };
+  return (
+    <div role="dialog" aria-modal="true" aria-label={recipe.name}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={onClose}>
+      <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-ink-700 bg-ink-900 p-5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-zinc-100">{CATEGORY_META[recipe.category].icon} {recipe.name}</h3>
+            <p className="text-xs text-zinc-500">
+              {CATEGORY_META[recipe.category].label} · yields {fmt(recipe.yieldQty)} {recipe.yieldUnit}
+              {scale !== 1 && <span className="text-fire-light"> ({scale}× batch)</span>}
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="min-h-[44px] min-w-[44px] rounded-lg border border-ink-700 text-zinc-400">✕</button>
+        </div>
+
+        {/* Batch scaler */}
+        <div className="mt-4 flex items-center gap-2">
+          <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Scale batch</span>
+          <div className="flex items-center rounded-lg border border-ink-700 text-xs" role="group" aria-label="Batch scale">
+            {SCALES.map(sc => (
+              <button key={sc} onClick={() => setScale(sc)}
+                className={`min-h-[40px] px-3 py-1.5 font-bold first:rounded-l-lg last:rounded-r-lg ${scale === sc ? "bg-fire text-white" : "text-zinc-400"}`}>
+                {sc}×
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <h4 className="mt-4 text-xs font-black uppercase tracking-wider text-fire-light">Ingredients</h4>
+        <table className="mt-1.5 w-full text-sm">
+          <tbody>
+            {recipe.ingredients.map(i => (
+              <tr key={i.id} className="border-b border-ink-800">
+                <td className="py-1.5 text-zinc-200">{i.name}</td>
+                <td className="py-1.5 text-right font-mono font-bold text-amber-300">{fmt(i.qty)}</td>
+                <td className="w-20 py-1.5 pl-2 text-zinc-500">{i.unit}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <h4 className="mt-4 text-xs font-black uppercase tracking-wider text-fire-light">Steps</h4>
+        <ol className="mt-1.5 space-y-1.5">
+          {recipe.steps.map((s, i) => (
+            <li key={i} className="flex gap-2 text-sm text-zinc-300">
+              <span className="w-5 shrink-0 font-mono text-xs font-bold text-zinc-500">{i + 1}.</span>{s}
+            </li>
+          ))}
+          {recipe.steps.length === 0 && <li className="text-sm text-zinc-600">No steps recorded</li>}
+        </ol>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onEdit} className="min-h-[44px] rounded-lg border border-ink-700 px-4 py-2 text-sm font-semibold text-zinc-300">Edit</button>
+          <button onClick={onClose} className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Done</button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { OutreachTarget } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { currentTime } from "../../lib/clock";
+import {
+  listTemplates, saveTemplate, removeTemplate, fillTemplate,
+  type OutreachTemplate,
+} from "./_data/outreachTemplates";
 
 /**
  * Marketing · Outreach Agent — V2 take on the Manus OutreachAgent.
@@ -138,6 +143,8 @@ export function OutreachAgentView() {
         })}
       </div>
 
+      <TemplatesPanel targets={targets ?? []} />
+
       {dialog && <TargetDialog target={dialog.target}
         busy={saveMut.isPending} error={saveMut.error?.message ?? null}
         onCancel={() => setDialog(null)}
@@ -217,6 +224,158 @@ function TargetDialog({ target, onSubmit, onCancel, busy, error }: {
             className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
             {busy ? "Saving…" : "Save target"}
           </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+/* ── Message template library ───────────────────────────────────────────── */
+
+const CHANNEL_LABEL: Record<OutreachTemplate["channel"], string> = {
+  email: "✉️ Email", sms: "💬 SMS", dm: "📨 DM",
+};
+
+function TemplatesPanel({ targets }: { targets: OutreachTarget[] }) {
+  const { actor } = useRole();
+  const [templates, setTemplates] = useState<OutreachTemplate[]>(() => listTemplates());
+  const [editing, setEditing] = useState<OutreachTemplate | null>(null);
+  const [open, setOpen] = useState(false);
+  const [targetId, setTargetId] = useState<string>("");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const selected = targets.find(t => t.id === targetId) ?? null;
+
+  const persist = (t: OutreachTemplate) => {
+    setTemplates(saveTemplate(t, currentTime().toISOString()));
+    setEditing(null);
+  };
+  const del = (id: string) => setTemplates(removeTemplate(id));
+
+  const copy = (t: OutreachTemplate) => {
+    const text = fillTemplate(t, {
+      business: selected?.business,
+      contact: selected?.contact,
+      owner: actor,
+    });
+    navigator.clipboard?.writeText(text);
+    setCopiedId(t.id);
+    setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  const blank = (): OutreachTemplate => ({
+    id: `tpl-${Date.now()}`, name: "", channel: "email", subject: "", body: "", updatedAt: "",
+  });
+
+  return (
+    <section className="mt-8 rounded-xl border border-ink-700 bg-ink-900 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Message templates</h2>
+          <p className="text-xs text-zinc-500">Copy a ready-made message — placeholders fill from the chosen target.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs text-zinc-400">
+            Fill for
+            <select value={targetId} onChange={e => setTargetId(e.target.value)}
+              aria-label="Fill template for target"
+              className="ml-2 min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100">
+              <option value="">— generic —</option>
+              {targets.map(t => <option key={t.id} value={t.id}>{t.business}</option>)}
+            </select>
+          </label>
+          <button onClick={() => { setEditing(blank()); setOpen(true); }}
+            className="min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-sm font-bold text-zinc-200 hover:border-fire/50">
+            + Template
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {templates.map(t => (
+          <div key={t.id} className="flex flex-col rounded-lg border border-ink-700 bg-ink-800 p-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-semibold text-zinc-100">{t.name || "Untitled template"}</p>
+                <p className="text-[11px] text-zinc-500">{CHANNEL_LABEL[t.channel]}</p>
+              </div>
+            </div>
+            {t.channel === "email" && t.subject && (
+              <p className="mt-2 truncate text-xs text-zinc-400">Subj: {t.subject}</p>
+            )}
+            <p className="mt-1 line-clamp-3 whitespace-pre-wrap text-xs text-zinc-500">{t.body}</p>
+            <div className="mt-3 flex items-center gap-2">
+              <button onClick={() => copy(t)}
+                className="min-h-[36px] flex-1 rounded-md border border-fire/40 bg-fire/10 px-2 py-1 text-xs font-bold text-fire-light hover:bg-fire/20">
+                {copiedId === t.id ? "Copied ✓" : selected ? `Copy for ${selected.business.slice(0, 14)}` : "Copy"}
+              </button>
+              <button onClick={() => { setEditing(t); setOpen(true); }}
+                className="min-h-[36px] rounded-md border border-ink-600 px-2 py-1 text-xs font-semibold text-zinc-300">Edit</button>
+              <button onClick={() => del(t.id)}
+                className="min-h-[36px] rounded-md border border-ink-600 px-2 py-1 text-xs font-semibold text-red-400">✕</button>
+            </div>
+          </div>
+        ))}
+        {templates.length === 0 && (
+          <p className="rounded-lg border border-dashed border-ink-700 py-8 text-center text-sm text-zinc-500 md:col-span-2 xl:col-span-3">
+            No templates yet — add one to reuse across outreach.
+          </p>
+        )}
+      </div>
+
+      {open && editing && (
+        <TemplateDialog template={editing}
+          onCancel={() => { setOpen(false); setEditing(null); }}
+          onSubmit={t => { persist(t); setOpen(false); }} />
+      )}
+    </section>
+  );
+}
+
+function TemplateDialog({ template, onSubmit, onCancel }: {
+  template: OutreachTemplate;
+  onSubmit: (t: OutreachTemplate) => void; onCancel: () => void;
+}) {
+  const [name, setName] = useState(template.name);
+  const [channel, setChannel] = useState<OutreachTemplate["channel"]>(template.channel);
+  const [subject, setSubject] = useState(template.subject);
+  const [body, setBody] = useState(template.body);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Edit template"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center">
+      <form className="w-full max-w-lg rounded-2xl border border-ink-700 bg-ink-900 p-5"
+        onSubmit={e => { e.preventDefault(); onSubmit({ ...template, name, channel, subject, body }); }}>
+        <h3 className="text-lg font-bold text-zinc-100">Message template</h3>
+        <p className="mt-1 text-xs text-zinc-500">Use {"{{business}}"}, {"{{contact}}"}, {"{{owner}}"} — they fill on copy.</p>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <label className="block text-sm font-semibold text-zinc-400">Name
+            <input value={name} onChange={e => setName(e.target.value)} required
+              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
+          </label>
+          <label className="block text-sm font-semibold text-zinc-400">Channel
+            <select value={channel} onChange={e => setChannel(e.target.value as OutreachTemplate["channel"])}
+              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-2 py-2.5 text-zinc-100">
+              <option value="email">Email</option>
+              <option value="sms">SMS</option>
+              <option value="dm">DM</option>
+            </select>
+          </label>
+        </div>
+        {channel === "email" && (
+          <label className="mt-3 block text-sm font-semibold text-zinc-400">Subject
+            <input value={subject} onChange={e => setSubject(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
+          </label>
+        )}
+        <label className="mt-3 block text-sm font-semibold text-zinc-400">Body
+          <textarea value={body} onChange={e => setBody(e.target.value)} required rows={6}
+            className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
+        </label>
+        <div className="mt-5 flex justify-end gap-2">
+          <button type="button" onClick={onCancel}
+            className="min-h-[44px] rounded-lg border border-ink-700 px-4 py-2 text-sm font-semibold text-zinc-300">Cancel</button>
+          <button type="submit"
+            className="min-h-[44px] rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Save template</button>
         </div>
       </form>
     </div>

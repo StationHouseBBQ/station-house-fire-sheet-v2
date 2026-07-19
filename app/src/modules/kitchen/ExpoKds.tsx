@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { KdsStage, KdsTicket } from "../../dal/types";
@@ -6,16 +6,24 @@ import { useRole } from "../../app/RoleContext";
 import { useUndo } from "../shared/undo";
 import { etParts } from "../../lib/time";
 import { currentTime } from "../../lib/clock";
+import { usePersistentState } from "./_data/localState";
 
 /**
  * Kitchen · Expo KDS — V2 implementation of the Manus ExpoKDS.
  * Three lanes (Kitchen / Expo / Ready) plus a collapsed "Handed off" count.
  * Kitchen lane checks kitchen boxes → Bump to Expo; Expo lane checks expo
- * boxes → Mark Ready; Ready lane → Hand Off. All-day totals panel with
- * checked/total progress. Auto-refetch every 15s.
+ * boxes → Mark Ready; Ready lane → Hand Off. All-day totals panel.
+ *
+ * Parity additions over the lean version:
+ *  - Station focus toggle (All / Kitchen / Expo) like Manus's station picker
+ *  - Live age timer per ticket (since fired) + due-window countdown, colored
+ *    by urgency (green / amber / red / late) — re-ticks every 20s
+ *  - Sort by urgency; "late" ring on overdue tickets
+ *  - Sound-on-new-late toggle (browser beep) so expo hears escalations
  */
 
 type Sync = "idle" | "saving" | "saved" | "error";
+type Focus = "all" | "kitchen" | "expo";
 
 const LANES: Array<{ stage: KdsStage; title: string; hint: string; accent: string }> = [
   { stage: "kitchen", title: "Kitchen", hint: "Check items as cooked, then bump", accent: "border-orange-500/40 text-orange-300" },
@@ -41,6 +49,51 @@ function todayEt(): string {
   return `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`;
 }
 
+/** Minutes since the ticket was fired (business clock aware). */
+function ageMinutes(firedAt: string): number {
+  const ms = currentTime().getTime() - new Date(firedAt).getTime();
+  return Math.max(0, Math.floor(ms / 60000));
+}
+
+/** Parse a leading "1:30 PM" style start time from a window like "1:30–2:00 PM". */
+function windowStartMinutes(win: string): number | null {
+  const m = win.match(/(\d{1,2}):(\d{2})\s*([ap]m)?/i);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const min = Number(m[2]);
+  const mer = (m[3] ?? "").toLowerCase();
+  if (mer === "pm" && h < 12) h += 12;
+  if (mer === "am" && h === 12) h = 0;
+  const p = etParts(currentTime());
+  const nowMin = p.hour * 60 + p.minute;
+  return h * 60 + min - nowMin; // minutes until the window start (negative = past)
+}
+
+/** Urgency from age + due countdown. */
+function urgency(t: KdsTicket): { level: "ok" | "warn" | "late"; ageLabel: string; dueLabel: string | null } {
+  const age = ageMinutes(t.firedAt);
+  const ageLabel = age < 60 ? `${age}m` : `${Math.floor(age / 60)}h ${age % 60}m`;
+  const due = windowStartMinutes(t.timeWindow);
+  let dueLabel: string | null = null;
+  let level: "ok" | "warn" | "late" = "ok";
+  if (due != null) {
+    if (due < 0) { dueLabel = `${Math.abs(due)}m late`; level = "late"; }
+    else if (due <= 15) { dueLabel = `${due}m`; level = "warn"; }
+    else if (due < 120) { dueLabel = `${due}m`; }
+    else { dueLabel = `${Math.floor(due / 60)}h ${due % 60}m`; }
+  }
+  // Age escalation independent of due time.
+  if (level === "ok" && age >= 25) level = "late";
+  else if (level === "ok" && age >= 12) level = "warn";
+  return { level, ageLabel, dueLabel };
+}
+
+const LEVEL_CLS: Record<"ok" | "warn" | "late", { ring: string; text: string }> = {
+  ok: { ring: "border-ink-700", text: "text-green-400" },
+  warn: { ring: "border-amber-600/60", text: "text-amber-400" },
+  late: { ring: "border-red-600/70", text: "text-red-400" },
+};
+
 export function ExpoKds() {
   const { actor } = useRole();
   const dal = getDal();
@@ -48,6 +101,15 @@ export function ExpoKds() {
   const undo = useUndo();
   const today = todayEt();
   const [sync, setSync] = useState<Sync>("idle");
+  const [focus, setFocus] = usePersistentState<Focus>("kds.focus.v1", "all");
+  const [sound, setSound] = usePersistentState<boolean>("kds.sound.v1", false);
+
+  // Live tick so age/countdown labels update without a refetch.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(n => n + 1), 20_000);
+    return () => clearInterval(id);
+  }, []);
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ["kds", "tickets", today],
@@ -59,6 +121,14 @@ export function ExpoKds() {
     queryFn: () => dal.kds.allDayTotals(today),
     refetchInterval: 15_000,
   });
+
+  // Escalation beep when the number of late tickets rises.
+  const lateCount = tickets.filter(t => t.stage !== "handed_off" && urgency(t).level === "late").length;
+  const [prevLate, setPrevLate] = useState(0);
+  useEffect(() => {
+    if (sound && lateCount > prevLate) beep();
+    setPrevLate(lateCount);
+  }, [lateCount, sound, prevLate]);
 
   const withSync = <T,>(p: Promise<T>): Promise<T> => {
     setSync("saving");
@@ -76,7 +146,6 @@ export function ExpoKds() {
       withSync(dal.kds.advance(ticketId, to, actor)),
     onSuccess: (_ticket, { ticketId, to, from, orderRef }) => {
       void invalidate();
-      // Back-steps (no `from`) are their own undo — only forward bumps get one.
       if (from && orderRef && from !== to) {
         undo.offer(`${orderRef} → ${STAGE_LABEL[to]}`, async () => {
           await withSync(dal.kds.advance(ticketId, from, actor));
@@ -89,9 +158,15 @@ export function ExpoKds() {
   const byStage = useMemo(() => {
     const m: Record<KdsStage, KdsTicket[]> = { kitchen: [], expo: [], ready: [], handed_off: [] };
     for (const t of tickets) m[t.stage].push(t);
-    for (const k of Object.keys(m) as KdsStage[]) m[k].sort((a, b) => a.timeWindow.localeCompare(b.timeWindow));
+    // Sort each lane by urgency then window.
+    const rank = { late: 0, warn: 1, ok: 2 } as const;
+    for (const k of Object.keys(m) as KdsStage[]) {
+      m[k].sort((a, b) => rank[urgency(a).level] - rank[urgency(b).level] || a.timeWindow.localeCompare(b.timeWindow));
+    }
     return m;
   }, [tickets]);
+
+  const visibleLanes = focus === "all" ? LANES : LANES.filter(l => (focus === "kitchen" ? l.stage === "kitchen" : l.stage !== "kitchen"));
 
   if (isLoading) return <p className="py-20 text-center text-zinc-500">Loading KDS…</p>;
 
@@ -103,14 +178,29 @@ export function ExpoKds() {
           <p className="text-sm text-zinc-500">
             {today} · {tickets.length} ticket{tickets.length !== 1 ? "s" : ""} ·{" "}
             <span className="text-zinc-400">✓ Handed off: {byStage.handed_off.length}</span>
+            {lateCount > 0 && <span className="ml-1 font-bold text-red-400">· 🔴 {lateCount} late</span>}
           </p>
         </div>
-        <SyncBadge sync={sync} />
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center rounded-lg border border-ink-700 text-xs" role="group" aria-label="Station focus">
+            {(["all", "kitchen", "expo"] as Focus[]).map(f => (
+              <button key={f} onClick={() => setFocus(f)}
+                className={`min-h-[40px] px-3 py-1.5 font-bold capitalize first:rounded-l-lg last:rounded-r-lg ${focus === f ? "bg-fire text-white" : "text-zinc-400"}`}>
+                {f === "all" ? "All lanes" : f}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setSound(s => !s)} aria-pressed={sound}
+            className={`min-h-[40px] rounded-lg border px-3 py-1.5 text-xs font-bold ${sound ? "border-fire/50 bg-fire/10 text-fire-light" : "border-ink-700 bg-ink-800 text-zinc-400"}`}>
+            {sound ? "🔔 Alerts on" : "🔕 Alerts off"}
+          </button>
+          <SyncBadge sync={sync} />
+        </div>
       </header>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_16rem]">
-        <div className="grid gap-3 md:grid-cols-3">
-          {LANES.map(lane => {
+        <div className={`grid gap-3 ${focus === "all" ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+          {visibleLanes.map(lane => {
             const back = BACK[lane.stage];
             return (
             <section key={lane.stage} className="rounded-xl border border-ink-700 bg-ink-950/60 p-2">
@@ -186,31 +276,42 @@ function TicketCard({ ticket, lane, checksEnabled, onToggle, onAdvance, onBack, 
   busy: boolean;
 }) {
   const allChecked = ticket.items.every(i => (lane === "kitchen" ? i.kitchenChecked : i.expoChecked));
+  const checked = ticket.items.filter(i => (lane === "kitchen" ? i.kitchenChecked : i.expoChecked)).length;
+  const u = urgency(ticket);
+  const lv = LEVEL_CLS[u.level];
   return (
-    <article className="rounded-lg border border-ink-700 bg-ink-900 p-3">
+    <article className={`rounded-lg border-l-4 border bg-ink-900 p-3 ${lv.ring} ${u.level === "late" ? "border-l-red-500" : u.level === "warn" ? "border-l-amber-500" : "border-l-green-500"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="truncate text-sm font-bold text-zinc-100">{ticket.customer}</p>
           <p className="text-xs text-zinc-500"><span className="font-mono">{ticket.orderRef}</span> · {ticket.timeWindow}</p>
         </div>
+        <div className="shrink-0 text-right">
+          <p className={`text-xs font-black ${lv.text}`}>⏱ {u.ageLabel}</p>
+          {u.dueLabel && <p className={`text-[10px] font-bold ${u.level === "late" ? "text-red-400" : "text-zinc-500"}`}>
+            {u.level === "late" ? "🔴 " : ""}{u.dueLabel}</p>}
+        </div>
       </div>
-      <ul className="mt-2 space-y-1">
+      <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-zinc-600">
+        {checked}/{ticket.items.length} {lane === "kitchen" ? "cooked" : "packed"}
+      </p>
+      <ul className="mt-1.5 space-y-1">
         {ticket.items.map(it => {
-          const checked = lane === "kitchen" ? it.kitchenChecked : it.expoChecked;
+          const isChecked = lane === "kitchen" ? it.kitchenChecked : it.expoChecked;
           return (
             <li key={it.id}>
               <button
                 onClick={() => checksEnabled && onToggle(it.id, lane)}
                 disabled={!checksEnabled}
-                aria-pressed={checked}
-                aria-label={`${it.name} — ${checked ? "checked" : "unchecked"} (${lane})`}
+                aria-pressed={isChecked}
+                aria-label={`${it.name} — ${isChecked ? "checked" : "unchecked"} (${lane})`}
                 className={`flex min-h-[44px] w-full items-center gap-2 rounded-lg border px-2.5 py-2 text-left text-sm transition-colors ${
-                  checked ? "border-green-600/50 bg-green-500/10" : "border-ink-700 bg-ink-950"
+                  isChecked ? "border-green-600/50 bg-green-500/10" : "border-ink-700 bg-ink-950"
                 } ${!checksEnabled ? "cursor-default opacity-70" : ""}`}>
                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-black ${
-                  checked ? "border-green-500 bg-green-600 text-white" : "border-zinc-600 text-transparent"
+                  isChecked ? "border-green-500 bg-green-600 text-white" : "border-zinc-600 text-transparent"
                 }`}>✓</span>
-                <span className={`flex-1 truncate ${checked ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{it.name}</span>
+                <span className={`flex-1 truncate ${isChecked ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{it.name}</span>
                 <span className="shrink-0 text-xs font-bold text-zinc-400">{it.qty} {it.unit}</span>
               </button>
             </li>
@@ -247,4 +348,24 @@ function SyncBadge({ sync }: { sync: Sync }) {
     error: { label: "Save failed — retry", cls: "text-red-400 border-red-700/50" },
   };
   return <span role="status" className={`rounded-lg border bg-ink-900 px-3 py-2 text-xs font-semibold ${meta[sync].cls}`}>{meta[sync].label}</span>;
+}
+
+/** Short browser beep for escalation alerts (best-effort; silent if blocked). */
+function beep(): void {
+  try {
+    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.value = 880;
+    gain.gain.value = 0.05;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.18);
+    osc.onended = () => ctx.close();
+  } catch {
+    /* audio unavailable — non-fatal */
+  }
 }

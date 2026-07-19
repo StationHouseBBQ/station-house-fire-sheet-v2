@@ -39,6 +39,9 @@ export function OrderHistoryView() {
   const [channel, setChannel] = useState<OrderChannel | "all">("all");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [sync, setSync] = useState<Sync>("idle");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", "all"],
@@ -61,10 +64,39 @@ export function OrderHistoryView() {
     return orders
       .filter(o => status === "all" || o.status === status)
       .filter(o => channel === "all" || o.channel === channel)
+      .filter(o => !from || o.serviceDate >= from)
+      .filter(o => !to || o.serviceDate <= to)
       .filter(o => !q || o.customer.toLowerCase().includes(q) || o.orderRef.toLowerCase().includes(q))
       .slice()
-      .sort((a, b) => b.serviceDate.localeCompare(a.serviceDate) || a.timeWindow.localeCompare(b.timeWindow));
-  }, [orders, search, status, channel]);
+      .sort((a, b) => {
+        const cmp = a.serviceDate.localeCompare(b.serviceDate) || a.timeWindow.localeCompare(b.timeWindow);
+        return sortDir === "desc" ? -cmp : cmp;
+      });
+  }, [orders, search, status, channel, from, to, sortDir]);
+
+  const summary = useMemo(() => {
+    const units = filtered.reduce((s, o) => s + o.items.reduce((si, it) => si + it.qty, 0), 0);
+    const done = filtered.filter(o => o.status === "picked_up" || o.status === "delivered").length;
+    const cancelled = filtered.filter(o => o.status === "cancelled").length;
+    return { units, done, cancelled, active: filtered.length - done - cancelled };
+  }, [filtered]);
+
+  const exportCsv = () => {
+    const rows = [["Order Ref", "Customer", "Date", "Window", "Channel", "Status", "Guests", "Items", "Item Units"]];
+    for (const o of filtered) {
+      const items = o.items.map(it => `${it.qty} ${it.unit} ${it.name}`).join("; ");
+      const units = o.items.reduce((s, it) => s + it.qty, 0);
+      rows.push([o.orderRef, o.customer, o.serviceDate, o.timeWindow, CHANNEL_LABEL[o.channel], STATUS_META[o.status].label, String(o.guests ?? ""), items, String(units)]);
+    }
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `order-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const toggle = (id: string) =>
     setExpanded(prev => {
@@ -82,7 +114,13 @@ export function OrderHistoryView() {
           <h1 className="text-2xl font-black uppercase text-zinc-100">Order History</h1>
           <p className="text-sm text-zinc-500">{filtered.length} of {orders.length} orders</p>
         </div>
-        <SyncBadge sync={sync} />
+        <div className="flex items-center gap-2">
+          <button onClick={exportCsv} disabled={filtered.length === 0}
+            className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-bold text-zinc-200 disabled:opacity-40">
+            ⬇ Export CSV
+          </button>
+          <SyncBadge sync={sync} />
+        </div>
       </header>
 
       {/* Search + channel */}
@@ -96,6 +134,29 @@ export function OrderHistoryView() {
           <option value="all">All channels</option>
           {CHANNELS.map(c => <option key={c} value={c}>{CHANNEL_LABEL[c]}</option>)}
         </select>
+        <input type="date" value={from} onChange={e => setFrom(e.target.value)} aria-label="From date"
+          className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100" />
+        <input type="date" value={to} onChange={e => setTo(e.target.value)} aria-label="To date"
+          className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-900 px-3 py-2.5 text-sm text-zinc-100" />
+        <button onClick={() => setSortDir(d => (d === "desc" ? "asc" : "desc"))}
+          className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm font-semibold text-zinc-200"
+          aria-label="Toggle sort direction">
+          {sortDir === "desc" ? "↓ Newest" : "↑ Oldest"}
+        </button>
+        {(from || to || search || status !== "all" || channel !== "all") && (
+          <button onClick={() => { setFrom(""); setTo(""); setSearch(""); setStatus("all"); setChannel("all"); }}
+            className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-sm font-semibold text-zinc-400">
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Summary strip */}
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <SummaryStat label="Orders" value={filtered.length} accent="text-fire-light" />
+        <SummaryStat label="Item units" value={summary.units} accent="text-zinc-100" />
+        <SummaryStat label="Active" value={summary.active} accent="text-amber-300" />
+        <SummaryStat label="Completed" value={summary.done} accent="text-green-400" />
       </div>
 
       {/* Status chips */}
@@ -192,6 +253,15 @@ function OrderRow({ order, expanded, onToggle, onStatus, busy }: {
         </div>
       )}
     </article>
+  );
+}
+
+function SummaryStat({ label, value, accent }: { label: string; value: number; accent: string }) {
+  return (
+    <div className="rounded-xl border border-ink-700 bg-ink-900 px-3 py-2.5">
+      <p className={`text-2xl font-black ${accent}`}>{value}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
+    </div>
   );
 }
 

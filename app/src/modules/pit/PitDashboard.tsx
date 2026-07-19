@@ -5,6 +5,7 @@ import type { PitTask, SmokerEntry } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
 import { etParts } from "../../lib/time";
 import { currentTime } from "../../lib/clock";
+import { isCombi, getsWrapped, seasonNightBefore, cookHoursFor } from "./_data/pitReference";
 
 /**
  * Pit · Fire Sheet dashboard — V2 of the Manus PitDashboard (today's pit
@@ -41,6 +42,7 @@ export function PitDashboard() {
   const qc = useQueryClient();
   const [sync, setSync] = useState<Sync>("idle");
   const [newLabel, setNewLabel] = useState("");
+  const [dayView, setDayView] = useState<"today" | "tomorrow">("today");
 
   const today = useMemo(() => todayEt(), []);
   const weekStart = useMemo(() => mondayOfWeek(today), [today]);
@@ -79,10 +81,18 @@ export function PitDashboard() {
   const done = tasks.filter(t => t.done).length;
   const pct = tasks.length ? Math.round((done / tasks.length) * 100) : 0;
 
-  const todayEntries: SmokerEntry[] = useMemo(
-    () => (weekQ.data ?? []).filter(e => e.date === today),
-    [weekQ.data, today],
+  const tomorrow = useMemo(() => addDays(today, 1), [today]);
+  const selectedDay = dayView === "today" ? today : tomorrow;
+  const dayEntries: SmokerEntry[] = useMemo(
+    () => (weekQ.data ?? []).filter(e => e.date === selectedDay).sort((a, b) => a.loadTime.localeCompare(b.loadTime)),
+    [weekQ.data, selectedDay],
   );
+  // For the tomorrow "prep tonight" nudge: whole-muscle cuts that season the night before.
+  const seasonTonight: SmokerEntry[] = useMemo(
+    () => (weekQ.data ?? []).filter(e => e.date === tomorrow && seasonNightBefore(e.protein)),
+    [weekQ.data, tomorrow],
+  );
+  const todayLoadCount = useMemo(() => (weekQ.data ?? []).filter(e => e.date === today).length, [weekQ.data, today]);
 
   if (checklistQ.isLoading) return <p className="py-20 text-center text-zinc-500">Loading fire sheet…</p>;
 
@@ -106,6 +116,14 @@ export function PitDashboard() {
 
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-ink-800" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
         <div className="h-full bg-gradient-to-r from-fire to-fire-light transition-all" style={{ width: `${pct}%` }} />
+      </div>
+
+      {/* ── Progress stat tiles ───────────────────────────────────────── */}
+      <div className="mt-4 grid grid-cols-4 gap-2">
+        <StatTile label="Tasks" value={String(tasks.length)} />
+        <StatTile label="Done" value={String(done)} tone="green" />
+        <StatTile label="Left" value={String(tasks.length - done)} tone={tasks.length - done > 0 ? "amber" : undefined} />
+        <StatTile label="Loads today" value={String(todayLoadCount)} tone="fire" />
       </div>
 
       {/* ── Checklist ─────────────────────────────────────────────────── */}
@@ -164,30 +182,75 @@ export function PitDashboard() {
         {addMut.error && <p className="mt-2 text-sm text-red-400">{addMut.error.message}</p>}
       </section>
 
-      {/* ── Today's smoker schedule ───────────────────────────────────── */}
+      {/* ── Season-tonight nudge ──────────────────────────────────────── */}
+      {seasonTonight.length > 0 && (
+        <section className="mt-8 rounded-xl border border-amber-800/40 bg-amber-950/15 p-4">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-amber-300">🧂 Season tonight for tomorrow</h2>
+          <p className="mt-1 text-xs text-amber-200/80">Whole-muscle cuts smoke better seasoned the night before and held cold overnight.</p>
+          <ul className="mt-2 flex flex-wrap gap-2">
+            {seasonTonight.map(e => (
+              <li key={e.id} className="rounded-full bg-amber-900/30 px-3 py-1 text-sm font-semibold text-amber-100">
+                {e.protein} · {e.rawLbs} lbs
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* ── Smoker schedule (today / tomorrow) ────────────────────────── */}
       <section className="mt-8">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Today's smoker schedule</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-zinc-400">Smoke plan</h2>
+          <div className="flex gap-1" role="tablist" aria-label="Schedule day">
+            <button role="tab" aria-selected={dayView === "today"} onClick={() => setDayView("today")}
+              className={`min-h-[44px] rounded-lg border px-4 py-2 text-sm font-bold ${dayView === "today" ? "border-fire bg-fire/15 text-fire-light" : "border-ink-700 bg-ink-800 text-zinc-300"}`}>Today</button>
+            <button role="tab" aria-selected={dayView === "tomorrow"} onClick={() => setDayView("tomorrow")}
+              className={`min-h-[44px] rounded-lg border px-4 py-2 text-sm font-bold ${dayView === "tomorrow" ? "border-fire bg-fire/15 text-fire-light" : "border-ink-700 bg-ink-800 text-zinc-300"}`}>Tomorrow</button>
+          </div>
+        </div>
         {weekQ.isLoading && <p className="mt-3 text-sm text-zinc-500">Loading schedule…</p>}
-        {!weekQ.isLoading && todayEntries.length === 0 && (
+        {!weekQ.isLoading && dayEntries.length === 0 && (
           <p className="mt-3 rounded-xl border border-dashed border-ink-700 bg-ink-900 p-6 text-center text-sm text-zinc-500">
-            Nothing scheduled on the smokers today. Set it up in Smoker Forecast.
+            Nothing scheduled on the smokers {dayView}. Set it up in Smoker Forecast.
           </p>
         )}
         <ul className="mt-2 space-y-2">
-          {todayEntries.map(e => (
-            <li key={e.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-ink-700 bg-ink-900 p-3">
-              <span className="min-w-0 flex-1 font-semibold text-zinc-100">{e.protein}</span>
-              <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs font-bold text-zinc-300">{e.rawLbs} lbs</span>
-              <span className="text-xs text-zinc-500">{e.smoker}</span>
-              <span className="text-xs font-semibold text-fire-light">
-                🔥 {fmtTime(e.loadTime)} → {fmtTime(e.targetDone)}
-              </span>
+          {dayEntries.map(e => (
+            <li key={e.id} className="rounded-xl border border-ink-700 bg-ink-900 p-3">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <span className="min-w-0 flex-1 font-semibold text-zinc-100">{e.protein}</span>
+                <span className="rounded-full bg-ink-800 px-2 py-0.5 text-xs font-bold text-zinc-300">{e.rawLbs} lbs</span>
+                <span className="text-xs text-zinc-500">{e.smoker}</span>
+                <span className="text-xs font-semibold text-fire-light">
+                  🔥 {fmtTime(e.loadTime)} → {fmtTime(e.targetDone)} · {cookHoursFor(e.protein)}h
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {isCombi(e.protein) && <Tag>ON SMOKER → IN COMBI</Tag>}
+                {!isCombi(e.protein) && <Tag>Stays on smoker</Tag>}
+                {getsWrapped(e.protein) && <Tag>Wrap at ~165°F</Tag>}
+                {seasonNightBefore(e.protein) && <Tag amber>Season night before</Tag>}
+              </div>
             </li>
           ))}
         </ul>
       </section>
     </div>
   );
+}
+
+function StatTile({ label, value, tone }: { label: string; value: string; tone?: "green" | "amber" | "fire" }) {
+  const num = tone === "green" ? "text-green-400" : tone === "amber" ? "text-amber-400" : tone === "fire" ? "text-fire-light" : "text-zinc-100";
+  return (
+    <div className="rounded-xl border border-ink-700 bg-ink-900 p-3 text-center">
+      <p className={`text-2xl font-black ${num}`}>{value}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-zinc-500">{label}</p>
+    </div>
+  );
+}
+
+function Tag({ children, amber }: { children: React.ReactNode; amber?: boolean }) {
+  return <span className={`rounded px-2 py-0.5 text-[10px] font-bold ${amber ? "bg-amber-900/30 text-amber-300" : "bg-ink-800 text-zinc-400"}`}>{children}</span>;
 }
 
 function SyncBadge({ sync }: { sync: Sync }) {

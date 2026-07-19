@@ -303,10 +303,10 @@ export interface FireDrop {
 export interface FireDropRepository {
   currentDrop(): Promise<FireDrop>;
   updateDrop(patch: { title?: string; soldOut?: boolean }, actor: string): Promise<FireDrop>;
-  upsertProduct(p: Omit<FireDropProduct, "soldQty"> & { id?: string }, actor: string): Promise<FireDrop>;
+  upsertProduct(p: Omit<FireDropProduct, "soldQty" | "id"> & { id?: string }, actor: string): Promise<FireDrop>;
   removeProduct(productId: string, actor: string): Promise<FireDrop>;
   toggleProductSoldOut(productId: string, actor: string): Promise<FireDrop>;
-  upsertSlot(s: Omit<FireDropSlot, "booked"> & { id?: string }, actor: string): Promise<FireDrop>;
+  upsertSlot(s: Omit<FireDropSlot, "booked" | "id"> & { id?: string }, actor: string): Promise<FireDrop>;
   removeSlot(slotId: string, actor: string): Promise<FireDrop>;
   orderingStatus(): { friday: boolean; saturday: boolean };
 }

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { OrderGuideRow } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { formatCents } from "../../lib/money";
+import { loadOrderGuideCosts, perUnitCents, saveOrderGuideCost, type OrderGuideCost, type OrderGuideCostMap } from "./_data_ops/orderGuideCosts";
 
 /**
  * Admin · Order Guide Setup — V2 counterpart of Manus OrderGuideSetup
@@ -21,6 +23,7 @@ export function OrderGuideSetup() {
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
 
   const { data: rows, isLoading } = useQuery({ queryKey: ["orderGuide"], queryFn: () => dal.orderGuide.rows() });
+  const { data: costs } = useQuery({ queryKey: ["orderGuide", "costs"], queryFn: () => loadOrderGuideCosts() });
 
   const withSync = <T,>(p: Promise<T>): Promise<T> => {
     setSync("saving");
@@ -40,10 +43,24 @@ export function OrderGuideSetup() {
     mutationFn: (id: string) => withSync(dal.orderGuide.remove(id, actor)),
     onSuccess: () => { setConfirmRemove(null); invalidate(); },
   });
+  const costMut = useMutation({
+    mutationFn: ({ rowId, cost }: { rowId: string; cost: OrderGuideCost | null }) =>
+      withSync(saveOrderGuideCost(rowId, cost, actor)),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["orderGuide", "costs"] }),
+  });
+
+  const runCostCents = useMemo(() => {
+    if (!rows || !costs) return 0;
+    return rows.reduce((sum, r) => {
+      const unit = perUnitCents(costs[r.id]);
+      return unit == null ? sum : sum + unit * r.orderQty;
+    }, 0);
+  }, [rows, costs]);
 
   if (isLoading || !rows) return <p className="py-20 text-center text-zinc-500">Loading order guide…</p>;
 
   const linesToOrder = rows.filter(r => r.orderQty > 0).length;
+  const costMap: OrderGuideCostMap = costs ?? {};
 
   return (
     <div className="mx-auto max-w-4xl pt-6 pb-12">
@@ -64,6 +81,11 @@ export function OrderGuideSetup() {
         {linesToOrder > 0 ? `📋 ${linesToOrder} line${linesToOrder === 1 ? "" : "s"} to order this run` : "✓ Everything is at PAR — nothing to order"}
       </div>
 
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-ink-700 bg-ink-900 px-4 py-3">
+        <p className="text-sm font-semibold text-zinc-300">Estimated cost of this order run</p>
+        <p className="font-mono text-lg font-black text-fire-light">{formatCents(runCostCents)}</p>
+      </div>
+
       <div className="mt-4 overflow-x-auto rounded-xl border border-ink-700">
         <table className="w-full text-left text-sm">
           <thead className="bg-ink-800 text-xs font-bold uppercase tracking-wider text-zinc-400">
@@ -74,6 +96,9 @@ export function OrderGuideSetup() {
               <th className="px-3 py-2.5 text-right">PAR</th>
               <th className="px-3 py-2.5 text-right">On hand</th>
               <th className="px-3 py-2.5 text-right">Order</th>
+              <th className="px-3 py-2.5 text-right">Case $ / pack</th>
+              <th className="px-3 py-2.5 text-right">$ / unit</th>
+              <th className="px-3 py-2.5 text-right">Ext. cost</th>
               <th className="px-3 py-2.5 text-right">Actions</th>
             </tr>
           </thead>
@@ -92,6 +117,17 @@ export function OrderGuideSetup() {
                     r.orderQty > 0 ? "bg-amber-600 text-white" : "text-zinc-600"}`}>
                     {r.orderQty}
                   </span>
+                </td>
+                <td className="px-3 py-2.5 text-right">
+                  <CostEditor row={r} cost={costMap[r.id]} onCommit={cost => costMut.mutate({ rowId: r.id, cost })} />
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono text-zinc-300">
+                  {perUnitCents(costMap[r.id]) == null ? <span className="text-zinc-600">—</span> : formatCents(perUnitCents(costMap[r.id])!)}
+                </td>
+                <td className="px-3 py-2.5 text-right font-mono font-bold text-zinc-200">
+                  {perUnitCents(costMap[r.id]) == null || r.orderQty === 0
+                    ? <span className="text-zinc-600">—</span>
+                    : formatCents(perUnitCents(costMap[r.id])! * r.orderQty)}
                 </td>
                 <td className="px-3 py-2.5 text-right">
                   <div className="flex justify-end gap-1">
@@ -116,7 +152,7 @@ export function OrderGuideSetup() {
                 </td>
               </tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-zinc-500">No lines yet.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-zinc-500">No lines yet.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -127,6 +163,52 @@ export function OrderGuideSetup() {
           onSubmit={r => upsertMut.mutate(r)} />
       )}
     </div>
+  );
+}
+
+function CostEditor({ row, cost, onCommit }: {
+  row: OrderGuideRow; cost: OrderGuideCost | undefined; onCommit: (cost: OrderGuideCost | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [priceStr, setPriceStr] = useState("");
+  const [packStr, setPackStr] = useState("");
+
+  if (!editing) {
+    const label = cost ? `${formatCents(cost.casePriceCents)} / ${cost.packSizeQty}` : "Set cost";
+    return (
+      <button onClick={() => {
+          setPriceStr(cost ? (cost.casePriceCents / 100).toFixed(2) : "");
+          setPackStr(cost ? String(cost.packSizeQty) : String(row.parQty || 1));
+          setEditing(true);
+        }}
+        aria-label={`Edit vendor cost for ${row.item}`}
+        className={`min-h-[36px] rounded-lg border px-2.5 py-1 font-mono text-xs ${
+          cost ? "border-ink-700 bg-ink-800 text-zinc-200" : "border-dashed border-ink-700 text-zinc-500 hover:text-zinc-300"}`}>
+        {label}
+      </button>
+    );
+  }
+  const commit = () => {
+    const price = Number(priceStr);
+    const pack = Number(packStr);
+    if (priceStr.trim() === "" && packStr.trim() === "") { onCommit(null); setEditing(false); return; }
+    if (Number.isFinite(price) && price >= 0 && Number.isFinite(pack) && pack > 0) {
+      onCommit({ casePriceCents: Math.round(price * 100), packSizeQty: pack });
+    }
+    setEditing(false);
+  };
+  return (
+    <span className="inline-flex items-center gap-1">
+      <input autoFocus inputMode="decimal" value={priceStr} onChange={e => setPriceStr(e.target.value)} placeholder="case $"
+        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+        className="w-16 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1.5 text-right font-mono text-xs text-zinc-100"
+        aria-label={`Case price for ${row.item}`} />
+      <span className="text-zinc-600">/</span>
+      <input inputMode="decimal" value={packStr} onChange={e => setPackStr(e.target.value)} placeholder="pack"
+        onBlur={commit} onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+        className="w-14 rounded-lg border border-fire/50 bg-ink-800 px-2 py-1.5 text-right font-mono text-xs text-zinc-100"
+        aria-label={`Pack size for ${row.item}`} />
+    </span>
   );
 }
 

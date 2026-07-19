@@ -21,6 +21,7 @@ export function DiscountCodes() {
   const [sync, setSync] = useState<Sync>("idle");
   const [dialog, setDialog] = useState<{ open: boolean; code: DiscountCode | null }>({ open: false, code: null });
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const { data: codes, isLoading } = useQuery({ queryKey: ["discounts"], queryFn: () => dal.discounts.list() });
 
@@ -75,16 +76,25 @@ export function DiscountCodes() {
           <tbody className="divide-y divide-ink-800 bg-ink-900">
             {codes.map(c => (
               <tr key={c.id} className={c.active ? "" : "opacity-60"}>
-                <td className="px-3 py-2.5 font-mono font-bold text-zinc-100">{c.code}</td>
+                <td className="px-3 py-2.5 font-mono font-bold text-zinc-100">
+                  <button type="button" onClick={() => { navigator.clipboard?.writeText(c.code); setCopied(c.id); }}
+                    title="Copy code" className="rounded px-1 py-0.5 hover:bg-ink-800">
+                    {c.code}{copied === c.id && <span className="ml-1.5 text-[10px] font-semibold text-green-400">Copied ✓</span>}
+                  </button>
+                </td>
                 <td className="px-3 py-2.5 text-zinc-400">{c.kind === "percent" ? "Percent" : "Fixed"}</td>
                 <td className="px-3 py-2.5 text-right font-mono text-zinc-200">
                   {c.kind === "percent" ? `${c.value}%` : formatCents(c.value)}
                 </td>
                 <td className="px-3 py-2.5">
-                  <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
-                    c.active ? "bg-green-600 text-white" : "border border-ink-700 text-zinc-500"}`}>
-                    {c.active ? "ACTIVE" : "OFF"}
-                  </span>
+                  {c.expiresAt && new Date(c.expiresAt) < new Date() ? (
+                    <span className="rounded-full bg-red-600 px-2.5 py-1 text-[10px] font-black text-white">EXPIRED</span>
+                  ) : (
+                    <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
+                      c.active ? "bg-green-600 text-white" : "border border-ink-700 text-zinc-500"}`}>
+                      {c.active ? "ACTIVE" : "OFF"}
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2.5 text-right font-mono text-zinc-400">{c.usedCount}</td>
                 <td className="px-3 py-2.5 text-xs text-zinc-500">{c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : "Never"}</td>
