@@ -40,6 +40,19 @@ function acceptUrl(order: CateringOrder): string {
 }
 
 /** Open the browser print dialog with the current document as the print area. */
+export function sendDocument(order: CateringOrder, kind: DocumentKind): { ok: boolean; reason?: string } {
+  if (kind !== "quote" && kind !== "invoice") return { ok: false, reason: "Only quotes and invoices are sent to customers." };
+  const to = order.event.email;
+  if (!to) return { ok: false, reason: "No customer email on this order — add one in the event details." };
+  const label = kind === "invoice" ? "Invoice" : "Quote";
+  const subject = `${label} ${order.ref} \u2014 Station House BBQ`;
+  const body = documentPlainText(order, kind);
+  if (typeof window !== "undefined") {
+    window.location.href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+  return { ok: true };
+}
+
 export function openPrint(): void {
   if (typeof window !== "undefined") window.print();
 }
