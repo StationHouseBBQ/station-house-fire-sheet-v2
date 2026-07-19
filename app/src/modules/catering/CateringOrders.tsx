@@ -324,7 +324,17 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
         <KitchenDialog onCancel={() => setKitchenOpen(false)}
           onSubmit={notes => { setKitchenOpen(false); run(clc.handToKitchen(order.id, notes || null, actor)); }} />
       )}
-      {docKind && <DocumentModal order={order} kind={docKind} onClose={() => setDocKind(null)} />}
+      {docKind && <DocumentModal order={order} kind={docKind} onClose={() => setDocKind(null)}
+        onSend={(k) => {
+          // Send ONLY the clean customer document — nothing internal.
+          const label = k === "invoice" ? "Invoice" : "Quote";
+          const subject = `${label} ${order.ref} — Station House BBQ`;
+          const body = documentPlainText(order, k);
+          const to = encodeURIComponent(order.event.email || "");
+          window.location.href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          void clc.logComm(order.id, "email", `${label} ${order.ref} emailed to ${order.event.email}.`, actor)
+            .then(() => onChanged());
+        }} />}
     </div>
   );
 }
@@ -684,7 +694,7 @@ function KitchenDialog({ onSubmit, onCancel }: { onSubmit: (notes: string) => vo
 function FulfillmentPanel({ order, onSave }: {
   order: CateringOrder; onSave: (mode: "pickup" | "delivery", feeCents: number) => void;
 }) {
-  const [fee, setFee] = useState((order.deliveryFeeCents / 100).toFixed(2));
+  const [fee, setFee] = useState(((order.deliveryFeeCents ?? 0) / 100).toFixed(2));
   const isDelivery = order.fulfillment === "delivery";
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-sm">
@@ -705,7 +715,7 @@ function FulfillmentPanel({ order, onSave }: {
           </label>
         )}
       </div>
-      {isDelivery && <p className="mt-2 text-xs text-zinc-500">Delivery fee adds {formatCents(order.deliveryFeeCents)} to totals and every document.</p>}
+      {isDelivery && <p className="mt-2 text-xs text-zinc-500">Delivery fee adds {formatCents(order.deliveryFeeCents ?? 0)} to totals and every document.</p>}
     </div>
   );
 }
@@ -715,7 +725,7 @@ interface StaffDraft { id: string; role: string; name: string; callTime: string 
 function StaffPanel({ order, onSave }: {
   order: CateringOrder; onSave: (rows: Array<{ id?: string; role: string; name: string; callTime: string | null }>) => void;
 }) {
-  const toDraft = (): StaffDraft[] => order.staff.map(s => ({ id: s.id, role: s.role, name: s.name, callTime: s.callTime ?? "" }));
+  const toDraft = (): StaffDraft[] => (order.staff ?? []).map(s => ({ id: s.id, role: s.role, name: s.name, callTime: s.callTime ?? "" }));
   const [rows, setRows] = useState<StaffDraft[]>(toDraft);
   const dirty = JSON.stringify(rows) !== JSON.stringify(toDraft());
   const fullService = order.event.serviceType === "Full Service";
@@ -759,7 +769,7 @@ interface EquipDraft { id: string; name: string; qty: number }
 function EquipmentPanel({ order, catalog, onSave }: {
   order: CateringOrder; catalog: string[]; onSave: (rows: Array<{ id?: string; name: string; qty: number }>) => void;
 }) {
-  const toDraft = (): EquipDraft[] => order.equipment.map(e => ({ id: e.id, name: e.name, qty: e.qty }));
+  const toDraft = (): EquipDraft[] => (order.equipment ?? []).map(e => ({ id: e.id, name: e.name, qty: e.qty }));
   const [rows, setRows] = useState<EquipDraft[]>(toDraft);
   const [showCatalog, setShowCatalog] = useState(false);
   const dirty = JSON.stringify(rows) !== JSON.stringify(toDraft());
@@ -812,12 +822,16 @@ function EquipmentPanel({ order, catalog, onSave }: {
 }
 
 // ── Print-ready document modal ──────────────────────────────────────────────
-function DocumentModal({ order, kind, onClose }: { order: CateringOrder; kind: DocumentKind; onClose: () => void }) {
+function DocumentModal({ order, kind, onClose, onSend }: { order: CateringOrder; kind: DocumentKind; onClose: () => void; onSend: (kind: DocumentKind) => void }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try { await navigator.clipboard.writeText(documentPlainText(order, kind)); setCopied(true); setTimeout(() => setCopied(false), 2000); }
     catch { /* clipboard unavailable */ }
   };
+  // Only the customer-facing documents (quote, invoice) are sendable — the
+  // BEO/pull sheet is internal and never emailed to a customer.
+  const sendable = kind === "quote" || kind === "invoice";
+  const hasEmail = !!order.event.email;
   return (
     <div role="dialog" aria-modal="true" aria-label={`${kind} document`}
       className="fixed inset-0 z-[9000] overflow-y-auto bg-white">
@@ -825,11 +839,21 @@ function DocumentModal({ order, kind, onClose }: { order: CateringOrder; kind: D
       <div className="no-print sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-gray-300 bg-white px-4 py-3">
         <p className="text-sm font-bold uppercase tracking-wider text-gray-700">{kind === "beo" ? "BEO / Pull Sheet" : kind} · {order.ref}</p>
         <div className="flex gap-2">
+          {sendable && (
+            <button onClick={() => onSend(kind)} disabled={!hasEmail}
+              title={hasEmail ? `Email this ${kind} to ${order.event.email}` : "Add a customer email first"}
+              className="min-h-[40px] rounded-lg bg-orange-600 px-4 text-sm font-bold text-white disabled:opacity-40">
+              ✉️ Send to customer
+            </button>
+          )}
           <button onClick={openPrint} className="min-h-[40px] rounded-lg bg-black px-4 text-sm font-bold text-white">🖨 Print</button>
           <button onClick={copy} className="min-h-[40px] rounded-lg border border-gray-400 px-4 text-sm font-bold text-gray-800">{copied ? "✓ Copied" : "📋 Copy for email"}</button>
           <button onClick={onClose} className="min-h-[40px] rounded-lg border border-gray-400 px-4 text-sm font-bold text-gray-800">Close</button>
         </div>
       </div>
+      {sendable && !hasEmail && (
+        <p className="no-print bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">No customer email on this order — add one in the event details to send.</p>
+      )}
       <CateringDocument order={order} kind={kind} />
     </div>
   );

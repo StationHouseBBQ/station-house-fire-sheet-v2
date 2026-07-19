@@ -72,7 +72,22 @@ function seed(): CateringOrder[] {
 export class DemoCateringLifecycle implements CateringLifecycleRepository {
   constructor(private audit: AuditRepository, private orders: OrdersRepository, private leads: LeadsRepository) {}
 
-  private async all() { return loadCol(COL, seed); }
+  private async all(): Promise<CateringOrder[]> {
+    const rows = await loadCol(COL, seed);
+    // Backfill fields added after a record was first stored, so older demo
+    // data (or data from a prior build) can never crash a document/panel.
+    let dirty = false;
+    for (const o of rows as CateringOrder[]) {
+      if (!Array.isArray(o.staff)) { o.staff = []; dirty = true; }
+      if (!Array.isArray(o.equipment)) { o.equipment = []; dirty = true; }
+      if (o.fulfillment !== "pickup" && o.fulfillment !== "delivery") { o.fulfillment = "pickup"; dirty = true; }
+      if (typeof o.deliveryFeeCents !== "number") { o.deliveryFeeCents = 0; dirty = true; }
+      if (!o.kitchen) { o.kitchen = { handedOffAt: null, prepNotes: null, pullSheetConfirmed: false, ticketStatus: "none" }; dirty = true; }
+      if (!Array.isArray(o.timeline)) { o.timeline = []; dirty = true; }
+    }
+    if (dirty) await saveCol(COL, rows);
+    return rows;
+  }
 
   private async mutate(id: string, actor: string, action: string, fn: (o: CateringOrder) => void, timelineEntry?: (o: CateringOrder) => CateringOrder["timeline"][number]): Promise<CateringOrder> {
     const rows = await this.all();

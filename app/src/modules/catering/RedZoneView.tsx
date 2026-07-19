@@ -42,7 +42,7 @@ function lifecycleIssues(o: CateringOrder, today: string): Array<{ leadOrQuoteId
     issues.push("In kitchen — pull sheet not confirmed");
   }
   // Full Service event within 3 days missing staff.
-  if (o.event.serviceType === "Full Service" && o.staff.length === 0 && daysToEvent !== null && daysToEvent <= 3 && daysToEvent >= 0
+  if (o.event.serviceType === "Full Service" && (o.staff ?? []).length === 0 && daysToEvent !== null && daysToEvent <= 3 && daysToEvent >= 0
       && o.stage !== "completed" && o.stage !== "lost" && o.stage !== "cancelled") {
     issues.push("Full Service in ≤3 days — no staff assigned");
   }

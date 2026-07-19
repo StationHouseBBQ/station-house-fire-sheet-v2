@@ -261,7 +261,7 @@ function BeoDoc({ order }: { order: CateringOrder }) {
       </table>
 
       <h2 className="mb-2 mt-6 text-sm font-black uppercase tracking-widest text-black">Staffing</h2>
-      {order.staff.length ? (
+      {(order.staff ?? []).length ? (
         <table className="w-full border-collapse text-sm text-black">
           <thead>
             <tr className="border-b border-black text-left">
@@ -271,7 +271,7 @@ function BeoDoc({ order }: { order: CateringOrder }) {
             </tr>
           </thead>
           <tbody>
-            {order.staff.map(s => (
+            {(order.staff ?? []).map(s => (
               <tr key={s.id} className="border-b border-gray-300">
                 <td className="py-1.5 pr-2">{s.role || "—"}</td>
                 <td className="py-1.5 px-2">{s.name || "—"}</td>
@@ -283,9 +283,9 @@ function BeoDoc({ order }: { order: CateringOrder }) {
       ) : <p className="text-sm italic text-gray-500">No staffing assigned{ev.serviceType === "Full Service" ? " — required for Full Service." : "."}</p>}
 
       <h2 className="mb-2 mt-6 text-sm font-black uppercase tracking-widest text-black">Equipment &amp; rentals</h2>
-      {order.equipment.length ? (
+      {(order.equipment ?? []).length ? (
         <ul className="text-sm text-black">
-          {order.equipment.map(e => (
+          {(order.equipment ?? []).map(e => (
             <li key={e.id} className="flex items-center gap-2 border-b border-gray-300 py-1.5">
               <span className="inline-block h-4 w-4 border border-black" />
               <span className="font-bold">{e.qty}×</span> {e.name}
@@ -336,7 +336,7 @@ export function documentPlainText(order: CateringOrder, kind: DocumentKind): str
     push("");
     push(`  Subtotal: ${money(order.subtotalCents)}`);
     push(`  ${TAX_LABEL}: ${money(order.taxCents)}`);
-    if (order.fulfillment === "delivery" && order.deliveryFeeCents > 0) push(`  Delivery & setup: ${money(order.deliveryFeeCents)}`);
+    if (order.fulfillment === "delivery" && (order.deliveryFeeCents ?? 0) > 0) push(`  Delivery & setup: ${money(order.deliveryFeeCents)}`);
     push(`  TOTAL: ${money(order.totalCents)}`);
     if (order.depositCents > 0) push(`  Deposit to reserve: ${money(order.depositCents)}`);
     push("");
@@ -355,7 +355,7 @@ export function documentPlainText(order: CateringOrder, kind: DocumentKind): str
     push("");
     push(`  Subtotal: ${money(order.subtotalCents)}`);
     push(`  ${TAX_LABEL}: ${money(order.taxCents)}`);
-    if (order.fulfillment === "delivery" && order.deliveryFeeCents > 0) push(`  Delivery & setup: ${money(order.deliveryFeeCents)}`);
+    if (order.fulfillment === "delivery" && (order.deliveryFeeCents ?? 0) > 0) push(`  Delivery & setup: ${money(order.deliveryFeeCents)}`);
     push(`  TOTAL: ${money(order.totalCents)}`);
     push(`  Amount paid: ${money(order.paidCents)}`);
     push(`  BALANCE DUE: ${money(balance)}`);
@@ -378,11 +378,11 @@ export function documentPlainText(order: CateringOrder, kind: DocumentKind): str
     for (const l of order.lines) push(`  [ ] ${l.qty} × ${l.name}`);
     push("");
     push("STAFFING");
-    if (order.staff.length) for (const s of order.staff) push(`  ${s.role || "—"} — ${s.name || "—"} — call ${s.callTime || "—"}`);
+    if ((order.staff ?? []).length) for (const s of (order.staff ?? [])) push(`  ${s.role || "—"} — ${s.name || "—"} — call ${s.callTime || "—"}`);
     else push("  (none assigned)");
     push("");
     push("EQUIPMENT & RENTALS");
-    if (order.equipment.length) for (const e of order.equipment) push(`  [ ] ${e.qty}× ${e.name}`);
+    if ((order.equipment ?? []).length) for (const e of (order.equipment ?? [])) push(`  [ ] ${e.qty}× ${e.name}`);
     else push("  (none)");
     push("");
     push(`PREP NOTES: ${order.kitchen.prepNotes || order.notes || "—"}`);
