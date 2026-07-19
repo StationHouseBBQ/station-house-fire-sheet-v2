@@ -16,19 +16,19 @@ describe("Demo prep repository (Kitchen vertical slice)", () => {
     expect(s!.serviceDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
-  it("Thursday-only items (Cubans, Smash Burgers) appear only on Thursdays", async () => {
+  it("Thursday-only items (Cubans) appear only on Thursdays", async () => {
     vi.useFakeTimers();
     try {
       vi.setSystemTime(new Date("2026-07-16T14:00:00-04:00")); // Thursday ET
       let s = await createDemoDal().prep.getActiveSession();
       expect(s!.entries.some(e => /Cuban/.test(e.name))).toBe(true);
-      expect(s!.entries.some(e => /Smash Burger/.test(e.name))).toBe(true);
+      expect(s!.entries.some(e => /Cuban/.test(e.name))).toBe(true);
 
       const idb = await import("idb-keyval") as unknown as { __mem: Map<string, unknown> };
       idb.__mem.clear();
       vi.setSystemTime(new Date("2026-07-17T14:00:00-04:00")); // Friday ET
       s = await createDemoDal().prep.getActiveSession();
-      expect(s!.entries.some(e => /Cuban|Smash Burger/.test(e.name))).toBe(false);
+      expect(s!.entries.some(e => /Cuban/.test(e.name))).toBe(false);
     } finally {
       vi.useRealTimers();
     }

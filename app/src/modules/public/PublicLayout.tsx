@@ -50,7 +50,7 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           <p className="font-bold uppercase tracking-widest text-zinc-300">Station House BBQ</p>
           <p>{ADDRESS_LINE}</p>
           <p>{PHONE} · Instagram {INSTAGRAM}</p>
-          <p>Thursday: Cubans &amp; Smash Burgers · Fri–Sat: BBQ preorders</p>
+          <p>Thursday: Cubans · Fri–Sat: BBQ preorders</p>
           <p>{NONPROFIT}</p>
           <p className="pt-2 text-xs text-zinc-600">Demo preview — no live payments.</p>
         </div>

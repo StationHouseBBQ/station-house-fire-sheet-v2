@@ -3,7 +3,7 @@ import type { PrepSession } from "../types";
 /**
  * Seeded demo data mirroring the Manus prep-board shapes. Demo mode remains
  * the default until production data migration is approved by the owner.
- * Menu truths respected: Cubans / Brisket Smash Burgers are Thursday-only
+ * Menu truths respected: Cubans are Thursday-only
  * and therefore appear on prep only for Thursday service dates.
  */
 export function seedPrepSession(serviceDate: string, isThursday: boolean): PrepSession {
@@ -26,7 +26,6 @@ export function seedPrepSession(serviceDate: string, isThursday: boolean): PrepS
   const thursdayOnly = [
     { name: "Cuban Roast Pork (mojo)", category: "meats", unit: "pans", parQty: 3 },
     { name: "Cuban Bread Order", category: "misc", unit: "loaves", parQty: 30 },
-    { name: "Smash Burger Patties", category: "meats", unit: "each", parQty: 60 },
   ] as const;
   const rows = [...base, ...(isThursday ? thursdayOnly : [])];
   const now = new Date().toISOString();
