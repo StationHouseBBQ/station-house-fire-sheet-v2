@@ -342,8 +342,9 @@ export class DemoVenues implements VenuesRepository {
 }
 
 // ── Companies (collection shared with DemoPortalAdmin) ────────────────────
-const COMPANIES = "companies.v1";
-function seedCompanies(): Company[] {
+export const COMPANIES_KEY = "companies.v1";
+const COMPANIES = COMPANIES_KEY;
+export function seedCompanies(): Company[] {
   return [
     { id: "co-tampa-tech", name: "Tampa Tech Co.", industry: "Technology", contactIds: [], portalEnabled: true, notes: "Monthly office lunches via portal", updatedAt: nowIso() },
     { id: "co-bayfront", name: "Bayfront Realty", industry: "Real estate", contactIds: [], portalEnabled: true, notes: "Quarterly client events", updatedAt: nowIso() },

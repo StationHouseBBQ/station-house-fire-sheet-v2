@@ -1,3 +1,4 @@
+import { COMPANIES_KEY, seedCompanies } from "./catering";
 /**
  * Demo analogs of the server-side public flows. These enforce the SAME rules
  * the Supabase Edge Functions will: ET ordering windows, sold-out flags,
@@ -256,7 +257,7 @@ export function formatEventWindow(startHour: number): string {
 export class DemoPortal implements PortalRepository {
   constructor(private audit: AuditRepository, private portalAdmin: PortalAdminRepository) {}
   async companies(): Promise<Company[]> {
-    const rows = await loadCol<Company>("companies.v1", () => []);
+    const rows = await loadCol<Company>(COMPANIES_KEY, seedCompanies);
     return rows.filter(c => c.portalEnabled);
   }
   async ordersForCompany(companyId: string): Promise<PortalOrder[]> {
@@ -265,7 +266,7 @@ export class DemoPortal implements PortalRepository {
   async createRequest(companyId: string, eventDate: string, items: Array<{ name: string; qty: number; unitPriceCents: number }>, requestedBy: string): Promise<PortalOrder> {
     if (!items.length) throw new Error("Add at least one item");
     if (!eventDate) throw new Error("Event date required");
-    const companies = await loadCol<Company>("companies.v1", () => []);
+    const companies = await loadCol<Company>(COMPANIES_KEY, seedCompanies);
     const c = companies.find(x => x.id === companyId);
     if (!c) throw new Error("Company not found");
     if (!c.portalEnabled) throw new Error("Portal access is disabled for this company");

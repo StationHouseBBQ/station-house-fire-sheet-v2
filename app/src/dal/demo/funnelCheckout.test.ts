@@ -125,3 +125,14 @@ describe("Express Catering funnel → kitchen catering ticket", () => {
     })).rejects.toThrow();
   });
 });
+
+describe("Client Portal shares the company seed (no seeding-order dependency)", () => {
+  it("portal.companies() returns portal-enabled companies on a fresh load", async () => {
+    const dal = createDemoDal();
+    // Read the portal FIRST, before any admin/companies view has loaded.
+    const companies = await dal.portal.companies();
+    expect(companies.length).toBeGreaterThan(0);
+    expect(companies.every(c => c.portalEnabled)).toBe(true);
+    expect(companies.some(c => c.name === "Tampa Tech Co.")).toBe(true);
+  });
+});
