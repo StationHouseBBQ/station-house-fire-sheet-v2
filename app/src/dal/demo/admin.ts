@@ -65,7 +65,7 @@ function seedMenuItems(): MenuItem[] {
       description: needsPrice ? "⚠ Estimated price — owner to confirm" : (r.unit ? `Sold by ${r.unit}.` : ""),
       priceCents: r.priceCents ?? estimateCents(r.categoryId, r.name),
       active: r.active,
-      // Menu truth: Cubans & Smash Burgers are Thursday-only, no exceptions.
+      // Menu truth: Cubans are Thursday-only, no exceptions.
       thursdayOnly: r.thursdayOnly || /cuban|smash burger/i.test(r.name),
       sortOrder: (catSort.get(r.categoryId) ?? 0) * 1000 + r.sortOrder,
       updatedAt: nowIso(),
@@ -259,7 +259,7 @@ function seedEvents(): SpecialEvent[] {
     ({ id: uid(), slug, name, landingEnabled, orderingEnabled, eventDate, menuItemIds: [], notes, updatedAt: nowIso() });
   return [
     mk("fathers-day", "Father's Day Feast", false, false, "2026-06-21", "Past event — archive copy for next year"),
-    mk("cuban-thursday", "Cuban Thursday", true, true, null, "Weekly — every Thursday. Cubans & Brisket Smash Burgers only."),
+    mk("cuban-thursday", "Cuban Thursday", true, true, null, "Weekly — every Thursday. Cubans only."),
     mk("july4", "July 4th Cookout Packs", false, false, "2026-07-04", "Past event — sold out both pack tiers"),
     mk("football-sunday", "Football Sunday", true, false, null, "Landing live for fall; ordering opens with season"),
   ];
@@ -383,7 +383,7 @@ function seedPrepTemplates(): PrepTemplateRow[] {
   const thursdayOnly: Array<[string, PrepCategory, string, number]> = [
     ["Cuban Roast Pork (mojo)", "meats", "pans", 3],
     ["Cuban Bread Order", "misc", "loaves", 30],
-    ["Smash Burger Patties", "meats", "each", 60],
+    
   ];
   return [
     ...base.map(([name, category, unit, parQty]) => ({ id: uid(), name, category, unit, parQty, thursdayOnly: false, active: true })),

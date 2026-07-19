@@ -38,7 +38,7 @@ function seedPosts(): ContentPost[] {
     ({ id: uid(), date, platform, title, body, status, updatedAt: nowIso() });
   return [
     mk(addDays(t, -2), "instagram", "Brisket pull reel", "Slow pull on the 14-hr packer — post oak only. Sound on.", "posted"),
-    mk(addDays(t, 0), "facebook", "Cuban Thursday reminder", "Cubans & Brisket Smash Burgers, Thursday only. Preorder link in bio.", "scheduled"),
+    mk(addDays(t, 0), "facebook", "Cuban Thursday reminder", "Cubans, Thursday only. Preorder link in bio.", "scheduled"),
     mk(addDays(t, 1), "tiktok", "Weekend Pre-Order menu drop", "This weekend's Weekend Pre-Order menu reveal — oxtail is BACK.", "drafted"),
     mk(addDays(t, 3), "instagram", "Sampler tray carousel", "Walk-In Sampler: pulled pork, brisket, sausage, ribs, chicken quarters. $34.", "drafted"),
     mk(addDays(t, 5), "facebook", "Catering testimonial", "Photo set from the Bayfront Realty client dinner + review quote.", "idea"),

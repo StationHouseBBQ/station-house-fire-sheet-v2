@@ -181,10 +181,10 @@ export const MENU_ITEMS: Array<MenuItemSeed> = [
   // (names, prices, order). This category is the canonical Thursday channel;
   // the old retail_meat "Cuban Sandwich"/"Smash Burger" rows were folded in
   // here under their live names.
-  { name: "Thursday Sampler", categoryId: "thursday_only", unit: "each", sizeOptions: null, sortOrder: 1, active: true, priceCents: 5499, thursdayOnly: true },
+  { name: "Thursday Sampler", categoryId: "thursday_only", unit: "each", sizeOptions: null, sortOrder: 1, active: false, priceCents: 5499, thursdayOnly: true },
   { name: "Smokin Cuban", categoryId: "thursday_only", unit: "pc", sizeOptions: null, sortOrder: 10, active: true, priceCents: 1299, thursdayOnly: true },
   { name: "Brisket Cuban", categoryId: "thursday_only", unit: "pc", sizeOptions: null, sortOrder: 11, active: true, priceCents: 1799, thursdayOnly: true },
-  { name: "Brisket Tallow Smash Burger", categoryId: "thursday_only", unit: "pc", sizeOptions: null, sortOrder: 12, active: true, priceCents: 1299, thursdayOnly: true },
+  { name: "Brisket Tallow Smash Burger", categoryId: "thursday_only", unit: "pc", sizeOptions: null, sortOrder: 12, active: false, priceCents: 1299, thursdayOnly: true },
   { name: "Smoked Gouda Mac and Cheese (Small)", categoryId: "thursday_only", unit: "each", sizeOptions: null, sortOrder: 20, active: true, priceCents: 599, thursdayOnly: true },
   { name: "Smoked Gouda Mac and Cheese (Large)", categoryId: "thursday_only", unit: "each", sizeOptions: null, sortOrder: 21, active: true, priceCents: 1199, thursdayOnly: true },
   { name: "Brisket Baked Beans (Small)", categoryId: "thursday_only", unit: "each", sizeOptions: null, sortOrder: 22, active: true, priceCents: 599, thursdayOnly: true },

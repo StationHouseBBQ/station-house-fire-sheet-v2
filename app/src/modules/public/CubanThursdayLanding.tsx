@@ -85,7 +85,7 @@ export function CubanThursdayLanding() {
           <span className="bg-gradient-to-r from-lime-400 to-emerald-400 bg-clip-text text-transparent">Thursday</span>
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-sm text-zinc-400">
-          Smoked mojo pork Cubans pressed to order, plus brisket smash burgers off the flat top.
+          Smoked mojo pork Cubans pressed to order — award-winning, low & slow.
           Pre-order by Thursday 9am for same-day pickup — pickup starts 11 AM. When they're gone, they're gone.
         </p>
         <p className="mx-auto mt-3 max-w-xl text-xs font-bold uppercase tracking-widest text-zinc-500">

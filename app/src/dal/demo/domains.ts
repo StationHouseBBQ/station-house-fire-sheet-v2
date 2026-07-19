@@ -1,6 +1,6 @@
 /**
  * Demo repositories for orders/KDS/checklists/calendar/pit domains.
- * Seeds respect menu truths: Cubans & Smash Burgers Thursday-only;
+ * Seeds respect menu truths: Cubans Thursday-only;
  * Fri/Sat are BBQ preorder days; Walk-In Sampler = pulled pork, brisket,
  * sausage, ribs, chicken quarters only.
  */
@@ -32,7 +32,7 @@ export function mondayOfWeek(iso: string): string {
 // ── Orders seed ───────────────────────────────────────────────────────────
 const CUSTOMERS = ["Maria Santos", "James Walker", "Aisha Brooks", "Tampa Tech Co.", "Bayfront Realty", "Derek Owens", "Luis Ramirez", "Megan Ford", "Seminole Little League", "Ybor Social Club"];
 const BBQ_ITEMS: Array<[string, string]> = [["Pulled Pork", "lbs"], ["Brisket (sliced)", "lbs"], ["St. Louis Ribs", "racks"], ["Smoked Sausage", "each"], ["Chicken Quarters", "each"], ["Mac & Cheese", "pans"], ["Collard Greens", "pans"], ["Coleslaw", "quarts"], ["Banana Pudding", "each"]];
-const THU_ITEMS: Array<[string, string]> = [["Smokin Cuban", "each"], ["Brisket Tallow Smash Burger", "each"]];
+const THU_ITEMS: Array<[string, string]> = [["Smokin Cuban", "each"], ["Brisket Cuban", "each"]];
 
 function seedOrders(): OrderTicket[] {
   const monday = mondayOfWeek(todayEt());
@@ -328,7 +328,7 @@ export class DemoCalendar implements CalendarRepository {
     for (let d = 1; d <= days; d++) {
       const iso = `${yearMonth}-${String(d).padStart(2, "0")}`;
       const dow = weekdayOf(iso);
-      if (dow === 4) evts.push({ id: `cu-${iso}`, date: iso, title: "Cuban Thursday (Cubans & Smash Burgers)", kind: "cuban_thursday", orderId: null });
+      if (dow === 4) evts.push({ id: `cu-${iso}`, date: iso, title: "Cuban Thursday (Cubans)", kind: "cuban_thursday", orderId: null });
       if (dow === 5) evts.push({ id: `fd-${iso}`, date: iso, title: "Weekend Pre-Order · Friday pickup", kind: "fire_drop", orderId: null });
       if (dow === 6) evts.push({ id: `fs-${iso}`, date: iso, title: "Weekend Pre-Order · Saturday pickup", kind: "fire_drop", orderId: null });
     }
