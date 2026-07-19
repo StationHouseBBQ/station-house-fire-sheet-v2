@@ -5,6 +5,7 @@ import { useRole } from "../../app/RoleContext";
 import { useUndo } from "../shared/undo";
 import { formatCents, orderTotals } from "../../lib/money";
 import type { CateringOrder, CateringStage, CateringTimelineEntry, LeadPriority, QuoteLine } from "../../dal/types";
+import { CateringDocument, documentPlainText, openPrint, isInvoiceReal, type DocumentKind } from "./CateringDocuments";
 
 /**
  * Catering · Orders — the unified lifecycle cockpit. One screen carries a
@@ -192,6 +193,13 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
   const [payOpen, setPayOpen] = useState(false);
   const [kitchenOpen, setKitchenOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [docKind, setDocKind] = useState<DocumentKind | null>(null);
+
+  const { data: equipmentCatalog = [] } = useQuery({
+    queryKey: ["equipment", "catalog"],
+    queryFn: () => dal.equipment.list(),
+    staleTime: 5 * 60_000,
+  });
 
   const clc = dal.cateringLifecycle;
   const run = async (p: Promise<unknown>) => { setErr(null); try { await p; onChanged(); } catch (e) { setErr((e as Error).message); } };
@@ -221,6 +229,19 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
           </select>
         </label>
       </header>
+
+      {/* Documents */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Documents</span>
+        <button onClick={() => setDocKind("quote")} className="min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-3 text-sm font-semibold text-zinc-200">Quote</button>
+        <button onClick={() => setDocKind("invoice")} title={isInvoiceReal(order) ? "" : "Preview (DRAFT) — invoice not issued yet"}
+          className="min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-3 text-sm font-semibold text-zinc-200">
+          Invoice{!isInvoiceReal(order) && <span className="ml-1 text-[10px] font-bold uppercase text-amber-400">draft</span>}
+        </button>
+        <button onClick={() => setDocKind("beo")} disabled={order.lines.length === 0}
+          title={order.lines.length === 0 ? "Add items first" : ""}
+          className="min-h-[40px] rounded-lg border border-ink-700 bg-ink-800 px-3 text-sm font-semibold text-zinc-200 disabled:opacity-40">BEO / Pull Sheet</button>
+      </div>
 
       {err && <p role="alert" className="rounded-lg bg-red-950/60 px-4 py-2 text-sm text-red-400">{err}</p>}
 
@@ -256,6 +277,17 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
       <QuoteEditor order={order} onSave={lines => run(clc.updateLines(order.id, lines, actor))}
         onSetDeposit={cents => run(clc.setDeposit(order.id, cents, actor))} />
 
+      {/* Fulfillment */}
+      <FulfillmentPanel order={order}
+        onSave={(mode, feeCents) => run(clc.setFulfillment(order.id, mode, feeCents, actor))} />
+
+      {/* Staffing (BEO) */}
+      <StaffPanel order={order} onSave={rows => run(clc.setStaff(order.id, rows, actor))} />
+
+      {/* Equipment & rentals */}
+      <EquipmentPanel order={order} catalog={equipmentCatalog.map(e => e.name)}
+        onSave={rows => run(clc.setEquipment(order.id, rows, actor))} />
+
       {/* Payments summary */}
       <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-sm">
         <p className="font-bold uppercase tracking-wider text-zinc-400">Payments</p>
@@ -271,6 +303,12 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
           <p className="text-zinc-500">Handed off {shortTime(order.kitchen.handedOffAt)}</p>
           {order.kitchen.prepNotes && <p className="mt-1 text-zinc-300">Prep notes: {order.kitchen.prepNotes}</p>}
           <p className="mt-1 text-xs text-zinc-500">BEO + pull sheet generated with the items above.</p>
+          <label className="mt-2 flex items-center gap-2 text-sm font-semibold text-zinc-200">
+            <input type="checkbox" checked={order.kitchen.pullSheetConfirmed}
+              onChange={e => run(clc.confirmPullSheet(order.id, e.target.checked, actor))}
+              className="h-4 w-4 accent-fire" />
+            Pull sheet confirmed by kitchen
+          </label>
         </div>
       )}
 
@@ -286,6 +324,7 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
         <KitchenDialog onCancel={() => setKitchenOpen(false)}
           onSubmit={notes => { setKitchenOpen(false); run(clc.handToKitchen(order.id, notes || null, actor)); }} />
       )}
+      {docKind && <DocumentModal order={order} kind={docKind} onClose={() => setDocKind(null)} />}
     </div>
   );
 }
@@ -637,6 +676,161 @@ function KitchenDialog({ onSubmit, onCancel }: { onSubmit: (notes: string) => vo
           <button type="submit" className="rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Send to kitchen</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+// ── Fulfillment panel ───────────────────────────────────────────────────────
+function FulfillmentPanel({ order, onSave }: {
+  order: CateringOrder; onSave: (mode: "pickup" | "delivery", feeCents: number) => void;
+}) {
+  const [fee, setFee] = useState((order.deliveryFeeCents / 100).toFixed(2));
+  const isDelivery = order.fulfillment === "delivery";
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-sm">
+      <p className="mb-2 font-bold uppercase tracking-wider text-zinc-400">Fulfillment</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 rounded-lg border border-ink-700 bg-ink-800 p-1">
+          <button onClick={() => onSave("pickup", 0)}
+            className={`min-h-[36px] rounded px-3 text-sm font-bold ${!isDelivery ? "bg-fire text-white" : "text-zinc-400"}`}>Pickup</button>
+          <button onClick={() => { const c = dollarsToCents(fee) ?? 0; onSave("delivery", c); }}
+            className={`min-h-[36px] rounded px-3 text-sm font-bold ${isDelivery ? "bg-fire text-white" : "text-zinc-400"}`}>Delivery</button>
+        </div>
+        {isDelivery && (
+          <label className="flex items-center gap-1 text-xs font-semibold text-zinc-500">Delivery fee ($)
+            <input value={fee} onChange={e => setFee(e.target.value)} inputMode="decimal"
+              className="w-24 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100" />
+            <button onClick={() => { const c = dollarsToCents(fee); if (c != null) onSave("delivery", c); }}
+              className="rounded border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">Set</button>
+          </label>
+        )}
+      </div>
+      {isDelivery && <p className="mt-2 text-xs text-zinc-500">Delivery fee adds {formatCents(order.deliveryFeeCents)} to totals and every document.</p>}
+    </div>
+  );
+}
+
+// ── Staffing (BEO) panel ────────────────────────────────────────────────────
+interface StaffDraft { id: string; role: string; name: string; callTime: string }
+function StaffPanel({ order, onSave }: {
+  order: CateringOrder; onSave: (rows: Array<{ id?: string; role: string; name: string; callTime: string | null }>) => void;
+}) {
+  const toDraft = (): StaffDraft[] => order.staff.map(s => ({ id: s.id, role: s.role, name: s.name, callTime: s.callTime ?? "" }));
+  const [rows, setRows] = useState<StaffDraft[]>(toDraft);
+  const dirty = JSON.stringify(rows) !== JSON.stringify(toDraft());
+  const fullService = order.event.serviceType === "Full Service";
+
+  const update = (id: string, patch: Partial<StaffDraft>) => setRows(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r));
+  const add = () => setRows(rs => [...rs, { id: `new-${Date.now()}`, role: "", name: "", callTime: "" }]);
+  const remove = (id: string) => setRows(rs => rs.filter(r => r.id !== id));
+
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <p className="font-bold uppercase tracking-wider text-zinc-400">Staffing (BEO)</p>
+        <button onClick={add} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">+ Add role</button>
+      </div>
+      {fullService && <p className="mb-2 text-xs text-amber-400">Full Service event — assign an event lead + servers.</p>}
+      {rows.length === 0 && <p className="text-sm text-zinc-500">No staff assigned yet.</p>}
+      <ul className="space-y-2">
+        {rows.map(r => (
+          <li key={r.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-ink-800 bg-ink-900 p-2">
+            <input value={r.role} onChange={e => update(r.id, { role: e.target.value })} placeholder="Role (Event lead)"
+              aria-label="Staff role" className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100" />
+            <input value={r.name} onChange={e => update(r.id, { name: e.target.value })} placeholder="Name"
+              aria-label="Staff name" className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100" />
+            <input value={r.callTime} onChange={e => update(r.id, { callTime: e.target.value })} placeholder="3:30 PM"
+              aria-label="Call time" className="w-24 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100" />
+            <button onClick={() => remove(r.id)} aria-label="Remove staff row"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded text-zinc-500 hover:text-red-400">✕</button>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex justify-end">
+        <button disabled={!dirty} onClick={() => onSave(rows)}
+          className="min-h-[40px] rounded-lg bg-fire px-4 text-sm font-bold text-white disabled:opacity-40">Save staffing</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Equipment & rentals panel ───────────────────────────────────────────────
+interface EquipDraft { id: string; name: string; qty: number }
+function EquipmentPanel({ order, catalog, onSave }: {
+  order: CateringOrder; catalog: string[]; onSave: (rows: Array<{ id?: string; name: string; qty: number }>) => void;
+}) {
+  const toDraft = (): EquipDraft[] => order.equipment.map(e => ({ id: e.id, name: e.name, qty: e.qty }));
+  const [rows, setRows] = useState<EquipDraft[]>(toDraft);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const dirty = JSON.stringify(rows) !== JSON.stringify(toDraft());
+
+  const update = (id: string, patch: Partial<EquipDraft>) => setRows(rs => rs.map(r => r.id === id ? { ...r, ...patch } : r));
+  const add = (name = "") => setRows(rs => [...rs, { id: `new-${Date.now()}-${rs.length}`, name, qty: 1 }]);
+  const remove = (id: string) => setRows(rs => rs.filter(r => r.id !== id));
+  const quickAdd = (name: string) => { if (!rows.some(r => r.name === name)) add(name); };
+
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="font-bold uppercase tracking-wider text-zinc-400">Equipment &amp; rentals</p>
+        <div className="flex gap-2">
+          <button onClick={() => setShowCatalog(v => !v)} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">Suggest from catalog</button>
+          <button onClick={() => add()} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">+ Add</button>
+        </div>
+      </div>
+      {showCatalog && (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {catalog.length === 0 && <span className="text-xs text-zinc-500">No catalog items.</span>}
+          {catalog.map(name => (
+            <button key={name} onClick={() => quickAdd(name)}
+              className="rounded-full border border-ink-700 bg-ink-800 px-2.5 py-1 text-xs font-semibold text-zinc-300 hover:border-fire/50">+ {name}</button>
+          ))}
+        </div>
+      )}
+      {rows.length === 0 && <p className="text-sm text-zinc-500">No equipment listed.</p>}
+      <ul className="space-y-2">
+        {rows.map(r => (
+          <li key={r.id} className="flex items-center gap-2 rounded-lg border border-ink-800 bg-ink-900 p-2">
+            <input value={r.name} onChange={e => update(r.id, { name: e.target.value })} placeholder="Chafers (full size)"
+              aria-label="Equipment name" className="min-w-0 flex-1 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100" />
+            <div className="flex items-center gap-1">
+              <button onClick={() => update(r.id, { qty: Math.max(1, r.qty - 1) })} className="grid h-8 w-8 place-items-center rounded bg-ink-800 text-zinc-300" aria-label="Decrease qty">−</button>
+              <span className="w-7 text-center text-sm font-bold text-zinc-100">{r.qty}</span>
+              <button onClick={() => update(r.id, { qty: r.qty + 1 })} className="grid h-8 w-8 place-items-center rounded bg-ink-800 text-zinc-300" aria-label="Increase qty">+</button>
+            </div>
+            <button onClick={() => remove(r.id)} aria-label="Remove equipment row"
+              className="grid h-8 w-8 shrink-0 place-items-center rounded text-zinc-500 hover:text-red-400">✕</button>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex justify-end">
+        <button disabled={!dirty} onClick={() => onSave(rows)}
+          className="min-h-[40px] rounded-lg bg-fire px-4 text-sm font-bold text-white disabled:opacity-40">Save equipment</button>
+      </div>
+    </div>
+  );
+}
+
+// ── Print-ready document modal ──────────────────────────────────────────────
+function DocumentModal({ order, kind, onClose }: { order: CateringOrder; kind: DocumentKind; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(documentPlainText(order, kind)); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { /* clipboard unavailable */ }
+  };
+  return (
+    <div role="dialog" aria-modal="true" aria-label={`${kind} document`}
+      className="fixed inset-0 z-[9000] overflow-y-auto bg-white">
+      {/* Toolbar — hidden when printing */}
+      <div className="no-print sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-gray-300 bg-white px-4 py-3">
+        <p className="text-sm font-bold uppercase tracking-wider text-gray-700">{kind === "beo" ? "BEO / Pull Sheet" : kind} · {order.ref}</p>
+        <div className="flex gap-2">
+          <button onClick={openPrint} className="min-h-[40px] rounded-lg bg-black px-4 text-sm font-bold text-white">🖨 Print</button>
+          <button onClick={copy} className="min-h-[40px] rounded-lg border border-gray-400 px-4 text-sm font-bold text-gray-800">{copied ? "✓ Copied" : "📋 Copy for email"}</button>
+          <button onClick={onClose} className="min-h-[40px] rounded-lg border border-gray-400 px-4 text-sm font-bold text-gray-800">Close</button>
+        </div>
+      </div>
+      <CateringDocument order={order} kind={kind} />
     </div>
   );
 }

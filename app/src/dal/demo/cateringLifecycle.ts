@@ -11,7 +11,7 @@ import { todayEt } from "./domains";
 import { orderTotals } from "../../lib/money";
 import type {
   AuditRepository, CateringEventDetails, CateringOrder, CateringStage,
-  CateringLifecycleRepository, LeadPriority, OrdersRepository, QuoteLine,
+  CateringLifecycleRepository, LeadPriority, LeadsRepository, OrdersRepository, QuoteLine,
 } from "../types";
 
 const COL = "cateringOrders.v1";
@@ -25,7 +25,9 @@ function recompute(o: CateringOrder): void {
   const t = orderTotals(o.lines.map(l => ({ unitPriceCents: l.unitPriceCents, qty: l.qty })));
   o.subtotalCents = t.subtotalCents;
   o.taxCents = t.taxCents;
-  o.totalCents = t.totalCents;
+  // Delivery fee is a flat pass-through added after tax (not taxed as food).
+  const fee = o.fulfillment === "delivery" ? o.deliveryFeeCents : 0;
+  o.totalCents = t.totalCents + fee;
 }
 
 const STAGE_LABEL: Record<CateringStage, string> = {
@@ -46,6 +48,7 @@ function seed(): CateringOrder[] {
       id: uid(), ref, stage, priority, customer, companyName: company, source,
       event: { eventDate, eventTime: "5:00 PM", guests, serviceType, venueId: null, address: "Tampa, FL", contactName: customer, phone: "813-555-0100", email: `${customer.split(" ")[0].toLowerCase()}@example.com` },
       lines: qLines, subtotalCents: 0, taxCents: 0, depositCents: 0, paidCents: 0, totalCents: 0,
+      staff: [], equipment: [], fulfillment: "pickup", deliveryFeeCents: 0,
       quotePublicToken: uid(), quoteSentAt: null, acceptedAt: null, invoicedAt: null, paidAt: null,
       kitchen: { handedOffAt: null, prepNotes: null, pullSheetConfirmed: false, ticketStatus: "none" },
       timeline: [{ id: uid(), at: now, actor: "demo-seed", kind: "stage", toStage: stage, body: `Order created at stage “${STAGE_LABEL[stage]}”.` }],
@@ -67,7 +70,7 @@ function seed(): CateringOrder[] {
 }
 
 export class DemoCateringLifecycle implements CateringLifecycleRepository {
-  constructor(private audit: AuditRepository, private orders: OrdersRepository) {}
+  constructor(private audit: AuditRepository, private orders: OrdersRepository, private leads: LeadsRepository) {}
 
   private async all() { return loadCol(COL, seed); }
 
@@ -109,7 +112,9 @@ export class DemoCateringLifecycle implements CateringLifecycleRepository {
       id: uid(), ref: refFor(ev.eventDate), stage: input.lines.length ? "quoting" : "inquiry",
       priority: "normal", customer: input.customer.trim(), companyName: input.companyName, source: input.source,
       event: ev, lines: input.lines.map(l => ({ id: uid(), ...l })), subtotalCents: 0, taxCents: 0,
-      depositCents: 0, paidCents: 0, totalCents: 0, quotePublicToken: uid(),
+      depositCents: 0, paidCents: 0, totalCents: 0,
+      staff: [], equipment: [], fulfillment: "pickup", deliveryFeeCents: 0,
+      quotePublicToken: uid(),
       quoteSentAt: null, acceptedAt: null, invoicedAt: null, paidAt: null,
       kitchen: { handedOffAt: null, prepNotes: null, pullSheetConfirmed: false, ticketStatus: "none" },
       timeline: [this.entry(actor, "stage", leadId ? "Converted from pipeline lead." : "Catering order created.", input.lines.length ? "quoting" : "inquiry")],
@@ -145,6 +150,57 @@ export class DemoCateringLifecycle implements CateringLifecycleRepository {
   }
   setPriority(id: string, priority: LeadPriority, actor: string) {
     return this.mutate(id, actor, "catering.priority", o => { o.priority = priority; });
+  }
+  setStaff(id: string, staff: Array<{ id?: string; role: string; name: string; callTime: string | null }>, actor: string) {
+    const clean = staff
+      .map(r => ({ id: r.id ?? uid(), role: r.role.trim(), name: r.name.trim(), callTime: (r.callTime ?? "").trim() || null }))
+      .filter(r => r.role || r.name);
+    return this.mutate(id, actor, "catering.staff", o => { o.staff = clean; },
+      () => this.entry(actor, "note", `Staffing plan updated (${clean.length} on the BEO).`));
+  }
+  setEquipment(id: string, equipment: Array<{ id?: string; name: string; qty: number }>, actor: string) {
+    const clean = equipment
+      .map(r => ({ id: r.id ?? uid(), name: r.name.trim(), qty: Math.max(1, Math.round(Number(r.qty) || 1)) }))
+      .filter(r => r.name);
+    return this.mutate(id, actor, "catering.equipment", o => { o.equipment = clean; },
+      () => this.entry(actor, "note", `Equipment & rentals updated (${clean.length} item${clean.length === 1 ? "" : "s"}).`));
+  }
+  setFulfillment(id: string, fulfillment: "pickup" | "delivery", deliveryFeeCents: number, actor: string) {
+    if (!Number.isInteger(deliveryFeeCents) || deliveryFeeCents < 0) throw new Error("Delivery fee must be a non-negative amount");
+    return this.mutate(id, actor, "catering.fulfillment", o => {
+      o.fulfillment = fulfillment;
+      o.deliveryFeeCents = fulfillment === "delivery" ? deliveryFeeCents : 0;
+      recompute(o);
+    }, o => this.entry(actor, "note", fulfillment === "delivery"
+      ? `Set to delivery (+${(o.deliveryFeeCents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })} fee).`
+      : "Set to customer pickup (no delivery fee)."));
+  }
+  confirmPullSheet(id: string, confirmed: boolean, actor: string) {
+    return this.mutate(id, actor, "catering.pullSheet", o => { o.kitchen.pullSheetConfirmed = confirmed; },
+      () => this.entry(actor, "system", confirmed ? "Kitchen confirmed the pull sheet." : "Pull-sheet confirmation cleared."));
+  }
+  async convertLead(leadId: string, actor: string): Promise<CateringOrder> {
+    const leads = await this.leads.list();
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) throw new Error("Lead not found");
+    const order = await this.createFromLead(lead.id, {
+      customer: lead.company ? `${lead.name}` : lead.name,
+      companyName: lead.company,
+      source: lead.source,
+      event: {
+        eventDate: lead.eventDate ?? null,
+        guests: lead.guests ?? null,
+        serviceType: lead.serviceType ?? null,
+        address: lead.eventAddress ?? null,
+        contactName: lead.name,
+        phone: lead.phone,
+        email: lead.email,
+      },
+      lines: [],
+    }, actor);
+    // Move the lead to booked so the pipeline and cockpit stay consistent.
+    await this.leads.updateStage(lead.id, "booked", actor);
+    return order;
   }
   logComm(id: string, kind: "note" | "email" | "call" | "text", body: string, actor: string) {
     if (!body.trim()) throw new Error("Message body required");

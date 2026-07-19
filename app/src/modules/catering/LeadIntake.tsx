@@ -19,12 +19,17 @@ export function LeadIntake() {
   const { actor } = useRole();
   const dal = getDal();
   const [done, setDone] = useState<Lead | null>(null);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => { captureAttribution(); }, []);
 
   const createMut = useMutation({
-    mutationFn: (input: Parameters<typeof dal.leads.create>[0]) => dal.leads.create(input, actor),
-    onSuccess: lead => setDone(lead),
+    mutationFn: async ({ input, startNow }: { input: Parameters<typeof dal.leads.create>[0]; startNow: boolean }) => {
+      const lead = await dal.leads.create(input, actor);
+      if (startNow) { await dal.cateringLifecycle.convertLead(lead.id, actor); }
+      return { lead, startNow };
+    },
+    onSuccess: ({ lead, startNow }) => { setDone(lead); setStarted(startNow); },
   });
 
   if (done) {
@@ -32,14 +37,25 @@ export function LeadIntake() {
       <div className="mx-auto max-w-xl pt-6 pb-12">
         <div className="rounded-2xl border border-green-800/50 bg-green-950/10 p-8 text-center">
           <p className="text-3xl">🎉</p>
-          <h1 className="mt-2 text-xl font-black text-zinc-100">Lead captured</h1>
+          <h1 className="mt-2 text-xl font-black text-zinc-100">{started ? "Lead captured & order started" : "Lead captured"}</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            <span className="font-semibold text-zinc-200">{done.name}</span> was added to the pipeline as a new lead.
+            <span className="font-semibold text-zinc-200">{done.name}</span>{" "}
+            {started
+              ? "was added and a catering order was started — find it in the Director Cockpit."
+              : "was added to the pipeline as a new lead."}
           </p>
-          <button onClick={() => { setDone(null); createMut.reset(); }}
-            className="mt-6 min-h-[44px] rounded-lg bg-fire px-6 py-2.5 text-sm font-bold text-white">
-            + Add another lead
-          </button>
+          <div className="mt-6 flex flex-col items-center gap-2">
+            {started && (
+              <a href="#/catering/cockpit"
+                className="min-h-[44px] rounded-lg bg-fire px-6 py-2.5 text-sm font-bold text-white">
+                Open Director Cockpit
+              </a>
+            )}
+            <button onClick={() => { setDone(null); setStarted(false); createMut.reset(); }}
+              className={`min-h-[44px] rounded-lg px-6 py-2.5 text-sm font-bold ${started ? "border border-ink-700 text-zinc-300" : "bg-fire text-white"}`}>
+              + Add another lead
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -52,13 +68,13 @@ export function LeadIntake() {
         <p className="text-sm text-zinc-500">New catering inquiry — attribution is captured automatically</p>
       </header>
       <IntakeForm busy={createMut.isPending} error={createMut.error?.message ?? null}
-        onSubmit={i => createMut.mutate(i)} />
+        onSubmit={(i, startNow) => createMut.mutate({ input: i, startNow })} />
     </div>
   );
 }
 
 function IntakeForm({ onSubmit, busy, error }: {
-  onSubmit: (input: Parameters<ReturnType<typeof getDal>["leads"]["create"]>[0]) => void;
+  onSubmit: (input: Parameters<ReturnType<typeof getDal>["leads"]["create"]>[0], startNow: boolean) => void;
   busy: boolean; error: string | null;
 }) {
   const [name, setName] = useState("");
@@ -71,6 +87,7 @@ function IntakeForm({ onSubmit, busy, error }: {
   const [budget, setBudget] = useState("");
   const [notes, setNotes] = useState("");
   const [source, setSource] = useState<string>("google");
+  const [startNow, setStartNow] = useState(false);
 
   const submit = () => {
     const attr = getAttribution();
@@ -96,7 +113,7 @@ function IntakeForm({ onSubmit, busy, error }: {
         referrer: attr?.referrer ?? null,
         landingPage: attr?.landing_page ?? null,
       },
-    });
+    }, startNow);
   };
 
   return (
@@ -151,9 +168,14 @@ function IntakeForm({ onSubmit, busy, error }: {
           className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
       </Field>
 
+      <label className="mt-4 flex items-center gap-2 text-sm font-semibold text-zinc-300">
+        <input type="checkbox" checked={startNow} onChange={e => setStartNow(e.target.checked)} className="h-4 w-4 accent-fire" />
+        Start catering order now (send straight to the Cockpit)
+      </label>
+
       <button type="submit" disabled={busy}
         className="mt-5 w-full rounded-lg bg-fire px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
-        {busy ? "Saving…" : "Create lead"}
+        {busy ? "Saving…" : startNow ? "Create lead & start order" : "Create lead"}
       </button>
     </form>
   );

@@ -109,4 +109,89 @@ describe("Demo catering lifecycle (quote → invoice → kitchen)", () => {
     const declined = await dal.cateringLifecycle.respondByToken(sent.quotePublicToken, "declined", "Priya");
     expect(declined.stage).toBe("lost");
   });
+
+  it("setStaff persists rows and appends a timeline entry", async () => {
+    const { dal, o } = await freshOrder();
+    const before = o.timeline.length;
+    const updated = await dal.cateringLifecycle.setStaff(o.id, [
+      { role: "Event lead", name: "Marcus", callTime: "3:30 PM" },
+      { role: "Server", name: "Dana", callTime: "4:00 PM" },
+    ], ACTOR);
+    expect(updated.staff).toHaveLength(2);
+    expect(updated.staff[0]).toMatchObject({ role: "Event lead", name: "Marcus", callTime: "3:30 PM" });
+    expect(updated.staff[0].id).toBeTruthy();
+    expect(updated.timeline.length).toBe(before + 1);
+    // Persisted across reload.
+    const reloaded = await dal.cateringLifecycle.get(o.id);
+    expect(reloaded?.staff).toHaveLength(2);
+  });
+
+  it("setEquipment persists rows and appends a timeline entry", async () => {
+    const { dal, o } = await freshOrder();
+    const before = o.timeline.length;
+    const updated = await dal.cateringLifecycle.setEquipment(o.id, [
+      { name: "Chafers (full size)", qty: 4 },
+      { name: "6ft folding tables", qty: 3 },
+    ], ACTOR);
+    expect(updated.equipment).toHaveLength(2);
+    expect(updated.equipment[0]).toMatchObject({ name: "Chafers (full size)", qty: 4 });
+    expect(updated.timeline.length).toBe(before + 1);
+    const reloaded = await dal.cateringLifecycle.get(o.id);
+    expect(reloaded?.equipment[1]).toMatchObject({ name: "6ft folding tables", qty: 3 });
+  });
+
+  it("setFulfillment delivery sets the fee and adds it to the total; pickup clears it", async () => {
+    const { dal, o } = await freshOrder();
+    // Baseline (pickup, 1 × 132900): subtotal 132900, tax 9968, total 142868.
+    expect(o.fulfillment).toBe("pickup");
+    expect(o.deliveryFeeCents).toBe(0);
+    expect(o.subtotalCents).toBe(132900);
+    expect(o.taxCents).toBe(9968);
+    expect(o.totalCents).toBe(142868);
+
+    const delivery = await dal.cateringLifecycle.setFulfillment(o.id, "delivery", 15000, ACTOR);
+    expect(delivery.fulfillment).toBe("delivery");
+    expect(delivery.deliveryFeeCents).toBe(15000);
+    // Subtotal/tax unchanged; total gains the flat delivery fee.
+    expect(delivery.subtotalCents).toBe(132900);
+    expect(delivery.taxCents).toBe(9968);
+    expect(delivery.totalCents).toBe(157868);
+
+    const pickup = await dal.cateringLifecycle.setFulfillment(o.id, "pickup", 15000, ACTOR);
+    expect(pickup.fulfillment).toBe("pickup");
+    expect(pickup.deliveryFeeCents).toBe(0);
+    expect(pickup.totalCents).toBe(142868);
+  });
+
+  it("confirmPullSheet toggles the kitchen flag", async () => {
+    const { dal, o } = await freshOrder();
+    expect(o.kitchen.pullSheetConfirmed).toBe(false);
+    const on = await dal.cateringLifecycle.confirmPullSheet(o.id, true, ACTOR);
+    expect(on.kitchen.pullSheetConfirmed).toBe(true);
+    const off = await dal.cateringLifecycle.confirmPullSheet(o.id, false, ACTOR);
+    expect(off.kitchen.pullSheetConfirmed).toBe(false);
+  });
+
+  it("convertLead creates an order from a seeded lead and books the lead", async () => {
+    const dal = createDemoDal();
+    const leads = await dal.leads.list();
+    expect(leads.length).toBeGreaterThan(0);
+    const lead = leads[0];
+
+    const order = await dal.cateringLifecycle.convertLead(lead.id, ACTOR);
+    // Order carries the lead's identity + details.
+    expect(order.customer).toContain(lead.name);
+    expect(order.event.guests).toBe(lead.guests ?? null);
+    expect(order.source).toBe(lead.source);
+    // New orders with no lines start at inquiry.
+    expect(order.stage).toBe("inquiry");
+
+    // The order is now listed.
+    const orders = await dal.cateringLifecycle.list();
+    expect(orders.some(o => o.id === order.id)).toBe(true);
+
+    // The lead moved to booked.
+    const after = (await dal.leads.list()).find(l => l.id === lead.id);
+    expect(after?.stage).toBe("booked");
+  });
 });

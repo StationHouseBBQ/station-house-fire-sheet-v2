@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDal } from "../../dal";
-import type { Lead } from "../../dal/types";
+import type { CateringOrder, CateringStage, Lead } from "../../dal/types";
 import { etParts } from "../../lib/time";
 import { formatCents } from "../../lib/money";
 
@@ -24,7 +24,22 @@ function fmtDate(iso: string | null): string {
 
 type Pill =
   | { kind: "event"; id: string; date: string; title: string }
-  | { kind: "lead"; id: string; date: string; title: string; lead: Lead };
+  | { kind: "lead"; id: string; date: string; title: string; lead: Lead }
+  | { kind: "order"; id: string; date: string; title: string; order: CateringOrder };
+
+const ORDER_STAGE_CLS: Record<CateringStage, string> = {
+  inquiry: "border-zinc-500/40 bg-zinc-500/20 text-zinc-300",
+  quoting: "border-sky-500/40 bg-sky-500/20 text-sky-300",
+  quote_sent: "border-amber-500/40 bg-amber-500/20 text-amber-300",
+  accepted: "border-emerald-500/40 bg-emerald-500/20 text-emerald-300",
+  invoiced: "border-indigo-500/40 bg-indigo-500/20 text-indigo-300",
+  paid: "border-green-500/40 bg-green-500/20 text-green-300",
+  in_kitchen: "border-fire/50 bg-fire/20 text-fire-light",
+  ready: "border-teal-500/40 bg-teal-500/20 text-teal-300",
+  completed: "border-zinc-600/40 bg-zinc-600/20 text-zinc-400",
+  lost: "border-red-500/40 bg-red-500/20 text-red-300",
+  cancelled: "border-zinc-700/40 bg-zinc-800 text-zinc-500",
+};
 
 export function SalesCalendarView() {
   const dal = getDal();
@@ -44,6 +59,10 @@ export function SalesCalendarView() {
     queryKey: ["leads", "list"],
     queryFn: () => dal.leads.list(),
   });
+  const { data: orders = [], isLoading: loadingOrders } = useQuery({
+    queryKey: ["cateringLifecycle", "list"],
+    queryFn: () => dal.cateringLifecycle.list(),
+  });
 
   const pillsByDate = useMemo(() => {
     const m = new Map<string, Pill[]>();
@@ -58,8 +77,13 @@ export function SalesCalendarView() {
         push({ kind: "lead", id: l.id, date: l.eventDate, title: `${l.name} · ${l.eventType}`, lead: l });
       }
     }
+    for (const o of orders) {
+      if (o.event.eventDate && o.event.eventDate.startsWith(yearMonth)) {
+        push({ kind: "order", id: o.id, date: o.event.eventDate, title: o.customer, order: o });
+      }
+    }
     return m;
-  }, [events, leads, yearMonth]);
+  }, [events, leads, orders, yearMonth]);
 
   const selectedLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) ?? null : null;
 
@@ -80,7 +104,7 @@ export function SalesCalendarView() {
   ];
   const monthTitle = new Date(cursor.year, cursor.month - 1, 1)
     .toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const isLoading = loadingEvents || loadingLeads;
+  const isLoading = loadingEvents || loadingLeads || loadingOrders;
 
   return (
     <div className="mx-auto max-w-6xl pt-6 pb-12">
@@ -101,6 +125,7 @@ export function SalesCalendarView() {
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-zinc-400">
         <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-purple-400" /> Catering event</span>
         <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-green-400" /> Booked lead (tap for details)</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rounded-full bg-amber-400" /> Catering order (colored by stage · opens Cockpit)</span>
       </div>
 
       {selectedLead && (
@@ -152,6 +177,13 @@ export function SalesCalendarView() {
                               className="w-full truncate rounded border border-green-500/30 bg-green-500/20 px-1.5 py-0.5 text-left text-[11px] leading-tight text-green-300">
                               {p.title}
                             </button>
+                          </li>
+                        ) : p.kind === "order" ? (
+                          <li key={`o-${p.id}`}>
+                            <a href="#/catering/cockpit" title={`${p.title} · ${p.order.stage}`}
+                              className={`block w-full truncate rounded border px-1.5 py-0.5 text-left text-[11px] leading-tight ${ORDER_STAGE_CLS[p.order.stage]}`}>
+                              {p.title}
+                            </a>
                           </li>
                         ) : (
                           <li key={`e-${p.id}`} title={p.title}

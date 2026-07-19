@@ -493,6 +493,13 @@ export interface CateringOrder {
     pullSheetConfirmed: boolean;
     ticketStatus: "none" | "queued" | "in_production" | "ready" | "picked_up";
   };
+  /** Event-day staffing plan (BEO): who works, in what role, when they arrive. */
+  staff: Array<{ id: string; role: string; name: string; callTime: string | null }>;
+  /** Equipment & rentals pulled for the event (chafers, tables, linens, ...). */
+  equipment: Array<{ id: string; name: string; qty: number }>;
+  /** Pickup vs delivery; a delivery adds a flat fee to totals/documents. */
+  fulfillment: "pickup" | "delivery";
+  deliveryFeeCents: number;
   timeline: CateringTimelineEntry[];
   notes: string | null;
   createdAt: string;
@@ -512,6 +519,16 @@ export interface CateringLifecycleRepository {
   setDeposit(id: string, depositCents: number, actor: string): Promise<CateringOrder>;
   setStage(id: string, stage: CateringStage, actor: string): Promise<CateringOrder>;
   setPriority(id: string, priority: LeadPriority, actor: string): Promise<CateringOrder>;
+  /** BEO staffing rows (role/name/call time). Replaces the full list. */
+  setStaff(id: string, staff: Array<{ id?: string; role: string; name: string; callTime: string | null }>, actor: string): Promise<CateringOrder>;
+  /** Equipment & rentals rows (name/qty). Replaces the full list. */
+  setEquipment(id: string, equipment: Array<{ id?: string; name: string; qty: number }>, actor: string): Promise<CateringOrder>;
+  /** Pickup/delivery + delivery fee (fee forced to 0 for pickup). */
+  setFulfillment(id: string, fulfillment: "pickup" | "delivery", deliveryFeeCents: number, actor: string): Promise<CateringOrder>;
+  /** Kitchen pull-sheet sign-off toggle. */
+  confirmPullSheet(id: string, confirmed: boolean, actor: string): Promise<CateringOrder>;
+  /** Convert a pipeline lead into a catering order, carrying its details, and mark the lead booked. */
+  convertLead(leadId: string, actor: string): Promise<CateringOrder>;
   /** Communication + notes on the shared timeline. */
   logComm(id: string, kind: "note" | "email" | "call" | "text", body: string, actor: string): Promise<CateringOrder>;
   /** One-click transitions with all side effects + timeline entries. */

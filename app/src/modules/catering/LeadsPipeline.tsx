@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { Lead, LeadPriority, LeadStage } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
+import { useUndo } from "../shared/undo";
 import { formatCents } from "../../lib/money";
 
 /**
@@ -46,6 +47,7 @@ export function LeadsPipeline() {
   const { actor } = useRole();
   const dal = getDal();
   const qc = useQueryClient();
+  const undo = useUndo();
   const [sync, setSync] = useState<Sync>("idle");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -72,6 +74,18 @@ export function LeadsPipeline() {
   const activityMut = useMutation({
     mutationFn: ({ id, kind, body }: { id: string; kind: string; body: string }) => withSync(dal.leads.logActivity(id, kind, body, actor)),
     onSuccess: invalidate,
+  });
+  const convertMut = useMutation({
+    mutationFn: (id: string) => withSync(dal.cateringLifecycle.convertLead(id, actor)),
+    onSuccess: (order, id) => {
+      qc.invalidateQueries({ queryKey: ["leads", "list"] });
+      qc.invalidateQueries({ queryKey: ["cateringLifecycle"] });
+      setSelectedId(null);
+      undo.offer(`${order.customer} started in the Cockpit — lead moved to Booked`, async () => {
+        await dal.leads.updateStage(id, "quote_sent", actor);
+        qc.invalidateQueries({ queryKey: ["leads", "list"] });
+      });
+    },
   });
 
   const byStage = useMemo(() => {
@@ -148,10 +162,11 @@ export function LeadsPipeline() {
       </div>
 
       {selected && (
-        <LeadDrawer lead={selected} busy={activityMut.isPending}
+        <LeadDrawer lead={selected} busy={activityMut.isPending} converting={convertMut.isPending}
           onClose={() => setSelectedId(null)}
           onStage={stage => stageMut.mutate({ id: selected.id, stage })}
           onPriority={priority => priorityMut.mutate({ id: selected.id, priority })}
+          onConvert={() => convertMut.mutate(selected.id)}
           onLog={(kind, body) => activityMut.mutate({ id: selected.id, kind, body })} />
       )}
     </div>
@@ -168,10 +183,10 @@ function SyncBadge({ sync }: { sync: Sync }) {
   return <span role="status" className={`rounded-lg border bg-ink-900 px-3 py-2 text-xs font-semibold ${meta[sync].cls}`}>{meta[sync].label}</span>;
 }
 
-function LeadDrawer({ lead, busy, onClose, onStage, onPriority, onLog }: {
-  lead: Lead; busy: boolean; onClose: () => void;
+function LeadDrawer({ lead, busy, converting, onClose, onStage, onPriority, onConvert, onLog }: {
+  lead: Lead; busy: boolean; converting: boolean; onClose: () => void;
   onStage: (s: LeadStage) => void; onPriority: (p: LeadPriority) => void;
-  onLog: (kind: string, body: string) => void;
+  onConvert: () => void; onLog: (kind: string, body: string) => void;
 }) {
   const [kind, setKind] = useState<string>("call");
   const [body, setBody] = useState("");
@@ -211,6 +226,12 @@ function LeadDrawer({ lead, busy, onClose, onStage, onPriority, onLog }: {
             </select>
           </label>
         </div>
+
+        <button onClick={onConvert} disabled={converting}
+          className="mt-3 w-full rounded-lg bg-fire px-4 py-3 text-sm font-bold text-white disabled:opacity-50">
+          {converting ? "Starting…" : "→ Start catering order"}
+        </button>
+        <p className="mt-1 text-center text-[11px] text-zinc-500">Creates a lifecycle order in the Cockpit and marks this lead Booked.</p>
 
         {/* Details */}
         <dl className="mt-4 space-y-1.5 rounded-xl border border-ink-700 bg-ink-800/60 p-3 text-sm">
