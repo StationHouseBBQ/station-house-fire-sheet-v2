@@ -1,1 +1,0 @@
-import{j as t}from"./index-rNU9lsZ5.js";import{B as e}from"./BriefQueue-D4hoHlOc.js";import"./useQuery-DyXkSZxM.js";import"./useMutation-C-Ul0Kw8.js";import"./index-6n9c5oqO.js";function p(){return t.jsx(e,{kind:"content",title:"Content Agent",accent:"#ff8a3d"})}export{p as ContentAgentView};
