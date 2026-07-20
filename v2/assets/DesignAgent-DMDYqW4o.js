@@ -1,1 +1,0 @@
-import{j as t}from"./index-D3u7nsaL.js";import{B as e}from"./BriefQueue-Bcl4yhml.js";import"./useQuery-_7407Gzs.js";import"./useMutation-RlV6bKlg.js";import"./index-DhWfSo5-.js";function s(){return t.jsx(e,{kind:"design",title:"Design Agent",accent:"#60a5fa"})}export{s as DesignAgentView};
