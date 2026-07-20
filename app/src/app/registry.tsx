@@ -41,6 +41,16 @@ const ApprovalQueueView = lazyWithRetry(() => import("../modules/catering/Approv
 const PortalAdminView = lazyWithRetry(() => import("../modules/catering/PortalAdmin").then(m => ({ default: m.PortalAdminView })), "PortalAdminView");
 const EquipmentCatalogView = lazyWithRetry(() => import("../modules/catering/EquipmentCatalog").then(m => ({ default: m.EquipmentCatalogView })), "EquipmentCatalogView");
 const CompaniesView = lazyWithRetry(() => import("../modules/catering/CompaniesView").then(m => ({ default: m.CompaniesView })), "CompaniesView");
+const CateringPrepList = lazyWithRetry(() => import("../modules/catering/CateringPrepList").then(m => ({ default: m.CateringPrepList })), "CateringPrepList");
+const CateringOrderGuideView = lazyWithRetry(() => import("../modules/catering/CateringOrderGuideView").then(m => ({ default: m.CateringOrderGuideView })), "CateringOrderGuideView");
+const CateringWeeklyBoard = lazyWithRetry(() => import("../modules/catering/CateringWeeklyBoard").then(m => ({ default: m.CateringWeeklyBoard })), "CateringWeeklyBoard");
+const FinanceDashboard = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinanceDashboard })), "FinanceDashboard");
+const FinanceInvoices = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinanceInvoices })), "FinanceInvoices");
+const FinancePayments = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinancePayments })), "FinancePayments");
+const FinanceQuotes = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinanceQuotes })), "FinanceQuotes");
+const FinanceCustomers = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinanceCustomers })), "FinanceCustomers");
+const FinancePayroll = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinancePayroll })), "FinancePayroll");
+const FinanceForecast = lazyWithRetry(() => import("../modules/finance").then(m => ({ default: m.FinanceForecast })), "FinanceForecast");
 const LandingHub = lazyWithRetry(() => import("../modules/marketing/LandingHub").then(m => ({ default: m.LandingHub })), "LandingHub");
 const MarketingCommandCenter = lazyWithRetry(() => import("../modules/marketing/CommandCenter").then(m => ({ default: m.MarketingCommandCenter })), "MarketingCommandCenter");
 const LeadAnalysisView = lazyWithRetry(() => import("../modules/marketing/LeadAnalysis").then(m => ({ default: m.LeadAnalysisView })), "LeadAnalysisView");
@@ -120,6 +130,16 @@ export const IMPLEMENTED: Record<string, ComponentType> = {
   "catering/portal": PortalAdminView,
   "catering/equipment": EquipmentCatalogView,
   "catering/companies": CompaniesView,
+  "catering/prep-list": CateringPrepList,
+  "catering/order-guide": CateringOrderGuideView,
+  "catering/weekly": CateringWeeklyBoard,
+  "finance/dashboard": FinanceDashboard,
+  "finance/invoices": FinanceInvoices,
+  "finance/payments": FinancePayments,
+  "finance/quotes": FinanceQuotes,
+  "finance/customers": FinanceCustomers,
+  "finance/payroll": FinancePayroll,
+  "finance/forecast": FinanceForecast,
   "marketing/hub": LandingHub,
   "marketing/command": MarketingCommandCenter,
   "marketing/leads": LeadAnalysisView,

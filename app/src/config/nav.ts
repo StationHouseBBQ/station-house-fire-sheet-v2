@@ -95,6 +95,9 @@ export const WORKSPACES: WorkspaceDef[] = [
       { implemented: true, id: "portal", label: "Client Portal Admin", parityRow: 38, sourceComponent: "ClientPortalAdmin", sourceFile: "client/src/pages/ClientPortalAdmin.tsx" },
       { implemented: true, id: "equipment", label: "Equipment Catalog", parityRow: 39, sourceComponent: "EquipmentCatalog", sourceFile: "client/src/pages/catering/EquipmentCatalog.tsx" },
       { implemented: true, id: "companies", label: "Companies", parityRow: 40, sourceComponent: "CompaniesTab", sourceFile: "client/src/pages/catering/CompaniesTab.tsx" },
+      { implemented: true, id: "prep-list", label: "Catering Prep", parityRow: 74, sourceComponent: "CateringPrepList", sourceFile: "client/src/pages/CateringPrepList.tsx" },
+      { implemented: true, id: "order-guide", label: "Order Guide", parityRow: 75, sourceComponent: "CateringOrderGuide", sourceFile: "client/src/pages/CateringOrderGuide.tsx" },
+      { implemented: true, id: "weekly", label: "Weekly Board", parityRow: 76, sourceComponent: "CateringWeeklyBoard", sourceFile: "client/src/pages/CateringWeeklyBoard.tsx" },
     ],
   },
   {
@@ -111,6 +114,18 @@ export const WORKSPACES: WorkspaceDef[] = [
       { implemented: true, id: "performance", label: "Performance", parityRow: 49, sourceComponent: "PerformanceAgent", sourceFile: "client/src/pages/marketing/PerformanceAgent.tsx" },
       { implemented: true, id: "ads", label: "AI Ads Center", parityRow: 50, sourceComponent: "AdsCommandCenter", sourceFile: "client/src/pages/AdsCommandCenter.tsx" },
       { implemented: true, id: "design", label: "Design Agent", parityRow: 51, sourceComponent: "DesignAgent", sourceFile: "client/src/pages/marketing/DesignAgent.tsx" },
+    ],
+  },
+  {
+    id: "finance", label: "Finance", base: "/finance", roles: R.admin,
+    tabs: [
+      { implemented: true, id: "dashboard", label: "Dashboard", parityRow: 77, sourceComponent: "FinanceDashboard", sourceFile: "client/src/pages/FinanceDashboard.tsx" },
+      { implemented: true, id: "invoices", label: "Invoices", parityRow: 78, sourceComponent: "FinanceInvoices", sourceFile: "client/src/pages/FinanceInvoices.tsx" },
+      { implemented: true, id: "payments", label: "Payments", parityRow: 79, sourceComponent: "FinancePayments", sourceFile: "client/src/pages/FinancePayments.tsx" },
+      { implemented: true, id: "quotes", label: "Quotes", parityRow: 80, sourceComponent: "FinanceQuotes", sourceFile: "client/src/pages/FinanceQuotes.tsx" },
+      { implemented: true, id: "customers", label: "Customers", parityRow: 81, sourceComponent: "FinanceCustomers", sourceFile: "client/src/pages/FinanceCustomers.tsx" },
+      { implemented: true, id: "payroll", label: "Payroll", parityRow: 82, sourceComponent: "FinancePayroll", sourceFile: "client/src/pages/FinancePayroll.tsx" },
+      { implemented: true, id: "forecast", label: "Forecast", parityRow: 83, sourceComponent: "FinanceForecast", sourceFile: "client/src/pages/FinanceForecast.tsx" },
     ],
   },
   {
