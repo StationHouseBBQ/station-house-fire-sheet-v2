@@ -296,6 +296,9 @@ function CommandCard({ order, actor, onChanged }: { order: CateringOrder; actor:
         <p className="text-zinc-400">Balance due: <span className="font-bold text-fire-light">{formatCents(balanceDue)}</span></p>
       </div>
 
+      {/* Payment schedule (deposit → 2nd payment → final, per catering terms) */}
+      <PaymentSchedule order={order} onRecord={cents => run(clc.recordPayment(order.id, cents, actor))} />
+
       {/* Kitchen panel */}
       {order.kitchen.handedOffAt && (
         <div className="rounded-xl border border-fire/40 bg-fire/5 p-3 text-sm">
@@ -1047,6 +1050,85 @@ function DocumentModal({ order, kind, onClose, onSend }: { order: CateringOrder;
         <p className="no-print bg-amber-50 px-4 py-2 text-center text-sm text-amber-800">No customer email on this order — add one in the event details to send.</p>
       )}
       <CateringDocument order={order} kind={kind} />
+    </div>
+  );
+}
+
+
+/** Payment milestone for a catering order. */
+interface Milestone { key: string; label: string; dueLabel: string; dueTs: number | null; amountCents: number; }
+
+/** Build the payment schedule from the event date, total and requested deposit. */
+export function buildPaymentSchedule(order: CateringOrder): Milestone[] {
+  const total = order.totalCents;
+  const iso = order.event.eventDate;
+  if (total <= 0) return [];
+  if (!iso) return [{ key: "full", label: "Full payment", dueLabel: "At booking", dueTs: null, amountCents: total }];
+  const eventTs = Date.parse(iso + "T12:00:00Z");
+  const days = Math.round((eventTs - Date.now()) / 86_400_000);
+  if (days <= 30) return [{ key: "full", label: "Full payment", dueLabel: "Due now (event within 30 days)", dueTs: Date.now(), amountCents: total }];
+
+  const dep = order.depositCents > 0 ? order.depositCents : Math.round(total * (days > 183 ? 0.3 : 0.5));
+  const ms: Milestone[] = [{ key: "deposit", label: "Deposit", dueLabel: "At booking", dueTs: Date.now(), amountCents: dep }];
+  const balance = total - dep;
+  const finalDue = eventTs - 21 * 86_400_000;
+  const finalLabel = "21 days before event";
+  if (days > 183) {
+    const second = new Date(eventTs); second.setMonth(second.getMonth() - 6);
+    const secondAmt = Math.round(balance * 0.5);
+    ms.push({ key: "second", label: "2nd payment", dueLabel: "6 months before event", dueTs: second.getTime(), amountCents: secondAmt });
+    ms.push({ key: "final", label: "Final payment", dueLabel: finalLabel, dueTs: finalDue, amountCents: balance - secondAmt });
+  } else {
+    ms.push({ key: "final", label: "Final payment", dueLabel: finalLabel, dueTs: finalDue, amountCents: balance });
+  }
+  return ms;
+}
+
+function PaymentSchedule({ order, onRecord }: { order: CateringOrder; onRecord: (cents: number) => void }) {
+  const schedule = buildPaymentSchedule(order);
+  if (schedule.length === 0) return null;
+  const fmtDue = (m: Milestone) => m.dueTs && m.key !== "deposit" && m.key !== "full"
+    ? `${m.dueLabel} · ${new Date(m.dueTs).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`
+    : m.dueLabel;
+
+  let remainingPaid = order.paidCents;
+  let firstUnpaidHit = false;
+
+  return (
+    <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-sm">
+      <p className="mb-2 font-bold uppercase tracking-wider text-zinc-400">Payment schedule</p>
+      <ul className="space-y-2">
+        {schedule.map(m => {
+          const paidForThis = Math.max(0, Math.min(remainingPaid, m.amountCents));
+          remainingPaid -= paidForThis;
+          const fullyPaid = paidForThis >= m.amountCents && m.amountCents > 0;
+          const isNextDue = !fullyPaid && !firstUnpaidHit;
+          if (isNextDue) firstUnpaidHit = true;
+          const overdue = isNextDue && m.dueTs != null && m.dueTs < Date.now();
+          const owed = m.amountCents - paidForThis;
+          return (
+            <li key={m.key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-ink-800 bg-ink-900 px-3 py-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-zinc-100">
+                  {m.label}
+                  {fullyPaid && <span className="ml-2 rounded-full border border-green-700/60 bg-green-600/20 px-2 py-0.5 text-[10px] font-black uppercase text-green-300">Paid</span>}
+                  {overdue && <span className="ml-2 rounded-full border border-red-700/60 bg-red-600/20 px-2 py-0.5 text-[10px] font-black uppercase text-red-300">Overdue</span>}
+                  {isNextDue && !overdue && <span className="ml-2 rounded-full border border-amber-700/60 bg-amber-600/20 px-2 py-0.5 text-[10px] font-black uppercase text-amber-300">Due next</span>}
+                </p>
+                <p className="text-xs text-zinc-500">{fmtDue(m)}</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-sm font-bold text-zinc-100">{formatCents(m.amountCents)}</span>
+                {!fullyPaid && isNextDue && owed > 0 && (
+                  <button onClick={() => onRecord(owed)}
+                    className="rounded-lg bg-fire px-3 py-1.5 text-xs font-bold text-white">Record {formatCents(owed)}</button>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="mt-2 text-xs text-zinc-500">Deposit &gt;6 months out 30% · within 6 months 50% · within 30 days paid in full. Adjust the deposit above to change the split.</p>
     </div>
   );
 }
