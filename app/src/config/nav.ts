@@ -101,6 +101,16 @@ export const WORKSPACES: WorkspaceDef[] = [
     ],
   },
   {
+    id: "crm", label: "CRM", base: "/crm", roles: R.cat,
+    tabs: [
+      { implemented: true, id: "dashboard", label: "Dashboard", parityRow: 84, sourceComponent: "CrmDashboard", sourceFile: "client/src/pages/CrmDashboard.tsx" },
+      { implemented: true, id: "opportunities", label: "Opportunities", parityRow: 85, sourceComponent: "CrmOpportunities", sourceFile: "client/src/pages/CrmOpportunities.tsx" },
+      { implemented: true, id: "tasks", label: "Tasks", parityRow: 86, sourceComponent: "CrmTasks", sourceFile: "client/src/pages/CrmTasks.tsx" },
+      { implemented: true, id: "conversations", label: "Conversations", parityRow: 87, sourceComponent: "CrmConversations", sourceFile: "client/src/pages/CrmConversations.tsx" },
+      { implemented: true, id: "automations", label: "Automations", parityRow: 88, sourceComponent: "CrmAutomations", sourceFile: "client/src/pages/CrmAutomations.tsx" },
+    ],
+  },
+  {
     id: "marketing", label: "Marketing", base: "/marketing", roles: R.cat,
     tabs: [
       { implemented: true, id: "hub", label: "Landing Page Hub", parityRow: 41, sourceComponent: "MarketingHub", sourceFile: "client/src/pages/marketing/MarketingHub.tsx" },
