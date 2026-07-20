@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import { useRole } from "../../app/RoleContext";
@@ -428,7 +428,7 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
 
   const update = (id: string, patch: Partial<QuoteLine>) => setLines(ls => ls.map(l => l.id === id ? { ...l, ...patch } : l));
   const remove = (id: string) => setLines(ls => ls.filter(l => l.id !== id));
-  const add = () => setLines(ls => [...ls, { id: `new-${Date.now()}`, name: "New item", qty: 1, unitPriceCents: 0 }]);
+  const add = () => setLines(ls => [...ls, { id: `new-${Date.now()}`, name: "Additional charge", qty: 1, unitPriceCents: 0 }]);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const guests = order.event.guests ?? 1;
   const addLine = (name: string, unitPriceCents: number, qty: number) =>
@@ -440,7 +440,7 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
         <p className="font-bold uppercase tracking-wider text-zinc-400">Items / quote</p>
         <div className="flex gap-2">
           <button onClick={() => setCatalogOpen(true)} className="rounded-lg border border-fire/40 bg-fire/10 px-3 py-1.5 text-xs font-bold text-fire-light">+ Add from menu</button>
-          <button onClick={add} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">+ Add line</button>
+          <button onClick={add} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">+ Add charge / item</button>
         </div>
       </div>
       <ul className="space-y-2">
@@ -606,21 +606,21 @@ function CatalogGroup({ title, items, onPick, money }: {
 }
 
 function PriceEditor({ cents, onChange }: { cents: number; onChange: (c: number) => void }) {
-  const [editing, setEditing] = useState(false);
   const [val, setVal] = useState((cents / 100).toFixed(2));
-  if (!editing) {
-    return (
-      <button onClick={() => { setVal((cents / 100).toFixed(2)); setEditing(true); }}
-        className="w-20 shrink-0 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-right text-sm font-bold text-zinc-200" aria-label="Edit unit price">
-        {formatCents(cents)}
-      </button>
-    );
-  }
-  const commit = () => { const c = dollarsToCents(val); if (c != null) onChange(c); setEditing(false); };
+  const [focused, setFocused] = useState(false);
+  // Keep the visible amount in sync with the saved value unless the user is typing.
+  useEffect(() => { if (!focused) setVal((cents / 100).toFixed(2)); }, [cents, focused]);
+  const commit = (raw: string) => { const c = dollarsToCents(raw); if (c != null) onChange(c); };
   return (
-    <input autoFocus inputMode="decimal" value={val} onChange={e => setVal(e.target.value)} onBlur={commit}
-      onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
-      className="w-20 shrink-0 rounded border border-fire/50 bg-ink-800 px-2 py-1.5 text-right text-sm font-bold text-zinc-100" aria-label="Unit price dollars" />
+    <div className="relative w-24 shrink-0" title="Unit price — type any amount for extras / add-ons">
+      <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm text-zinc-500">$</span>
+      <input inputMode="decimal" value={val}
+        onFocus={() => setFocused(true)}
+        onChange={e => { setVal(e.target.value); commit(e.target.value); }}
+        onBlur={() => { setFocused(false); commit(val); }}
+        className="w-full rounded border border-ink-700 bg-ink-800 py-1.5 pl-5 pr-2 text-right text-sm font-bold text-zinc-100 focus:border-fire/60"
+        aria-label="Unit price dollars" />
+    </div>
   );
 }
 
