@@ -6,7 +6,7 @@ import { useUndo } from "../shared/undo";
 import { formatCents, orderTotals } from "../../lib/money";
 import type { CateringOrder, CateringStage, CateringTimelineEntry, LeadPriority, QuoteLine } from "../../dal/types";
 import { CateringDocument, documentPlainText, openPrint, isInvoiceReal, type DocumentKind } from "./CateringDocuments";
-import { CATERING_CATALOG_DEFAULTS, PREMIUM_UPGRADE_SMOKED_CENTS, PREMIUM_UPGRADE_BEYOND_PIT_CENTS } from "../../lib/cateringCatalog";
+import { CATERING_CATALOG_DEFAULTS, CATERING_CATALOG_KEY, PREMIUM_UPGRADE_SMOKED_CENTS, PREMIUM_UPGRADE_BEYOND_PIT_CENTS, type CateringCatalog } from "../../lib/cateringCatalog";
 
 /**
  * Catering · Orders — the unified lifecycle cockpit. One screen carries a
@@ -434,6 +434,45 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
   const addLine = (name: string, unitPriceCents: number, qty: number) =>
     setLines(ls => [...ls, { id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, qty, unitPriceCents }]);
 
+  // Catering fees + deposit — rates come from the editable catalog (Admin > Catering Menu).
+  const feeDal = getDal();
+  const { data: catalog } = useQuery({
+    queryKey: ["settings", CATERING_CATALOG_KEY],
+    queryFn: () => feeDal.settings.get<CateringCatalog>(CATERING_CATALOG_KEY, CATERING_CATALOG_DEFAULTS),
+  });
+  const fees = (catalog ?? CATERING_CATALOG_DEFAULTS).fees;
+  const FEE_PREFIXES = ["Operations Fee", "Gratuity", "Delivery", "Cake Cutting", "Boxed Packaging"];
+  const isFee = (name: string) => FEE_PREFIXES.some(p => name.startsWith(p));
+  const [feeToggles, setFeeToggles] = useState(() => ({
+    ops: order.lines.some(l => l.name.startsWith("Operations Fee")),
+    gratuity: order.lines.some(l => l.name.startsWith("Gratuity")),
+    delivery: order.lines.some(l => l.name.startsWith("Delivery")) || order.fulfillment === "delivery",
+    cake: order.lines.some(l => l.name.startsWith("Cake Cutting")),
+    boxed: order.lines.some(l => l.name.startsWith("Boxed Packaging")),
+  }));
+  const applyFees = () => setLines(ls => {
+    const base = ls.filter(l => !isFee(l.name)).reduce((sum, l) => sum + l.unitPriceCents * l.qty, 0);
+    const feeLines: QuoteLine[] = [];
+    const mk = (name: string, cents: number) => feeLines.push({ id: `fee-${name}-${Date.now()}`, name, qty: 1, unitPriceCents: cents });
+    if (feeToggles.ops) mk(`Operations Fee (${fees.operationsFeePct}%)`, Math.round(base * fees.operationsFeePct / 100));
+    if (feeToggles.gratuity) mk(`Gratuity (${fees.gratuityFullServicePct}%)`, Math.round(base * fees.gratuityFullServicePct / 100));
+    if (feeToggles.cake) mk("Cake Cutting", guests * fees.cakeCuttingPerGuestCents);
+    if (feeToggles.boxed) mk("Boxed Packaging", guests * fees.boxedSurchargePerGuestCents);
+    if (feeToggles.delivery) mk("Delivery", order.deliveryFeeCents > 0 ? order.deliveryFeeCents : fees.deliveryBaseCents);
+    return [...ls.filter(l => !isFee(l.name)), ...feeLines];
+  });
+  const depositFromDate = () => {
+    const iso = order.event.eventDate;
+    let pct = fees.depositWithin6moPct;
+    if (iso) {
+      const days = Math.round((Date.parse(iso + "T12:00:00Z") - Date.now()) / 86_400_000);
+      pct = days <= 30 ? fees.depositWithin30daysPct : days > 183 ? fees.depositOver6moPct : fees.depositWithin6moPct;
+    }
+    const cents = Math.round(totals.totalCents * pct / 100);
+    setDeposit((cents / 100).toFixed(2));
+    onSetDeposit(cents);
+  };
+
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3">
       <div className="mb-2 flex items-center justify-between">
@@ -459,6 +498,25 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
         ))}
       </ul>
 
+      <div className="mt-3 rounded-lg border border-ink-800 bg-ink-950/40 p-2">
+        <p className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Catering fees</p>
+        <div className="flex flex-wrap gap-1.5">
+          {([
+            ["ops", `Operations Fee ${fees.operationsFeePct}%`],
+            ["gratuity", `Gratuity ${fees.gratuityFullServicePct}%`],
+            ["delivery", "Delivery"],
+            ["cake", "Cake cutting"],
+            ["boxed", "Boxed"],
+          ] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setFeeToggles(t => ({ ...t, [k]: !t[k] }))}
+              className={`rounded-full border px-3 py-1 text-xs font-semibold ${feeToggles[k] ? "border-fire/50 bg-fire/15 text-fire-light" : "border-ink-700 bg-ink-800 text-zinc-400"}`}>
+              {feeToggles[k] ? "✓ " : ""}{label}
+            </button>
+          ))}
+          <button onClick={applyFees} className="ml-auto rounded-lg bg-ink-700 px-3 py-1 text-xs font-bold text-zinc-100">Apply fees</button>
+        </div>
+      </div>
+
       <div className="mt-3 space-y-1 border-t border-ink-800 pt-3 text-sm">
         <Row label="Subtotal" value={formatCents(totals.subtotalCents)} />
         <Row label="Tax (7.5%)" value={formatCents(totals.taxCents)} />
@@ -472,6 +530,8 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
               className="w-24 rounded border border-ink-700 bg-ink-800 px-2 py-1.5 text-sm text-zinc-100" />
             <button onClick={() => { const c = dollarsToCents(deposit); if (c != null) onSetDeposit(c); }}
               className="rounded border border-ink-700 bg-ink-800 px-3 text-xs font-bold text-zinc-300">Set</button>
+            <button onClick={depositFromDate} title="Deposit from event date: >6mo 30% · <6mo 50% · <30 days 100%"
+              className="rounded border border-fire/40 bg-fire/10 px-3 text-xs font-bold text-fire-light">Auto from date</button>
           </div>
         </label>
         <button disabled={!dirty} onClick={() => onSave(lines)}
