@@ -6,3 +6,5 @@ export const CRM_TASKS_KEY = "crm.tasks";
 export const CRM_THREADS_KEY = "crm.threads";
 export const CRM_OPPS_KEY = "crm.opportunities";
 export const CRM_AUTOMATIONS_KEY = "crm.automations";
+export const CRM_EVENTS_KEY = "crm.events";
+export const CRM_SOCIAL_KEY = "crm.social";

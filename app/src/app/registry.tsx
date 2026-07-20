@@ -57,6 +57,8 @@ const CrmOpportunities = lazyWithRetry(() => import("../modules/crm").then(m => 
 const CrmTasks = lazyWithRetry(() => import("../modules/crm").then(m => ({ default: m.CrmTasks })), "CrmTasks");
 const CrmConversations = lazyWithRetry(() => import("../modules/crm").then(m => ({ default: m.CrmConversations })), "CrmConversations");
 const CrmAutomations = lazyWithRetry(() => import("../modules/crm").then(m => ({ default: m.CrmAutomations })), "CrmAutomations");
+const CrmEvents = lazyWithRetry(() => import("../modules/crm").then(m => ({ default: m.CrmEvents })), "CrmEvents");
+const CrmSocialPlanner = lazyWithRetry(() => import("../modules/crm").then(m => ({ default: m.CrmSocialPlanner })), "CrmSocialPlanner");
 const MarketingCommandCenter = lazyWithRetry(() => import("../modules/marketing/CommandCenter").then(m => ({ default: m.MarketingCommandCenter })), "MarketingCommandCenter");
 const LeadAnalysisView = lazyWithRetry(() => import("../modules/marketing/LeadAnalysis").then(m => ({ default: m.LeadAnalysisView })), "LeadAnalysisView");
 const ContentAgentView = lazyWithRetry(() => import("../modules/marketing/ContentAgent").then(m => ({ default: m.ContentAgentView })), "ContentAgentView");
@@ -150,6 +152,8 @@ export const IMPLEMENTED: Record<string, ComponentType> = {
   "crm/tasks": CrmTasks,
   "crm/conversations": CrmConversations,
   "crm/automations": CrmAutomations,
+  "crm/events": CrmEvents,
+  "crm/social": CrmSocialPlanner,
   "marketing/hub": LandingHub,
   "marketing/command": MarketingCommandCenter,
   "marketing/leads": LeadAnalysisView,

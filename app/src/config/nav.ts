@@ -108,6 +108,8 @@ export const WORKSPACES: WorkspaceDef[] = [
       { implemented: true, id: "tasks", label: "Tasks", parityRow: 86, sourceComponent: "CrmTasks", sourceFile: "client/src/pages/CrmTasks.tsx" },
       { implemented: true, id: "conversations", label: "Conversations", parityRow: 87, sourceComponent: "CrmConversations", sourceFile: "client/src/pages/CrmConversations.tsx" },
       { implemented: true, id: "automations", label: "Automations", parityRow: 88, sourceComponent: "CrmAutomations", sourceFile: "client/src/pages/CrmAutomations.tsx" },
+      { implemented: true, id: "events", label: "Events", parityRow: 89, sourceComponent: "CrmEvents", sourceFile: "client/src/pages/CrmEvents.tsx" },
+      { implemented: true, id: "social", label: "Social Planner", parityRow: 90, sourceComponent: "CrmSocialPlanner", sourceFile: "client/src/pages/CrmSocialPlanner.tsx" },
     ],
   },
   {

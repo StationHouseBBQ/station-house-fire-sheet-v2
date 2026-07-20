@@ -5,3 +5,5 @@ export { CrmOpportunities } from "./CrmOpportunities";
 export { CrmTasks } from "./CrmTasks";
 export { CrmConversations } from "./CrmConversations";
 export { CrmAutomations } from "./CrmAutomations";
+export { CrmEvents } from "./CrmEvents";
+export { CrmSocialPlanner } from "./CrmSocialPlanner";

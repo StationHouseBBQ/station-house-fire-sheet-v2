@@ -78,3 +78,40 @@ export interface CrmAutomation {
   createdAt: string;
   updatedAt: string;
 }
+
+// ── CRM events ("crm.events") ────────────────────────────────────────────────
+export type CrmEventKind = "tasting" | "meeting" | "site_visit" | "call" | "follow_up";
+export type CrmEventStatus = "scheduled" | "done" | "cancelled";
+
+export interface CrmEvent {
+  id: string;
+  title: string;
+  kind: CrmEventKind;
+  /** ISO date-only. */
+  date: string;
+  /** e.g. "2:00 PM" (free text). */
+  time: string | null;
+  location: string | null;
+  leadId: string | null;
+  linkedLabel: string | null;
+  status: CrmEventStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Social planner ("crm.social") ────────────────────────────────────────────
+export type SocialPlatform = "instagram" | "facebook" | "tiktok" | "x" | "email";
+export type SocialStatus = "idea" | "scheduled" | "posted";
+
+export interface CrmSocialPost {
+  id: string;
+  platform: SocialPlatform;
+  /** ISO date-only the post is planned for. */
+  date: string;
+  caption: string;
+  status: SocialStatus;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}

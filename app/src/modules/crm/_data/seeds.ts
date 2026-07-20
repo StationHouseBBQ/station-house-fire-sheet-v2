@@ -3,7 +3,7 @@
  * values passed to dal.settings.get, so a fresh demo shows a populated CRM.
  * IDs are stable strings so seeds are idempotent across reads.
  */
-import type { CrmAutomation, CrmTask } from "./types";
+import type { CrmAutomation, CrmTask, CrmEvent, CrmSocialPost } from "./types";
 
 export const CRM_TASKS_SEED: CrmTask[] = [
   {
@@ -100,4 +100,16 @@ export const CRM_AUTOMATIONS_SEED: CrmAutomation[] = [
     createdAt: "2026-07-01T12:00:00.000Z",
     updatedAt: "2026-07-01T12:00:00.000Z",
   },
+];
+
+export const CRM_EVENTS_SEED: CrmEvent[] = [
+  { id: "seed-ev-1", title: "Tasting — Riverside Wedding", kind: "tasting", date: "2026-07-24", time: "2:00 PM", location: "Station House kitchen", leadId: null, linkedLabel: "Riverside Wedding", status: "scheduled", notes: "Prep 3 proteins + 2 sides.", createdAt: "2026-07-18T14:00:00.000Z", updatedAt: "2026-07-18T14:00:00.000Z" },
+  { id: "seed-ev-2", title: "Site visit — Bayfront Realty office", kind: "site_visit", date: "2026-07-28", time: "10:30 AM", location: "Bayfront Realty, Tampa", leadId: null, linkedLabel: "Bayfront Realty", status: "scheduled", notes: null, createdAt: "2026-07-18T14:00:00.000Z", updatedAt: "2026-07-18T14:00:00.000Z" },
+  { id: "seed-ev-3", title: "Discovery call — corporate lunch", kind: "call", date: "2026-07-21", time: "9:00 AM", location: null, leadId: null, linkedLabel: "Corporate Lunch", status: "scheduled", notes: null, createdAt: "2026-07-18T14:00:00.000Z", updatedAt: "2026-07-18T14:00:00.000Z" },
+];
+
+export const CRM_SOCIAL_SEED: CrmSocialPost[] = [
+  { id: "seed-soc-1", platform: "instagram", date: "2026-07-22", caption: "Brisket day 🔥 Pre-order your weekend pull. Link in bio.", status: "scheduled", notes: "Reel + photo carousel.", createdAt: "2026-07-18T14:00:00.000Z", updatedAt: "2026-07-18T14:00:00.000Z" },
+  { id: "seed-soc-2", platform: "facebook", date: "2026-07-23", caption: "Cuban Thursday is back — mojo pork, pressed to perfection.", status: "scheduled", notes: null, createdAt: "2026-07-18T14:00:00.000Z", updatedAt: "2026-07-18T14:00:00.000Z" },
+  { id: "seed-soc-3", platform: "tiktok", date: "2026-07-25", caption: "POV: the smoker at 5am. #bbq #tampa", status: "idea", notes: "Behind-the-scenes clip.", createdAt: "2026-07-18T14:00:00.000Z", updatedAt: "2026-07-18T14:00:00.000Z" },
 ];
