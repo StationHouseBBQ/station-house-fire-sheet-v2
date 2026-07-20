@@ -6,6 +6,7 @@ import { useUndo } from "../shared/undo";
 import { formatCents, orderTotals } from "../../lib/money";
 import type { CateringOrder, CateringStage, CateringTimelineEntry, LeadPriority, QuoteLine } from "../../dal/types";
 import { CateringDocument, documentPlainText, openPrint, isInvoiceReal, type DocumentKind } from "./CateringDocuments";
+import { CATERING_CATALOG_DEFAULTS, PREMIUM_UPGRADE_SMOKED_CENTS, PREMIUM_UPGRADE_BEYOND_PIT_CENTS } from "../../lib/cateringCatalog";
 
 /**
  * Catering · Orders — the unified lifecycle cockpit. One screen carries a
@@ -428,12 +429,19 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
   const update = (id: string, patch: Partial<QuoteLine>) => setLines(ls => ls.map(l => l.id === id ? { ...l, ...patch } : l));
   const remove = (id: string) => setLines(ls => ls.filter(l => l.id !== id));
   const add = () => setLines(ls => [...ls, { id: `new-${Date.now()}`, name: "New item", qty: 1, unitPriceCents: 0 }]);
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const guests = order.event.guests ?? 1;
+  const addLine = (name: string, unitPriceCents: number, qty: number) =>
+    setLines(ls => [...ls, { id: `new-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name, qty, unitPriceCents }]);
 
   return (
     <div className="rounded-xl border border-ink-800 bg-ink-950/50 p-3">
       <div className="mb-2 flex items-center justify-between">
         <p className="font-bold uppercase tracking-wider text-zinc-400">Items / quote</p>
-        <button onClick={add} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">+ Add line</button>
+        <div className="flex gap-2">
+          <button onClick={() => setCatalogOpen(true)} className="rounded-lg border border-fire/40 bg-fire/10 px-3 py-1.5 text-xs font-bold text-fire-light">+ Add from menu</button>
+          <button onClick={add} className="rounded-lg border border-ink-700 bg-ink-800 px-3 py-1.5 text-xs font-bold text-zinc-300">+ Add line</button>
+        </div>
       </div>
       <ul className="space-y-2">
         {lines.map(l => (
@@ -469,6 +477,130 @@ function QuoteEditor({ order, onSave, onSetDeposit }: {
         <button disabled={!dirty} onClick={() => onSave(lines)}
           className="min-h-[40px] rounded-lg bg-fire px-4 text-sm font-bold text-white disabled:opacity-40">Save items</button>
       </div>
+
+      {catalogOpen && (
+        <CateringCatalogPicker guests={guests}
+          onPick={(name, price, qty) => addLine(name, price, qty)}
+          onClose={() => setCatalogOpen(false)} />
+      )}
+    </div>
+  );
+}
+
+function CateringCatalogPicker({ guests, onPick, onClose }: {
+  guests: number; onPick: (name: string, unitPriceCents: number, qty: number) => void; onClose: () => void;
+}) {
+  const cat = CATERING_CATALOG_DEFAULTS;
+  const [tab, setTab] = useState<"packages" | "proteins" | "alacarte" | "addons">("packages");
+  const [added, setAdded] = useState(0);
+  const pick = (name: string, price: number, qty: number) => { onPick(name, price, qty); setAdded(a => a + 1); };
+  const TABS: Array<{ k: typeof tab; label: string }> = [
+    { k: "packages", label: "Packages" }, { k: "proteins", label: "Proteins" },
+    { k: "alacarte", label: "À la carte" }, { k: "addons", label: "Add-ons" },
+  ];
+  const money = (c: number) => formatCents(c);
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Catering menu" className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center">
+      <div className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-ink-700 bg-ink-900">
+        <div className="flex items-center justify-between border-b border-ink-800 p-4">
+          <div>
+            <h3 className="text-lg font-bold text-zinc-100">Catering menu</h3>
+            <p className="text-xs text-zinc-500">Pricing for {guests} guest{guests === 1 ? "" : "s"} · packages add per-guest × guests</p>
+          </div>
+          <button onClick={onClose} className="rounded-lg bg-ink-800 px-3 py-1.5 text-sm font-bold text-zinc-300">Done{added > 0 ? ` (${added})` : ""}</button>
+        </div>
+        <div className="flex gap-1 border-b border-ink-800 p-2">
+          {TABS.map(t => (
+            <button key={t.k} onClick={() => setTab(t.k)}
+              className={`flex-1 rounded-lg px-2 py-1.5 text-xs font-bold ${tab === t.k ? "bg-fire text-white" : "bg-ink-800 text-zinc-400"}`}>{t.label}</button>
+          ))}
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          {tab === "packages" && (
+            <ul className="space-y-2">
+              {cat.packages.map(p => (
+                <li key={p.id}>
+                  <button onClick={() => pick(`${p.name} (${guests} guests)`, p.pricePerGuestCents, guests)}
+                    className="w-full rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-left hover:border-fire/50">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-zinc-100">{p.name}</span>
+                      <span className="shrink-0 font-mono text-sm text-fire-light">{money(p.pricePerGuestCents)}/pp</span>
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">{p.group} · {p.includes}</p>
+                    <p className="mt-1 text-xs text-zinc-400">= {money(p.pricePerGuestCents * guests)} for {guests} guests</p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {tab === "proteins" && (
+            <ul className="space-y-2">
+              {cat.proteins.map(p => {
+                const up = p.line === "smoked" ? PREMIUM_UPGRADE_SMOKED_CENTS : PREMIUM_UPGRADE_BEYOND_PIT_CENTS;
+                const isPrem = p.tier === "premium";
+                return (
+                  <li key={p.id}>
+                    <button onClick={() => pick(isPrem ? `${p.name} (premium upgrade, ${guests} guests)` : `${p.name} (${guests} guests)`, isPrem ? up : 0, guests)}
+                      className="w-full rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-left hover:border-fire/50">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-zinc-100">{p.name}</span>
+                        <span className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-bold ${isPrem ? "bg-amber-600/20 text-amber-300" : "bg-emerald-600/20 text-emerald-300"}`}>{isPrem ? `+${money(up)}/pp` : "Included"}</span>
+                      </div>
+                      <p className="mt-1 text-xs text-zinc-500">{p.line === "smoked" ? "Smoked" : "Beyond the Pit"} · {p.description}</p>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {tab === "alacarte" && (
+            <ul className="space-y-2">
+              {cat.alaCarte.map(i => (
+                <li key={i.id}>
+                  <button onClick={() => pick(i.name, i.priceCents, 1)}
+                    className="w-full rounded-xl border border-ink-800 bg-ink-950/50 p-3 text-left hover:border-fire/50">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-zinc-100">{i.name}</span>
+                      <span className="shrink-0 font-mono text-sm text-fire-light">{money(i.priceCents)}{i.unit ? `/${i.unit}` : ""}</span>
+                    </div>
+                    {i.note && <p className="mt-1 text-xs text-zinc-500">{i.note}</p>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {tab === "addons" && (
+            <div className="space-y-4">
+              <CatalogGroup title="Staffing" items={cat.staffRates.map(r => ({ id: r.id, name: r.role, priceCents: r.baseCents, unit: "event", note: r.note }))} onPick={(n, p) => pick(n, p, 1)} money={money} />
+              <CatalogGroup title="Desserts" items={cat.desserts} onPick={(n, p) => pick(`${n} (${guests} guests)`, p, guests)} money={money} />
+              <CatalogGroup title="Beverages" items={cat.beverages} onPick={(n, p, unit) => pick(unit === "pp" ? `${n} (${guests} guests)` : n, p, unit === "pp" ? guests : 1)} money={money} />
+              <CatalogGroup title="Breakfast" items={cat.breakfast} onPick={(n, p) => pick(`${n} (${guests} guests)`, p, guests)} money={money} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CatalogGroup({ title, items, onPick, money }: {
+  title: string; items: Array<{ id: string; name: string; priceCents: number; unit?: string; note?: string }>;
+  onPick: (name: string, priceCents: number, unit?: string) => void; money: (c: number) => string;
+}) {
+  return (
+    <div>
+      <p className="mb-1 text-xs font-bold uppercase tracking-wider text-zinc-500">{title}</p>
+      <ul className="space-y-1.5">
+        {items.map(i => (
+          <li key={i.id}>
+            <button onClick={() => onPick(i.name, i.priceCents, i.unit)}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-ink-800 bg-ink-950/50 px-3 py-2 text-left hover:border-fire/50">
+              <span className="min-w-0"><span className="text-sm font-semibold text-zinc-200">{i.name}</span>{i.note && <span className="block text-[11px] text-zinc-500">{i.note}</span>}</span>
+              <span className="shrink-0 font-mono text-xs text-fire-light">{money(i.priceCents)}{i.unit ? `/${i.unit}` : ""}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
