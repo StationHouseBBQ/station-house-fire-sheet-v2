@@ -1,1 +1,0 @@
-import{j as i}from"./index-CYkvxF10.js";import{B as o}from"./BriefQueue-BHFJmI4b.js";import"./useQuery-DQXDuFrD.js";import"./useMutation-Df6fEz6n.js";import"./index-DVOh3rii.js";function u(){return i.jsx(o,{kind:"video",title:"Video Studio",accent:"#c084fc"})}export{u as VideoStudioView};
