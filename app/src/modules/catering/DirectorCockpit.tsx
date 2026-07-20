@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import { formatCents } from "../../lib/money";
+import type { Lead } from "../../dal/types";
 
 /**
  * Catering · Director Cockpit — V2 counterpart of the Manus DirectorCockpit
@@ -22,6 +24,9 @@ export function DirectorCockpit() {
     queryFn: () => dal.cockpit.data(),
     refetchInterval: 30_000,
   });
+
+  const { data: leads = [] } = useQuery({ queryKey: ["leads", "list"], queryFn: () => dal.leads.list() });
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   if (isLoading || !data) return <p className="py-20 text-center text-zinc-500">Loading cockpit…</p>;
 
@@ -51,18 +56,22 @@ export function DirectorCockpit() {
         ) : (
           <ul className="mt-3 space-y-2">
             {redZone.map(r => (
-              <li key={r.leadOrQuoteId} className="rounded-xl border border-red-800/50 bg-ink-900 p-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold text-zinc-100">{r.label}</p>
-                  <p className="text-sm font-bold text-red-400">{fmtDate(r.eventDate)}</p>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {r.issues.map(issue => (
-                    <span key={issue} className="rounded-full border border-red-700/50 bg-red-600/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">
-                      {issue}
-                    </span>
-                  ))}
-                </div>
+              <li key={r.leadOrQuoteId}>
+                <button onClick={() => setDetailId(r.leadOrQuoteId)}
+                  className="w-full rounded-xl border border-red-800/50 bg-ink-900 p-3 text-left transition hover:border-red-500 hover:bg-red-950/30">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="font-semibold text-zinc-100">{r.label}</p>
+                    <p className="text-sm font-bold text-red-400">{fmtDate(r.eventDate)}</p>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {r.issues.map(issue => (
+                      <span key={issue} className="rounded-full border border-red-700/50 bg-red-600/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">
+                        {issue}
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-red-400/70">Tap to view contact →</p>
+                </button>
               </li>
             ))}
           </ul>
@@ -110,6 +119,71 @@ export function DirectorCockpit() {
           )}
         </section>
       </div>
+
+      {detailId && (
+        <RedZoneDetail
+          lead={leads.find(l => l.id === detailId) ?? null}
+          issues={redZone.find(r => r.leadOrQuoteId === detailId)?.issues ?? []}
+          onClose={() => setDetailId(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RedZoneDetail({ lead, issues, onClose }: { lead: Lead | null; issues: string[]; onClose: () => void }) {
+  const go = (hash: string) => { window.location.hash = hash; onClose(); };
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Red zone contact" className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-red-700/60 bg-ink-900 p-5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-black text-zinc-100">{lead ? lead.name : "Contact"}</h3>
+            {lead?.company && <p className="text-sm text-zinc-400">{lead.company}</p>}
+          </div>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-zinc-100" aria-label="Close">✕</button>
+        </div>
+
+        {issues.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {issues.map(i => (
+              <span key={i} className="rounded-full border border-red-700/50 bg-red-600/20 px-2.5 py-0.5 text-xs font-semibold text-red-300">{i}</span>
+            ))}
+          </div>
+        )}
+
+        {lead ? (
+          <div className="mt-4 space-y-2 text-sm">
+            <DetailRow label="Phone" value={lead.phone} href={lead.phone ? `tel:${lead.phone}` : undefined} />
+            <DetailRow label="Email" value={lead.email} href={lead.email ? `mailto:${lead.email}` : undefined} />
+            <DetailRow label="Event" value={[lead.eventType, lead.eventDate].filter(Boolean).join(" · ")} />
+            <DetailRow label="Guests" value={lead.guests != null ? String(lead.guests) : "—"} />
+            <DetailRow label="Service" value={lead.serviceType ?? "—"} />
+            <DetailRow label="Budget" value={lead.budgetCents != null ? formatCents(lead.budgetCents) : (lead.budgetRange ?? "—")} />
+            <DetailRow label="Address" value={lead.eventAddress ?? "—"} />
+            <DetailRow label="Source" value={lead.heardAbout ?? lead.source ?? "—"} />
+            <DetailRow label="Stage" value={lead.stage} />
+            {lead.notes && <DetailRow label="Notes" value={lead.notes} />}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-zinc-500">Full contact record not found in the current lead list. Open the pipeline to locate it.</p>
+        )}
+
+        <div className="mt-5 flex gap-2">
+          <button onClick={() => go("#/catering/pipeline")} className="flex-1 rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Open in Leads Pipeline</button>
+          <button onClick={() => go("#/catering/cockpit")} className="rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-bold text-zinc-300">Orders</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, href }: { label: string; value: string; href?: string }) {
+  return (
+    <div className="flex justify-between gap-3 border-b border-ink-800 pb-1.5">
+      <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-zinc-500">{label}</span>
+      {href ? <a href={href} className="min-w-0 truncate text-right text-fire-light hover:underline">{value || "—"}</a>
+            : <span className="min-w-0 truncate text-right text-zinc-200">{value || "—"}</span>}
     </div>
   );
 }

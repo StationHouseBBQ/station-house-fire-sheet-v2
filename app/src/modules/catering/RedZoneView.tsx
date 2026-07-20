@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import { etParts } from "../../lib/time";
-import type { CateringOrder } from "../../dal/types";
+import type { CateringOrder, Lead } from "../../dal/types";
+import { formatCents } from "../../lib/money";
 import { currentTime } from "../../lib/clock";
 import { getRecovery, setRecovery } from "./_data/overlay";
 import { useOverlayVersion } from "./_data/useOverlayVersion";
@@ -69,6 +70,8 @@ export function RedZoneView() {
     queryFn: () => dal.cateringLifecycle.list(),
     refetchInterval: 30_000,
   });
+  const { data: leads = [] } = useQuery({ queryKey: ["leads", "list"], queryFn: () => dal.leads.list() });
+  const [contactId, setContactId] = useState<string | null>(null);
 
   const allRows = useMemo(() => {
     if (!data) return [];
@@ -145,6 +148,8 @@ export function RedZoneView() {
                   </p>
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
+                  <button onClick={() => setContactId(r.leadOrQuoteId)}
+                    className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-semibold text-zinc-200">View contact</button>
                   {rec.resolved ? (
                     <button onClick={() => setRecovery(r.leadOrQuoteId, { resolved: false, note: "", resolvedAt: null })}
                       className="min-h-[44px] rounded-lg border border-ink-700 bg-ink-800 px-4 py-2 text-sm font-semibold text-zinc-300">Reopen</button>
@@ -165,6 +170,14 @@ export function RedZoneView() {
         <span className="font-semibold text-zinc-300">Leads Pipeline</span> drawer. Marking a row recovered here logs a
         recovery note and removes it from the active list.
       </p>
+
+      {contactId && (
+        <RzContactDetail
+          order={contactId.startsWith("order-") ? (orders.find(o => `order-${o.id}` === contactId) ?? null) : null}
+          lead={!contactId.startsWith("order-") ? (leads.find(l => l.id === contactId) ?? null) : null}
+          onClose={() => setContactId(null)}
+        />
+      )}
 
       {recovering && (
         <RecoverDialog label={recovering.label}
@@ -199,6 +212,70 @@ function RecoverDialog({ label, onSubmit, onCancel }: { label: string; onSubmit:
             className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white">Mark Recovered</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+
+function RzRow({ label, value, href }: { label: string; value: string; href?: string }) {
+  return (
+    <div className="flex justify-between gap-3 border-b border-ink-800 pb-1.5">
+      <span className="shrink-0 text-xs font-semibold uppercase tracking-wider text-zinc-500">{label}</span>
+      {href ? <a href={href} className="min-w-0 truncate text-right text-fire-light hover:underline">{value || "—"}</a>
+            : <span className="min-w-0 truncate text-right text-zinc-200">{value || "—"}</span>}
+    </div>
+  );
+}
+
+function RzContactDetail({ order, lead, onClose }: { order: CateringOrder | null; lead: Lead | null; onClose: () => void }) {
+  const go = (hash: string) => { window.location.hash = hash; onClose(); };
+  const name = order ? order.customer : lead ? lead.name : "Contact";
+  const company = order ? order.companyName : lead ? lead.company : null;
+  const phone = order ? order.event.phone : lead ? lead.phone : "";
+  const email = order ? order.event.email : lead ? lead.email : "";
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Red zone contact" className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center" onClick={onClose}>
+      <div className="w-full max-w-md rounded-2xl border border-red-700/60 bg-ink-900 p-5" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="text-lg font-black text-zinc-100">{name}</h3>
+            {company && <p className="text-sm text-zinc-400">{company}</p>}
+          </div>
+          <button onClick={onClose} className="grid h-8 w-8 place-items-center rounded-lg bg-ink-800 text-zinc-400 hover:text-zinc-100" aria-label="Close">✕</button>
+        </div>
+        <div className="mt-4 space-y-2 text-sm">
+          <RzRow label="Phone" value={phone} href={phone ? `tel:${phone}` : undefined} />
+          <RzRow label="Email" value={email} href={email ? `mailto:${email}` : undefined} />
+          {order ? (
+            <>
+              <RzRow label="Ref" value={order.ref} />
+              <RzRow label="Event" value={[order.event.serviceType, order.event.eventDate, order.event.eventTime].filter(Boolean).join(" · ")} />
+              <RzRow label="Guests" value={order.event.guests != null ? String(order.event.guests) : "—"} />
+              <RzRow label="Address" value={order.event.address ?? "—"} />
+              <RzRow label="Stage" value={order.stage} />
+              <RzRow label="Balance" value={formatCents(order.totalCents - order.paidCents)} />
+            </>
+          ) : lead ? (
+            <>
+              <RzRow label="Event" value={[lead.eventType, lead.eventDate].filter(Boolean).join(" · ")} />
+              <RzRow label="Guests" value={lead.guests != null ? String(lead.guests) : "—"} />
+              <RzRow label="Service" value={lead.serviceType ?? "—"} />
+              <RzRow label="Budget" value={lead.budgetCents != null ? formatCents(lead.budgetCents) : (lead.budgetRange ?? "—")} />
+              <RzRow label="Address" value={lead.eventAddress ?? "—"} />
+              <RzRow label="Source" value={lead.heardAbout ?? lead.source ?? "—"} />
+              <RzRow label="Stage" value={lead.stage} />
+              {lead.notes && <RzRow label="Notes" value={lead.notes} />}
+            </>
+          ) : (
+            <p className="text-zinc-500">Full record not found in the current list.</p>
+          )}
+        </div>
+        <div className="mt-5 flex gap-2">
+          {order
+            ? <button onClick={() => go("#/catering/cockpit")} className="flex-1 rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Open in Director Cockpit</button>
+            : <button onClick={() => go("#/catering/pipeline")} className="flex-1 rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white">Open in Leads Pipeline</button>}
+        </div>
+      </div>
     </div>
   );
 }
