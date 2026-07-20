@@ -117,6 +117,7 @@ export const WORKSPACES: WorkspaceDef[] = [
     id: "admin", label: "Admin", base: "/admin", roles: R.admin,
     tabs: [
       { implemented: true, id: "menu", label: "Menu Editor", parityRow: 52, sourceComponent: "AdminMenuEditor", sourceFile: "client/src/pages/AdminMenuEditor.tsx" },
+      { implemented: true, id: "catering-menu", label: "Catering Menu", parityRow: 73, sourceComponent: "CateringCatalog", sourceFile: "menu_reference.md" },
       { implemented: true, id: "walk-in-sampler", label: "Walk-In Samplers", parityRow: 53, sourceComponent: "WalkInSamplerEditor", sourceFile: "client/src/pages/WalkInSamplerEditor.tsx" },
       { implemented: true, id: "prep-master", label: "Prep Master", parityRow: 54, sourceComponent: "AdminPrepMaster", sourceFile: "client/src/pages/AdminPrepMaster.tsx" },
       { implemented: true, id: "fathers-day", label: "Father's Day", parityRow: 55, sourceComponent: "FathersDayAdmin", sourceFile: "client/src/pages/FathersDayAdmin.tsx" },

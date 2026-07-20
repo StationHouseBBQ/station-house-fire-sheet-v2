@@ -138,8 +138,17 @@ export const STAFF_RATES: StaffRoleRate[] = [
   { id: "st-action", role: "Action Station Staff", baseCents: 27500, minHours: 0, addlHourCents: null, note: "$275 per station" },
 ];
 
+export interface CateringFees {
+  operationsFeePct: number; operationsFeeMinCents: number; gratuityFullServicePct: number;
+  gratuityDeliveryPct: number; gratuityDeliveryMinCents: number; deliveryBaseCents: number;
+  deliveryPerMileCents: number; deliveryRadiusMiles: number; boxedSurchargePerGuestCents: number;
+  cakeCuttingPerGuestCents: number; sternoSetupCents: number; depositOver6moPct: number;
+  depositWithin6moPct: number; depositWithin30daysPct: number; minGuestsBuffet: number;
+  minGuestsBoxed: number; minGuestsBreakfast: number; planningNoticeDays: number; captainPerGuests: number;
+}
+
 /** ── FEES & RULES (editable) ── */
-export const CATERING_FEES = {
+export const CATERING_FEES: CateringFees = {
   operationsFeePct: 12,            // full-service; applies at $3,500+ f&b minimum
   operationsFeeMinCents: 350000,   // $3,500 food/beverage minimum
   gratuityFullServicePct: 18,
@@ -159,7 +168,7 @@ export const CATERING_FEES = {
   minGuestsBreakfast: 30,
   planningNoticeDays: 25,
   captainPerGuests: 50,            // 1 captain + 1 server per 50 guests (non-negotiable)
-} as const;
+};
 
 /** ── À LA CARTE / TAILGATE ── */
 export const ALA_CARTE: PricedItem[] = [
@@ -201,7 +210,7 @@ export interface CateringCatalog {
   staffRates: StaffRoleRate[];
   alaCarte: PricedItem[];
   breakfast: PricedItem[];
-  fees: typeof CATERING_FEES;
+  fees: CateringFees;
 }
 
 export const CATERING_CATALOG_DEFAULTS: CateringCatalog = {

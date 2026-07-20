@@ -1,5 +1,6 @@
 /** Admin workspace module exports — one component (or panel set) per tab. */
 export { MenuEditor } from "./MenuEditor";
+export { CateringMenu } from "./CateringMenu";
 export { SamplerEditor } from "./SamplerEditor";
 export { PrepMaster } from "./PrepMaster";
 export { EventAdmin } from "./EventAdmin";

@@ -53,6 +53,7 @@ const PerformanceView = lazyWithRetry(() => import("../modules/marketing/Perform
 const AdsCenterView = lazyWithRetry(() => import("../modules/marketing/AdsCenter").then(m => ({ default: m.AdsCenterView })), "AdsCenterView");
 const DesignAgentView = lazyWithRetry(() => import("../modules/marketing/DesignAgent").then(m => ({ default: m.DesignAgentView })), "DesignAgentView");
 const MenuEditor = lazyWithRetry(() => import("../modules/admin").then(m => ({ default: m.MenuEditor })), "MenuEditor");
+const CateringMenu = lazyWithRetry(() => import("../modules/admin").then(m => ({ default: m.CateringMenu })), "CateringMenu");
 const SamplerEditor = lazyWithRetry(() => import("../modules/admin").then(m => ({ default: m.SamplerEditor })), "SamplerEditor");
 const PrepMaster = lazyWithRetry(() => import("../modules/admin").then(m => ({ default: m.PrepMaster })), "PrepMaster");
 const EventAdmin = lazyWithRetry(() => import("../modules/admin").then(m => ({ default: m.EventAdmin })), "EventAdmin");
@@ -131,6 +132,7 @@ export const IMPLEMENTED: Record<string, ComponentType> = {
   "marketing/ads": AdsCenterView,
   "marketing/design": DesignAgentView,
   "admin/menu": MenuEditor,
+  "admin/catering-menu": CateringMenu,
   "admin/walk-in-sampler": SamplerEditor,
   "admin/prep-master": PrepMaster,
   "admin/fathers-day": FathersDayAdmin,
