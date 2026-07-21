@@ -11,6 +11,23 @@ const MeatCalc = lazyWithRetry(() => import("../modules/kitchen/MeatCalc").then(
 const OrderHistoryView = lazyWithRetry(() => import("../modules/kitchen/OrderHistory").then(m => ({ default: m.OrderHistoryView })), "OrderHistoryView");
 const MorningChecklist = lazyWithRetry(() => import("../modules/kitchen/MorningChecklist").then(m => ({ default: m.MorningChecklist })), "MorningChecklist");
 const PrepRecipesView = lazyWithRetry(() => import("../modules/kitchen/PrepRecipes").then(m => ({ default: m.PrepRecipesView })), "PrepRecipesView");
+const HaccpLog = lazyWithRetry(() => import("../modules/kitchen/HaccpLog").then(m => ({ default: m.HaccpLog })), "HaccpLog");
+const FoodWasteLog = lazyWithRetry(() => import("../modules/kitchen/FoodWasteLog").then(m => ({ default: m.FoodWasteLog })), "FoodWasteLog");
+const FireLog = lazyWithRetry(() => import("../modules/kitchen/FireLog").then(m => ({ default: m.FireLog })), "FireLog");
+const KitchenTaskBoard = lazyWithRetry(() => import("../modules/kitchen/KitchenTaskBoard").then(m => ({ default: m.KitchenTaskBoard })), "KitchenTaskBoard");
+const SeasoningLibrary = lazyWithRetry(() => import("../modules/kitchen/SeasoningLibrary").then(m => ({ default: m.SeasoningLibrary })), "SeasoningLibrary");
+const InventoryBoard = lazyWithRetry(() => import("../modules/inventory").then(m => ({ default: m.InventoryBoard })), "InventoryBoard");
+const InventoryCount = lazyWithRetry(() => import("../modules/inventory").then(m => ({ default: m.InventoryCount })), "InventoryCount");
+const ReceiveShipment = lazyWithRetry(() => import("../modules/inventory").then(m => ({ default: m.ReceiveShipment })), "ReceiveShipment");
+const PurchaseOrders = lazyWithRetry(() => import("../modules/inventory").then(m => ({ default: m.PurchaseOrders })), "PurchaseOrders");
+const Vendors = lazyWithRetry(() => import("../modules/inventory").then(m => ({ default: m.Vendors })), "Vendors");
+const FoodCostDashboard = lazyWithRetry(() => import("../modules/costing").then(m => ({ default: m.FoodCostDashboard })), "FoodCostDashboard");
+const BreakEven = lazyWithRetry(() => import("../modules/costing").then(m => ({ default: m.BreakEven })), "BreakEven");
+const RecipeCosting = lazyWithRetry(() => import("../modules/costing").then(m => ({ default: m.RecipeCosting })), "RecipeCosting");
+const TimeClock = lazyWithRetry(() => import("../modules/team").then(m => ({ default: m.TimeClock })), "TimeClock");
+const StaffScheduleTeam = lazyWithRetry(() => import("../modules/team").then(m => ({ default: m.StaffSchedule })), "StaffScheduleTeam");
+const LaborCost = lazyWithRetry(() => import("../modules/team").then(m => ({ default: m.LaborCost })), "LaborCost");
+const MessageBoard = lazyWithRetry(() => import("../modules/team").then(m => ({ default: m.MessageBoard })), "MessageBoard");
 const PitDashboard = lazyWithRetry(() => import("../modules/pit/PitDashboard").then(m => ({ default: m.PitDashboard })), "PitDashboard");
 const SmokedInventoryView = lazyWithRetry(() => import("../modules/pit/SmokedInventoryView").then(m => ({ default: m.SmokedInventoryView })), "SmokedInventoryView");
 const SmokerForecastView = lazyWithRetry(() => import("../modules/pit/SmokerForecastView").then(m => ({ default: m.SmokerForecastView })), "SmokerForecastView");
@@ -106,6 +123,23 @@ export const IMPLEMENTED: Record<string, ComponentType> = {
   "kitchen/order-history": OrderHistoryView,
   "kitchen/morning-checklist": MorningChecklist,
   "kitchen/prep-recipes": PrepRecipesView,
+  "kitchen/haccp": HaccpLog,
+  "kitchen/waste": FoodWasteLog,
+  "kitchen/fire-log": FireLog,
+  "kitchen/task-board": KitchenTaskBoard,
+  "kitchen/seasonings": SeasoningLibrary,
+  "inventory/board": InventoryBoard,
+  "inventory/count": InventoryCount,
+  "inventory/receive": ReceiveShipment,
+  "inventory/purchase-orders": PurchaseOrders,
+  "inventory/vendors": Vendors,
+  "costing/food-cost": FoodCostDashboard,
+  "costing/break-even": BreakEven,
+  "costing/recipe-costing": RecipeCosting,
+  "team/time-clock": TimeClock,
+  "team/schedule": StaffScheduleTeam,
+  "team/labor-cost": LaborCost,
+  "team/message-board": MessageBoard,
   "seminole/dashboard": RetailDashboard,
   "seminole/fire-sheet": RetailFireSheetView,
   "seminole/kds": SeminoleKds,

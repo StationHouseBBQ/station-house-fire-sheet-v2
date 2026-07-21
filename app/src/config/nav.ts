@@ -44,6 +44,11 @@ export const WORKSPACES: WorkspaceDef[] = [
       { implemented: true, id: "order-history", label: "Order History", parityRow: 7, sourceComponent: "KitchenOrderHistory", sourceFile: "client/src/pages/KitchenOrderHistory.tsx" },
       { implemented: true, id: "morning-checklist", label: "Morning Checklist", parityRow: 8, sourceComponent: "KitchenChecklist", sourceFile: "client/src/pages/KitchenChecklist.tsx" },
       { implemented: true, id: "prep-recipes", label: "Prep Recipes", parityRow: 9, sourceComponent: "PrepRecipeAdmin", sourceFile: "client/src/pages/PrepRecipeAdmin.tsx" },
+      { implemented: true, id: "haccp", label: "HACCP Log", parityRow: 91, sourceComponent: "HACCPLog", sourceFile: "client/src/pages/HACCPLog.tsx" },
+      { implemented: true, id: "waste", label: "Waste Log", parityRow: 92, sourceComponent: "FoodWasteLog", sourceFile: "client/src/pages/FoodWasteLog.tsx" },
+      { implemented: true, id: "fire-log", label: "Fire Log", parityRow: 93, sourceComponent: "FireLog", sourceFile: "client/src/pages/FireLog.tsx" },
+      { implemented: true, id: "task-board", label: "Task Board", parityRow: 94, sourceComponent: "KitchenTaskBoard", sourceFile: "client/src/pages/KitchenTaskBoard.tsx" },
+      { implemented: true, id: "seasonings", label: "Seasoning Library", parityRow: 95, sourceComponent: "SeasoningLibrary", sourceFile: "client/src/pages/SeasoningLibrary.tsx" },
     ],
   },
   {
@@ -138,6 +143,33 @@ export const WORKSPACES: WorkspaceDef[] = [
       { implemented: true, id: "customers", label: "Customers", parityRow: 81, sourceComponent: "FinanceCustomers", sourceFile: "client/src/pages/FinanceCustomers.tsx" },
       { implemented: true, id: "payroll", label: "Payroll", parityRow: 82, sourceComponent: "FinancePayroll", sourceFile: "client/src/pages/FinancePayroll.tsx" },
       { implemented: true, id: "forecast", label: "Forecast", parityRow: 83, sourceComponent: "FinanceForecast", sourceFile: "client/src/pages/FinanceForecast.tsx" },
+    ],
+  },
+  {
+    id: "inventory", label: "Inventory", base: "/inventory", roles: R.kitchenOps,
+    tabs: [
+      { implemented: true, id: "board", label: "Inventory Board", parityRow: 96, sourceComponent: "InventoryBoard", sourceFile: "client/src/pages/InventoryBoard.tsx" },
+      { implemented: true, id: "count", label: "Count Sheet", parityRow: 97, sourceComponent: "InventoryCount", sourceFile: "client/src/pages/InventoryCountSheet.tsx" },
+      { implemented: true, id: "receive", label: "Receive Shipment", parityRow: 98, sourceComponent: "ReceiveShipment", sourceFile: "client/src/pages/ReceiveShipment.tsx" },
+      { implemented: true, id: "purchase-orders", label: "Purchase Orders", parityRow: 99, sourceComponent: "PurchaseOrder", sourceFile: "client/src/pages/PurchaseOrder.tsx" },
+      { implemented: true, id: "vendors", label: "Vendors", parityRow: 100, sourceComponent: "VendorCosts", sourceFile: "client/src/pages/VendorCosts.tsx" },
+    ],
+  },
+  {
+    id: "costing", label: "Costing", base: "/costing", roles: R.admin,
+    tabs: [
+      { implemented: true, id: "food-cost", label: "Food Cost", parityRow: 101, sourceComponent: "FoodCostDashboard", sourceFile: "client/src/pages/FoodCostDashboard.tsx" },
+      { implemented: true, id: "break-even", label: "Break-Even", parityRow: 102, sourceComponent: "BreakEvenCalculator", sourceFile: "client/src/pages/BreakEvenCalculator.tsx" },
+      { implemented: true, id: "recipe-costing", label: "Recipe Costing", parityRow: 103, sourceComponent: "YieldSystem", sourceFile: "client/src/pages/YieldSystem.tsx" },
+    ],
+  },
+  {
+    id: "team", label: "Team", base: "/team", roles: R.admin,
+    tabs: [
+      { implemented: true, id: "time-clock", label: "Time Clock", parityRow: 104, sourceComponent: "TimeClock", sourceFile: "client/src/pages/TimeClock.tsx" },
+      { implemented: true, id: "schedule", label: "Staff Schedule", parityRow: 105, sourceComponent: "StaffSchedule", sourceFile: "client/src/pages/StaffSchedule.tsx" },
+      { implemented: true, id: "labor-cost", label: "Labor Cost", parityRow: 106, sourceComponent: "LaborCostTracker", sourceFile: "client/src/pages/LaborCostTracker.tsx" },
+      { implemented: true, id: "message-board", label: "Message Board", parityRow: 107, sourceComponent: "MessageBoard", sourceFile: "client/src/pages/MessageBoard.tsx" },
     ],
   },
   {
