@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: dark; }
+html, body, #root { height: 100%; }
+body {
+  @apply bg-ink-950 text-zinc-200 antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* iOS safe areas */
+header.sticky, nav.sticky { padding-top: env(safe-area-inset-top); }
+
+/* Restaurant-floor tap targets */
+button, [role="button"] { min-height: 44px; }
+
+/* ── Mobile hardening ────────────────────────────────────────────────── */
+/* Any data table scrolls horizontally on narrow screens instead of
+   breaking the layout — floor tablets and phones stay usable even where
+   a view lacks an explicit scroll wrapper. */
+@media (max-width: 767px) {
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}
+/* Prevent iOS zoom-on-focus for form fields (16px minimum). */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px; }
+}
+/* Kanban/board rows: momentum scroll */
+.overflow-x-auto { -webkit-overflow-scrolling: touch; }
+
+/* ── Print stylesheet (fire sheets, pull sheets, pack lists) ─────────── */
+@media print {
+  body { background: #fff !important; color: #000 !important; }
+  nav, header, .no-print, [role="status"] { display: none !important; }
+  .print-area { display: block !important; }
+  .rounded-2xl, .rounded-xl, .rounded-lg { border-radius: 0 !important; }
+  * { box-shadow: none !important; background: transparent !important; color: #000 !important; border-color: #999 !important; }
+  a { text-decoration: none; }
+}
