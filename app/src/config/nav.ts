@@ -78,7 +78,6 @@ export const WORKSPACES: WorkspaceDef[] = [
     tabs: [
       { implemented: true, id: "queue", label: "Pack Queue", parityRow: 22, sourceComponent: "PackingQueue", sourceFile: "client/src/pages/PackingQueue.tsx" },
       { implemented: true, id: "board", label: "Packing Board", parityRow: 23, sourceComponent: "PackingBoard", sourceFile: "client/src/pages/PackingBoard.tsx" },
-      { implemented: true, id: "expo", label: "Expo View", parityRow: 24, sourceComponent: "ExpoKDS", sourceFile: "client/src/pages/ExpoKDS.tsx" },
       { implemented: true, id: "deliveries", label: "Deliveries", parityRow: 25, sourceComponent: "DeliveriesTab", sourceFile: "client/src/pages/DeliveriesTab.tsx" },
       { implemented: true, id: "dashboard", label: "Dashboard", parityRow: 26, sourceComponent: "PackingStationDashboard", sourceFile: "client/src/pages/PackingStationDashboard.tsx" },
       { implemented: true, id: "inventory", label: "Inventory", parityRow: 27, sourceComponent: "PackingInventory", sourceFile: "client/src/pages/PackingInventory.tsx" },
@@ -109,12 +108,10 @@ export const WORKSPACES: WorkspaceDef[] = [
     id: "crm", label: "CRM", base: "/crm", roles: R.cat,
     tabs: [
       { implemented: true, id: "dashboard", label: "Dashboard", parityRow: 84, sourceComponent: "CrmDashboard", sourceFile: "client/src/pages/CrmDashboard.tsx" },
-      { implemented: true, id: "opportunities", label: "Opportunities", parityRow: 85, sourceComponent: "CrmOpportunities", sourceFile: "client/src/pages/CrmOpportunities.tsx" },
       { implemented: true, id: "tasks", label: "Tasks", parityRow: 86, sourceComponent: "CrmTasks", sourceFile: "client/src/pages/CrmTasks.tsx" },
       { implemented: true, id: "conversations", label: "Conversations", parityRow: 87, sourceComponent: "CrmConversations", sourceFile: "client/src/pages/CrmConversations.tsx" },
       { implemented: true, id: "automations", label: "Automations", parityRow: 88, sourceComponent: "CrmAutomations", sourceFile: "client/src/pages/CrmAutomations.tsx" },
       { implemented: true, id: "events", label: "Events", parityRow: 89, sourceComponent: "CrmEvents", sourceFile: "client/src/pages/CrmEvents.tsx" },
-      { implemented: true, id: "social", label: "Social Planner", parityRow: 90, sourceComponent: "CrmSocialPlanner", sourceFile: "client/src/pages/CrmSocialPlanner.tsx" },
     ],
   },
   {

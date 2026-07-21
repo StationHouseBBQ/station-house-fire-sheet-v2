@@ -1,14 +1,13 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { getDal } from "../../dal";
 import type { TempCheck } from "../../dal/types";
 import { useRole } from "../../app/RoleContext";
-import { formatCents } from "../../lib/money";
 import {
-  FOOD_ITEMS, TEMP_STATIONS, WASTE_REASONS, WASTE_UNITS, passFailFor, requiredLabel,
-  loadTempSessions, saveTempSession, loadWaste, addWaste, removeWaste, todayEt,
+  FOOD_ITEMS, TEMP_STATIONS, passFailFor, requiredLabel,
+  loadTempSessions, saveTempSession, todayEt,
   type FoodItemDef, type PassFail, type TempPeriod, type TempCheckSession,
-  type TempReadingRow, type WasteEntry,
+  type TempReadingRow,
 } from "./_data/foh";
 
 /**
@@ -23,7 +22,7 @@ import {
  * equipment station checks still flow through the shared DAL tempLog repo.
  */
 
-type Tab = "log" | "history" | "waste";
+type Tab = "log" | "history";
 const PERIODS: TempPeriod[] = ["morning", "midday", "evening"];
 
 function autoPeriod(): TempPeriod {
@@ -48,7 +47,7 @@ export function TempLogView() {
       <header className="flex items-center gap-3">
         <span className="text-3xl" aria-hidden>🌡️</span>
         <div>
-          <h1 className="text-2xl font-black uppercase text-zinc-100">Food Temp &amp; Waste Log</h1>
+          <h1 className="text-2xl font-black uppercase text-zinc-100">Food Temp Log</h1>
           <p className="text-sm text-zinc-500">HACCP temp checks 3× daily — Morning · Midday · Evening</p>
         </div>
       </header>
@@ -72,7 +71,7 @@ export function TempLogView() {
 
       {/* Tabs */}
       <div className="mt-5 flex gap-1 rounded-lg bg-ink-900 p-1">
-        {([["log", "📝 Log Temps"], ["history", "📊 History"], ["waste", "🗑️ Waste"]] as Array<[Tab, string]>).map(([t, label]) => (
+        {([["log", "📝 Log Temps"], ["history", "📊 History"]] as Array<[Tab, string]>).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)}
             className={`flex-1 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
               tab === t ? "bg-fire text-white" : "text-zinc-400 hover:text-zinc-100"}`}>
@@ -87,7 +86,6 @@ export function TempLogView() {
             onSubmitted={s => setSessions(saveTempSession(s))} />
         )}
         {tab === "history" && <HistoryTab sessions={sessions} />}
-        {tab === "waste" && <WasteTab actor={actor} today={today} />}
       </div>
     </div>
   );
@@ -350,105 +348,3 @@ function HistoryTab({ sessions }: { sessions: TempCheckSession[] }) {
 }
 
 // ── Waste tab ────────────────────────────────────────────────────────────────
-function WasteTab({ actor, today }: { actor: string; today: string }) {
-  const [entries, setEntries] = useState<WasteEntry[]>(() => loadWaste());
-  const [item, setItem] = useState("");
-  const [qty, setQty] = useState("1");
-  const [unit, setUnit] = useState(WASTE_UNITS[0]);
-  const [reason, setReason] = useState(WASTE_REASONS[0]);
-  const [cost, setCost] = useState("");
-
-  const todayEntries = useMemo(
-    () => entries.filter(e => e.date === today).sort((a, b) => b.at.localeCompare(a.at)),
-    [entries, today]);
-  const todayCostCents = todayEntries.reduce((s, e) => s + e.estCostCents, 0);
-  const allCostCents = entries.reduce((s, e) => s + e.estCostCents, 0);
-
-  const canAdd = item.trim() !== "" && Number(qty) > 0;
-  const add = () => {
-    if (!canAdd) return;
-    const cents = cost.trim() === "" ? 0 : Math.max(0, Math.round(Number(cost) * 100));
-    setEntries(addWaste({
-      date: today, item: item.trim(), qty: Number(qty), unit, reason,
-      estCostCents: Number.isFinite(cents) ? cents : 0, loggedBy: actor.replace(/^demo:/, ""),
-    }));
-    setItem(""); setQty("1"); setCost("");
-  };
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-ink-700 bg-ink-900 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Waste today</p>
-          <p className="mt-1 text-2xl font-black text-zinc-100">{todayEntries.length}</p>
-        </div>
-        <div className="rounded-xl border border-ink-700 bg-ink-900 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Est. cost today</p>
-          <p className="mt-1 text-2xl font-black text-red-400">{formatCents(todayCostCents)}</p>
-        </div>
-      </div>
-
-      <form className="space-y-3 rounded-xl border border-ink-700 bg-ink-900 p-4"
-        onSubmit={e => { e.preventDefault(); add(); }}>
-        <h3 className="text-sm font-black uppercase tracking-wider text-zinc-300">Log waste</h3>
-        <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Item
-          <input value={item} onChange={e => setItem(e.target.value)} placeholder="e.g. Brisket ends"
-            className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Qty
-            <input value={qty} onChange={e => setQty(e.target.value)} inputMode="decimal"
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
-          </label>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Unit
-            <select value={unit} onChange={e => setUnit(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-2 py-2.5 text-zinc-100">
-              {WASTE_UNITS.map(u => <option key={u}>{u}</option>)}
-            </select>
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Reason
-            <select value={reason} onChange={e => setReason(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-2 py-2.5 text-zinc-100">
-              {WASTE_REASONS.map(r => <option key={r}>{r}</option>)}
-            </select>
-          </label>
-          <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-500">Est. cost ($)
-            <input value={cost} onChange={e => setCost(e.target.value)} inputMode="decimal" placeholder="0.00"
-              className="mt-1 w-full rounded-lg border border-ink-700 bg-ink-800 px-3 py-2.5 text-zinc-100" />
-          </label>
-        </div>
-        <button type="submit" disabled={!canAdd}
-          className="min-h-[44px] w-full rounded-lg bg-fire px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
-          + Log waste entry
-        </button>
-      </form>
-
-      <section>
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-black uppercase tracking-wider text-zinc-300">Today's waste ({todayEntries.length})</h3>
-          {entries.length > 0 && <span className="text-xs text-zinc-500">All-time est. {formatCents(allCostCents)}</span>}
-        </div>
-        {todayEntries.length === 0 ? (
-          <p className="py-10 text-center text-zinc-500">No waste logged today.</p>
-        ) : (
-          <ul className="mt-2 space-y-2">
-            {todayEntries.map(e => (
-              <li key={e.id} className="flex items-center gap-3 rounded-xl border border-ink-700 bg-ink-900 p-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-semibold text-zinc-100">{e.qty} {e.unit} · {e.item}</p>
-                  <p className="text-xs text-zinc-500">{e.reason} · {e.loggedBy} · {fmtTime(e.at)}</p>
-                </div>
-                {e.estCostCents > 0 && <span className="text-sm font-bold text-red-400">{formatCents(e.estCostCents)}</span>}
-                <button onClick={() => setEntries(removeWaste(e.id))}
-                  className="min-h-[40px] rounded-lg border border-ink-700 px-2 text-xs font-semibold text-zinc-500 hover:text-red-400"
-                  aria-label={`Remove ${e.item} waste entry`}>✕</button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-}
